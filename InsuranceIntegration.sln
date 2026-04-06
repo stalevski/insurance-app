@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InsuranceIntegration.Api", "src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj", "{8C3D8B5E-0D8B-4E65-9E6C-1FA8D8A18D7B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InsuranceIntegration.Api.Tests", "tests\InsuranceIntegration.Api.Tests\InsuranceIntegration.Api.Tests.csproj", "{2A8E45CF-4784-40A5-B947-B6357B102B29}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8C3D8B5E-0D8B-4E65-9E6C-1FA8D8A18D7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C3D8B5E-0D8B-4E65-9E6C-1FA8D8A18D7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C3D8B5E-0D8B-4E65-9E6C-1FA8D8A18D7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C3D8B5E-0D8B-4E65-9E6C-1FA8D8A18D7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A8E45CF-4784-40A5-B947-B6357B102B29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A8E45CF-4784-40A5-B947-B6357B102B29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A8E45CF-4784-40A5-B947-B6357B102B29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A8E45CF-4784-40A5-B947-B6357B102B29}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
