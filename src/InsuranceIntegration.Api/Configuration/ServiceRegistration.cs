@@ -2,9 +2,11 @@ using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Services.Catalog;
 using InsuranceIntegration.Api.Services.Clearance;
+using InsuranceIntegration.Api.Services.Correlation;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
+using InsuranceIntegration.Api.Services.Outbox;
 using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Pricing;
 using InsuranceIntegration.Api.Services.Products;
@@ -20,7 +22,13 @@ public static class ServiceRegistration
         services.AddEndpointsApiExplorer();
 
         var connectionString = configuration?.GetConnectionString("Integration") ?? "Data Source=integration.db";
-        services.AddDbContextFactory<IntegrationDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContext<IntegrationDbContext>(options => options.UseSqlite(connectionString));
+
+        services.TryAddSingletonTimeProvider();
+
+        services.AddScoped<ICorrelationContext, CorrelationContext>();
+        services.AddScoped<IOutboxWriter, OutboxWriter>();
+        services.AddHostedService<OutboxDispatcher>();
 
         services.AddSingleton<ISourceSystemCatalogService, SourceSystemCatalogService>();
         services.AddSingleton<ILevenshteinDistanceCalculator, LevenshteinDistanceCalculator>();
@@ -42,7 +50,7 @@ public static class ServiceRegistration
         services.AddScoped<IBillingFlowService, BillingFlowService>();
         services.AddScoped<IComplianceFlowService, ComplianceFlowService>();
 
-        services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
+        services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
         services.AddScoped<IIngestHandler, RiskIngestHandler>();
         services.AddScoped<IIngestHandler, ClaimIngestHandler>();
         services.AddScoped<IIngestHandler, BillingIngestHandler>();
@@ -50,5 +58,13 @@ public static class ServiceRegistration
         services.AddScoped<IIngestDispatcher, IngestDispatcher>();
 
         return services;
+    }
+
+    private static void TryAddSingletonTimeProvider(this IServiceCollection services)
+    {
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(TimeProvider)))
+        {
+            services.AddSingleton(TimeProvider.System);
+        }
     }
 }

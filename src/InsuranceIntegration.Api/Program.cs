@@ -1,5 +1,6 @@
 using InsuranceIntegration.Api.Configuration;
 using InsuranceIntegration.Api.Endpoints;
+using InsuranceIntegration.Api.Middleware;
 using InsuranceIntegration.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +13,18 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<IntegrationDbContext>>();
-    using var context = factory.CreateDbContext();
-    context.Database.EnsureCreated();
+    var context = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+    if (context.Database.GetPendingMigrations().Any())
+    {
+        context.Database.Migrate();
+    }
+    else if (!context.Database.GetAppliedMigrations().Any())
+    {
+        context.Database.EnsureCreated();
+    }
 }
+
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.MapOpenApi();
 
