@@ -8,3 +8,7 @@ obj/
 *.log
 TestResults/
 artifacts/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
