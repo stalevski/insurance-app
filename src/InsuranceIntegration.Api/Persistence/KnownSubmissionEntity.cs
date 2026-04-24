@@ -2,7 +2,7 @@ namespace InsuranceIntegration.Api.Persistence;
 
 public sealed class KnownSubmissionEntity
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string ExternalReference { get; set; } = string.Empty;
 
@@ -13,4 +13,6 @@ public sealed class KnownSubmissionEntity
     public int UnderwritingYear { get; set; }
 
     public string? BrokerCode { get; set; }
+
+    public DateTime RegisteredAtUtc { get; set; }
 }
