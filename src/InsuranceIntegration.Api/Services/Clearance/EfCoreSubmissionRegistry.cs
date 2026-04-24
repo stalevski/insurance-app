@@ -5,17 +5,18 @@ namespace InsuranceIntegration.Api.Services.Clearance;
 
 public sealed class EfCoreSubmissionRegistry : ISubmissionRegistry
 {
-    private readonly IDbContextFactory<IntegrationDbContext> _contextFactory;
+    private readonly IntegrationDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public EfCoreSubmissionRegistry(IDbContextFactory<IntegrationDbContext> contextFactory)
+    public EfCoreSubmissionRegistry(IntegrationDbContext context, TimeProvider timeProvider)
     {
-        _contextFactory = contextFactory;
+        _context = context;
+        _timeProvider = timeProvider;
     }
 
     public IReadOnlyCollection<KnownSubmissionRecord> GetKnownSubmissions()
     {
-        using var context = _contextFactory.CreateDbContext();
-        return context.KnownSubmissions
+        return _context.KnownSubmissions
             .AsNoTracking()
             .Select(entity => new KnownSubmissionRecord
             {
@@ -30,15 +31,16 @@ public sealed class EfCoreSubmissionRegistry : ISubmissionRegistry
 
     public void Register(KnownSubmissionRecord record)
     {
-        using var context = _contextFactory.CreateDbContext();
-        context.KnownSubmissions.Add(new KnownSubmissionEntity
+        _context.KnownSubmissions.Add(new KnownSubmissionEntity
         {
+            Id = Guid.CreateVersion7(),
             ExternalReference = record.ExternalReference,
             InsuredName = record.InsuredName,
             ProductCode = record.ProductCode,
             UnderwritingYear = record.UnderwritingYear,
-            BrokerCode = record.BrokerCode
+            BrokerCode = record.BrokerCode,
+            RegisteredAtUtc = _timeProvider.GetUtcNow().UtcDateTime
         });
-        context.SaveChanges();
+        _context.SaveChanges();
     }
 }
