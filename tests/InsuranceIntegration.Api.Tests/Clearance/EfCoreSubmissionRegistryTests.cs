@@ -8,27 +8,26 @@ namespace InsuranceIntegration.Api.Tests.Clearance;
 public sealed class EfCoreSubmissionRegistryTests : IDisposable
 {
     private readonly SqliteConnection _connection;
-    private readonly IDbContextFactory<IntegrationDbContext> _factory;
+    private readonly DbContextOptions<IntegrationDbContext> _options;
 
     public EfCoreSubmissionRegistryTests()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        var options = new DbContextOptionsBuilder<IntegrationDbContext>()
+        _options = new DbContextOptionsBuilder<IntegrationDbContext>()
             .UseSqlite(_connection)
             .Options;
 
-        _factory = new TestDbContextFactory(options);
-
-        using var context = _factory.CreateDbContext();
+        using var context = new IntegrationDbContext(_options);
         context.Database.EnsureCreated();
     }
 
     [Test]
     public void RegisterAndRetrieve_PersistsSubmissionRecord()
     {
-        var registry = new EfCoreSubmissionRegistry(_factory);
+        using var context = new IntegrationDbContext(_options);
+        var registry = new EfCoreSubmissionRegistry(context, TimeProvider.System);
 
         registry.Register(new KnownSubmissionRecord
         {
@@ -50,20 +49,5 @@ public sealed class EfCoreSubmissionRegistryTests : IDisposable
     public void Dispose()
     {
         _connection.Dispose();
-    }
-
-    private sealed class TestDbContextFactory : IDbContextFactory<IntegrationDbContext>
-    {
-        private readonly DbContextOptions<IntegrationDbContext> _options;
-
-        public TestDbContextFactory(DbContextOptions<IntegrationDbContext> options)
-        {
-            _options = options;
-        }
-
-        public IntegrationDbContext CreateDbContext()
-        {
-            return new IntegrationDbContext(_options);
-        }
     }
 }
