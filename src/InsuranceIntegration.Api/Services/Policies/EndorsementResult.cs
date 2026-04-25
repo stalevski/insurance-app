@@ -10,5 +10,11 @@ public sealed class EndorsementResult
 
     public string AdjustmentDirection { get; init; } = string.Empty;
 
+    public decimal SumInsuredDelta { get; init; }
+
+    public decimal DeductibleDelta { get; init; }
+
+    public List<string> OperationsApplied { get; init; } = [];
+
     public List<string> Reasons { get; init; } = [];
 }

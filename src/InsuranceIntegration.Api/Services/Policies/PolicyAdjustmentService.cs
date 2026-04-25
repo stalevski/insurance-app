@@ -74,20 +74,66 @@ public sealed class PolicyAdjustmentService : IPolicyAdjustmentService
             _ => "NoAdjustment"
         };
 
+        var sumInsuredDelta = request.SectionOperations.Sum(operation => operation.SumInsuredDelta);
+        var deductibleDelta = request.SectionOperations.Sum(operation => operation.DeductibleDelta);
+        var operationDescriptions = request.SectionOperations
+            .Select(DescribeOperation)
+            .ToList();
+
+        var reasons = new List<string>
+        {
+            $"Premium delta: {premiumDelta:0.##}",
+            $"Remaining days: {remainingDays} of {totalDays}",
+            $"Pro-rata adjustment: {proRataAdjustment:0.##}",
+            $"Direction: {direction}"
+        };
+
+        if (request.SectionOperations.Count > 0)
+        {
+            reasons.Add($"Section operations: {request.SectionOperations.Count}");
+            reasons.Add($"Sum-insured delta: {sumInsuredDelta:0.##}");
+            reasons.Add($"Deductible delta: {deductibleDelta:0.##}");
+        }
+
         return new EndorsementResult
         {
             PolicyReference = request.PolicyReference,
             PremiumDelta = premiumDelta,
             ProRataAdjustment = proRataAdjustment,
             AdjustmentDirection = direction,
-            Reasons =
-            [
-                $"Premium delta: {premiumDelta:0.##}",
-                $"Remaining days: {remainingDays} of {totalDays}",
-                $"Pro-rata adjustment: {proRataAdjustment:0.##}",
-                $"Direction: {direction}"
-            ]
+            SumInsuredDelta = sumInsuredDelta,
+            DeductibleDelta = deductibleDelta,
+            OperationsApplied = operationDescriptions,
+            Reasons = reasons
         };
+    }
+
+    private static string DescribeOperation(SectionEndorsementOperation operation)
+    {
+        var target = string.IsNullOrWhiteSpace(operation.SubcoverCode)
+            ? $"section {operation.SectionCode}"
+            : $"{operation.SectionCode}/{operation.SubcoverCode}";
+
+        var details = new List<string>();
+        if (operation.SumInsuredDelta != 0m)
+        {
+            details.Add($"sum insured {operation.SumInsuredDelta:+0.##;-0.##}");
+        }
+
+        if (operation.DeductibleDelta != 0m)
+        {
+            details.Add($"deductible {operation.DeductibleDelta:+0.##;-0.##}");
+        }
+
+        if (operation.PremiumDelta != 0m)
+        {
+            details.Add($"premium {operation.PremiumDelta:+0.##;-0.##}");
+        }
+
+        var suffix = details.Count > 0 ? $" [{string.Join(", ", details)}]" : string.Empty;
+        var reason = string.IsNullOrWhiteSpace(operation.Reason) ? string.Empty : $" ({operation.Reason})";
+
+        return $"{operation.OperationType} on {target}{suffix}{reason}";
     }
 
     private static DateOnly ClampToPolicyPeriod(DateOnly target, DateOnly inception, DateOnly expiry)

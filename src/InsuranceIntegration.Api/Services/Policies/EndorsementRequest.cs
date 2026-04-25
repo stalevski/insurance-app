@@ -13,4 +13,6 @@ public sealed class EndorsementRequest
     public required DateOnly ExpiryDate { get; init; }
 
     public required DateOnly EffectiveDate { get; init; }
+
+    public List<SectionEndorsementOperation> SectionOperations { get; init; } = [];
 }
