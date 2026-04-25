@@ -23,4 +23,6 @@ public sealed class CanonicalBillingRequest
     public string CurrencyCode { get; init; } = "USD";
 
     public DateOnly? FirstDueDate { get; init; }
+
+    public List<BillingInstallment> Installments { get; init; } = [];
 }

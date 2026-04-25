@@ -22,6 +22,12 @@ public sealed class FinalBillingResponse
 
     public DateOnly? NextDueDate { get; init; }
 
+    public int OverdueInstallmentCount { get; init; }
+
+    public List<int> OverdueInstallmentNumbers { get; init; } = [];
+
+    public decimal NextInstallmentAmount { get; init; }
+
     public List<string> DecisionReasons { get; init; } = [];
 
     public string FinalStatus { get; init; } = string.Empty;
