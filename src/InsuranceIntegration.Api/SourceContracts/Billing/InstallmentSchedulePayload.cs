@@ -20,4 +20,23 @@ public sealed class InstallmentSchedulePayload
     public decimal PaidToDate { get; init; }
 
     public int MissedPayments { get; init; }
+
+    public List<InstallmentScheduleEntry> Installments { get; init; } = [];
+}
+
+public sealed class InstallmentScheduleEntry
+{
+    public int SequenceNumber { get; init; }
+
+    public DateOnly DueDate { get; init; }
+
+    public decimal Amount { get; init; }
+
+    public string Status { get; init; } = "Planned";
+
+    public DateOnly? IssuedDate { get; init; }
+
+    public DateOnly? PaidDate { get; init; }
+
+    public string? PaymentReference { get; init; }
 }

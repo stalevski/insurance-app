@@ -10,23 +10,71 @@ public sealed class BillingFlowService : IBillingFlowService
 
     public FinalBillingResponse Process(CanonicalBillingRequest request)
     {
-        var installmentAmount = request.InstallmentCount > 0
-            ? Math.Round(request.TotalAmount / request.InstallmentCount, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-        var outstanding = Math.Max(0m, request.TotalAmount - request.PaidToDate);
-        var billingStatus = ResolveStatus(outstanding, request.MissedPayments);
-        var dunningTriggered = request.MissedPayments >= MissedPaymentDunningThreshold;
-        var nonPaymentCancellation = request.MissedPayments >= MissedPaymentCancellationThreshold;
-        var nextDueDate = request.FirstDueDate?.AddMonths(Math.Max(request.MissedPayments, 0));
+        var hasSchedule = request.Installments.Count > 0;
+        var orderedInstallments = request.Installments
+            .OrderBy(installment => installment.SequenceNumber)
+            .ThenBy(installment => installment.DueDate)
+            .ToList();
+
+        var installmentCount = hasSchedule ? orderedInstallments.Count : request.InstallmentCount;
+        var paidFromSchedule = orderedInstallments
+            .Where(installment => BillingInstallmentStatus.IsPaid(installment.Status))
+            .Sum(installment => installment.Amount);
+        var paidToDate = hasSchedule ? paidFromSchedule : request.PaidToDate;
+        var totalAmount = hasSchedule
+            ? orderedInstallments
+                .Where(installment => !BillingInstallmentStatus.IsCancelled(installment.Status))
+                .Sum(installment => installment.Amount)
+            : request.TotalAmount;
+        var overdueInstallments = orderedInstallments
+            .Where(installment => BillingInstallmentStatus.IsOverdue(installment.Status))
+            .ToList();
+        var missedPayments = hasSchedule ? overdueInstallments.Count : request.MissedPayments;
+        var outstanding = Math.Max(0m, totalAmount - paidToDate);
+
+        var openInstallments = orderedInstallments
+            .Where(installment => BillingInstallmentStatus.IsOpen(installment.Status))
+            .ToList();
+        var nextInstallment = openInstallments.FirstOrDefault();
+
+        decimal installmentAmount;
+        if (hasSchedule)
+        {
+            installmentAmount = nextInstallment?.Amount
+                ?? orderedInstallments.LastOrDefault()?.Amount
+                ?? 0m;
+        }
+        else
+        {
+            installmentAmount = installmentCount > 0
+                ? Math.Round(totalAmount / installmentCount, 2, MidpointRounding.AwayFromZero)
+                : 0m;
+        }
+
+        var billingStatus = ResolveStatus(outstanding, missedPayments);
+        var dunningTriggered = missedPayments >= MissedPaymentDunningThreshold;
+        var nonPaymentCancellation = missedPayments >= MissedPaymentCancellationThreshold;
+        var nextDueDate = hasSchedule
+            ? nextInstallment?.DueDate
+            : request.FirstDueDate?.AddMonths(Math.Max(request.MissedPayments, 0));
 
         var reasons = new List<string>
         {
             $"Installment amount: {installmentAmount:0.##}",
             $"Outstanding balance: {outstanding:0.##}",
-            $"Missed payments: {request.MissedPayments}",
+            $"Missed payments: {missedPayments}",
             $"Dunning triggered: {dunningTriggered}",
             $"Non-payment cancellation recommended: {nonPaymentCancellation}"
         };
+
+        if (hasSchedule)
+        {
+            reasons.Add($"Schedule provided: {orderedInstallments.Count} installments; total billable {totalAmount:0.##}, paid {paidToDate:0.##}");
+            if (overdueInstallments.Count > 0)
+            {
+                reasons.Add($"Overdue installments: {string.Join(", ", overdueInstallments.Select(item => item.SequenceNumber))}");
+            }
+        }
 
         return new FinalBillingResponse
         {
@@ -35,11 +83,14 @@ public sealed class BillingFlowService : IBillingFlowService
             SourceSystem = request.SourceSystem,
             InstallmentAmount = installmentAmount,
             OutstandingBalance = outstanding,
-            InstallmentCount = request.InstallmentCount,
+            InstallmentCount = installmentCount,
             BillingStatus = billingStatus,
             DunningTriggered = dunningTriggered,
             NonPaymentCancellationRecommended = nonPaymentCancellation,
             NextDueDate = nextDueDate,
+            OverdueInstallmentCount = overdueInstallments.Count,
+            OverdueInstallmentNumbers = overdueInstallments.Select(item => item.SequenceNumber).ToList(),
+            NextInstallmentAmount = nextInstallment?.Amount ?? installmentAmount,
             DecisionReasons = reasons,
             FinalStatus = nonPaymentCancellation ? "PendingNonPaymentCancellation" : billingStatus
         };

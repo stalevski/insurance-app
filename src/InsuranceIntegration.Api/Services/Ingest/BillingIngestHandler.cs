@@ -32,6 +32,19 @@ public sealed class BillingIngestHandler : IIngestHandler
         var payload = envelope.Data.Deserialize<InstallmentSchedulePayload>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException("Unable to deserialize installment schedule payload.");
 
+        var installments = payload.Installments
+            .Select(entry => new BillingInstallment
+            {
+                SequenceNumber = entry.SequenceNumber,
+                DueDate = entry.DueDate,
+                Amount = entry.Amount,
+                Status = entry.Status,
+                IssuedDate = entry.IssuedDate,
+                PaidDate = entry.PaidDate,
+                PaymentReference = entry.PaymentReference
+            })
+            .ToList();
+
         var request = new CanonicalBillingRequest
         {
             EntityId = Guid.NewGuid(),
@@ -42,7 +55,8 @@ public sealed class BillingIngestHandler : IIngestHandler
             PaidToDate = payload.PaidToDate,
             MissedPayments = payload.MissedPayments,
             CurrencyCode = payload.CurrencyCode,
-            FirstDueDate = payload.FirstDueDate
+            FirstDueDate = payload.FirstDueDate,
+            Installments = installments
         };
 
         return _billingFlowService.Process(request);
