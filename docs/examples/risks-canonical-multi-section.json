@@ -1,0 +1,159 @@
+{
+  "externalReference": "EXT-MULTISEC-0005",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Quote",
+  "schemeCode": "STANDARD",
+  "transactionTimestampUtc": "2026-04-25T03:00:00Z",
+  "annualizedGrossPremium": 4500.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 4500.00,
+    "technicalPremium": 4400.00,
+    "revenue": 8500000.00,
+    "isRenewal": false
+  },
+  "broker": {
+    "brokerCode": "BRK-100",
+    "brokerName": "Summit Risk Partners",
+    "hasDelegatedAuthority": true,
+    "isPreferredPartner": true
+  },
+  "insured": {
+    "fullName": "Atlas Manufacturing Inc",
+    "tradingName": "Atlas Manufacturing",
+    "segmentCode": "MidMarket",
+    "annualRevenue": 8500000.00,
+    "employeeCount": 95,
+    "yearsInBusiness": 14
+  },
+  "quote": {
+    "quoteReference": "QT-3001",
+    "effectiveDate": "2026-06-01",
+    "expiryDate": "2027-05-31",
+    "quoteStatusHint": "Quoted"
+  },
+  "policy": {},
+  "clearance": {
+    "autoClearanceEnabled": true,
+    "premiumThreshold": 7500.00,
+    "fuzzyMatchTolerance": 3
+  },
+  "enrichments": [],
+  "contractChecks": [
+    { "code": "CONTRACT_SIGNALS", "isComplete": true }
+  ],
+  "complianceChecks": [
+    { "code": "KYC_BASELINE", "isComplete": true }
+  ],
+  "parties": [
+    { "role": "Insured", "name": "Atlas Manufacturing Inc" }
+  ],
+  "claims": [],
+  "sections": [
+    {
+      "sectionCode": "PROP",
+      "sectionName": "Property Damage",
+      "status": "Active",
+      "sumInsured": 5000000.00,
+      "sectionPremium": 2700.00,
+      "warranties": [ "Sprinkler maintenance contract in force" ],
+      "subcovers": [
+        {
+          "subcoverCode": "BUILDINGS",
+          "subcoverName": "Buildings",
+          "sumInsured": 4000000.00,
+          "perOccurrenceLimit": 4000000.00,
+          "aggregateLimit": 8000000.00,
+          "deductible": 5000.00,
+          "deductibleType": "Flat",
+          "premium": 2200.00,
+          "perils": [
+            { "code": "FIRE", "name": "Fire", "isCovered": true },
+            { "code": "WINDSTORM", "name": "Windstorm", "isCovered": true, "subLimit": 2000000.00, "waitingPeriodDays": 0 },
+            { "code": "FLOOD", "name": "Flood", "isCovered": true, "subLimit": 1000000.00, "waitingPeriodDays": 30 }
+          ],
+          "exclusions": [ "WAR", "TERRORISM" ]
+        },
+        {
+          "subcoverCode": "CONTENTS",
+          "subcoverName": "Contents",
+          "sumInsured": 1000000.00,
+          "perOccurrenceLimit": 1000000.00,
+          "aggregateLimit": 2000000.00,
+          "deductible": 0.025,
+          "deductibleType": "PercentageOfLoss",
+          "premium": 500.00,
+          "perils": [
+            { "code": "FIRE", "name": "Fire", "isCovered": true },
+            { "code": "THEFT", "name": "Theft", "isCovered": true, "subLimit": 250000.00 }
+          ],
+          "exclusions": [ "MYSTERIOUS_DISAPPEARANCE" ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "BI",
+      "sectionName": "Business Interruption",
+      "status": "Active",
+      "sumInsured": 1500000.00,
+      "sectionPremium": 900.00,
+      "warranties": [ "12-month indemnity period maximum" ],
+      "subcovers": [
+        {
+          "subcoverCode": "GP",
+          "subcoverName": "Gross Profit",
+          "sumInsured": 1500000.00,
+          "perOccurrenceLimit": 1500000.00,
+          "aggregateLimit": 1500000.00,
+          "deductible": 7,
+          "deductibleType": "Flat",
+          "premium": 900.00,
+          "perils": [
+            { "code": "FIRE", "name": "Fire", "isCovered": true },
+            { "code": "DENIAL_OF_ACCESS", "name": "Denial of Access", "isCovered": true, "waitingPeriodDays": 14 }
+          ],
+          "exclusions": [ "PANDEMIC" ]
+        }
+      ]
+    },
+    {
+      "sectionCode": "LIAB",
+      "sectionName": "General Liability",
+      "status": "Active",
+      "sumInsured": 2000000.00,
+      "sectionPremium": 900.00,
+      "subcovers": [
+        {
+          "subcoverCode": "GL",
+          "subcoverName": "Public Liability",
+          "sumInsured": 2000000.00,
+          "perOccurrenceLimit": 2000000.00,
+          "aggregateLimit": 4000000.00,
+          "deductible": 2500.00,
+          "deductibleType": "Flat",
+          "premium": 900.00,
+          "perils": [
+            { "code": "BODILY_INJURY", "name": "Bodily Injury", "isCovered": true },
+            { "code": "PROPERTY_DAMAGE", "name": "Property Damage", "isCovered": true }
+          ],
+          "exclusions": [ "PROFESSIONAL_INDEMNITY", "CYBER" ]
+        }
+      ]
+    }
+  ],
+  "sectionOperations": [
+    { "sectionCode": "PROP", "operationType": "AddSection" },
+    { "sectionCode": "PROP", "operationType": "AddSubcover", "subcoverCode": "BUILDINGS" },
+    { "sectionCode": "PROP", "operationType": "AddSubcover", "subcoverCode": "CONTENTS" },
+    { "sectionCode": "BI", "operationType": "AddSection" },
+    { "sectionCode": "LIAB", "operationType": "AddSection" }
+  ],
+  "installments": [
+    { "sequenceNumber": 1, "dueDate": "2026-06-01", "amount": 1125.00, "isPaid": false },
+    { "sequenceNumber": 2, "dueDate": "2026-09-01", "amount": 1125.00, "isPaid": false },
+    { "sequenceNumber": 3, "dueDate": "2026-12-01", "amount": 1125.00, "isPaid": false },
+    { "sequenceNumber": 4, "dueDate": "2027-03-01", "amount": 1125.00, "isPaid": false }
+  ]
+}

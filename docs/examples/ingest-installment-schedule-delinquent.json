@@ -1,0 +1,31 @@
+{
+  "id": "evt-bill-0002",
+  "source": "PAYMENTRAIL",
+  "type": "InstallmentSchedule",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:21:00Z",
+  "correlationId": "77777777-7777-7777-7777-777777777777",
+  "data": {
+    "policyReference": "POL-7782",
+    "installmentCount": 12,
+    "totalAmount": 18000.00,
+    "currencyCode": "USD",
+    "firstDueDate": "2026-01-01",
+    "paidToDate": 4500.00,
+    "missedPayments": 3,
+    "installments": [
+      { "sequenceNumber": 1, "dueDate": "2026-01-01", "amount": 1500.00, "status": "Paid", "paidDate": "2026-01-03", "paymentReference": "PMT-1001" },
+      { "sequenceNumber": 2, "dueDate": "2026-02-01", "amount": 1500.00, "status": "Paid", "paidDate": "2026-02-04", "paymentReference": "PMT-1002" },
+      { "sequenceNumber": 3, "dueDate": "2026-03-01", "amount": 1500.00, "status": "Paid", "paidDate": "2026-03-07", "paymentReference": "PMT-1003" },
+      { "sequenceNumber": 4, "dueDate": "2026-04-01", "amount": 1500.00, "status": "Overdue", "issuedDate": "2026-03-28" },
+      { "sequenceNumber": 5, "dueDate": "2026-05-01", "amount": 1500.00, "status": "Overdue", "issuedDate": "2026-04-28" },
+      { "sequenceNumber": 6, "dueDate": "2026-06-01", "amount": 1500.00, "status": "Overdue", "issuedDate": "2026-05-28" },
+      { "sequenceNumber": 7, "dueDate": "2026-07-01", "amount": 1500.00, "status": "Issued", "issuedDate": "2026-06-28" },
+      { "sequenceNumber": 8, "dueDate": "2026-08-01", "amount": 1500.00, "status": "Planned" },
+      { "sequenceNumber": 9, "dueDate": "2026-09-01", "amount": 1500.00, "status": "Planned" },
+      { "sequenceNumber": 10, "dueDate": "2026-10-01", "amount": 1500.00, "status": "Planned" },
+      { "sequenceNumber": 11, "dueDate": "2026-11-01", "amount": 1500.00, "status": "Planned" },
+      { "sequenceNumber": 12, "dueDate": "2026-12-01", "amount": 1500.00, "status": "Planned" }
+    ]
+  }
+}

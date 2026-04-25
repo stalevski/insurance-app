@@ -1,0 +1,25 @@
+{
+  "id": "evt-clm-0002",
+  "source": "CLAIMFORGE",
+  "type": "ClaimNotice",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:16:00Z",
+  "correlationId": "55555555-5555-5555-5555-555555555555",
+  "data": {
+    "claimReference": "CLM-1001",
+    "policyReference": "POL-7781",
+    "claimantName": "Northwind Storage Ltd",
+    "lossDate": "2026-02-15",
+    "lossCause": "FireDamage",
+    "estimatedIncurred": 75000.00,
+    "estimatedReserved": 60000.00,
+    "paidAmount": 0.00,
+    "currencyCode": "USD",
+    "fraudIndicator": false,
+    "affectedSectionCode": "PROP",
+    "affectedSubcoverCode": "BUILDINGS",
+    "affectedPerilCode": "FIRE",
+    "deductibleApplied": 5000.00,
+    "perOccurrenceLimit": 50000.00
+  }
+}

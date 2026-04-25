@@ -1,0 +1,23 @@
+{
+  "id": "evt-bill-0001",
+  "source": "PAYMENTRAIL",
+  "type": "InstallmentSchedule",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:20:00Z",
+  "correlationId": "66666666-6666-6666-6666-666666666666",
+  "data": {
+    "policyReference": "POL-7781",
+    "installmentCount": 4,
+    "totalAmount": 12000.00,
+    "currencyCode": "USD",
+    "firstDueDate": "2026-05-01",
+    "paidToDate": 0.00,
+    "missedPayments": 0,
+    "installments": [
+      { "sequenceNumber": 1, "dueDate": "2026-05-01", "amount": 3000.00, "status": "Issued", "issuedDate": "2026-04-25" },
+      { "sequenceNumber": 2, "dueDate": "2026-08-01", "amount": 3000.00, "status": "Planned" },
+      { "sequenceNumber": 3, "dueDate": "2026-11-01", "amount": 3000.00, "status": "Planned" },
+      { "sequenceNumber": 4, "dueDate": "2027-02-01", "amount": 3000.00, "status": "Planned" }
+    ]
+  }
+}

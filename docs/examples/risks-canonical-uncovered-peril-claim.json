@@ -1,0 +1,92 @@
+{
+  "externalReference": "EXT-UNCOVERED-PERIL-0004",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Submission",
+  "schemeCode": "STANDARD",
+  "transactionTimestampUtc": "2026-04-25T03:00:00Z",
+  "annualizedGrossPremium": 1000.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 1000.00,
+    "technicalPremium": 950.00,
+    "revenue": 500000.00,
+    "isRenewal": false
+  },
+  "broker": {
+    "brokerCode": "BRK-100",
+    "brokerName": "Summit Risk Partners",
+    "hasDelegatedAuthority": false,
+    "isPreferredPartner": true
+  },
+  "insured": {
+    "fullName": "Northwind Storage Ltd",
+    "tradingName": "Northwind Storage",
+    "segmentCode": "SME",
+    "annualRevenue": 500000.00,
+    "employeeCount": 20,
+    "yearsInBusiness": 5
+  },
+  "quote": {
+    "quoteReference": "QT-2004",
+    "effectiveDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "quoteStatusHint": "Indicative"
+  },
+  "policy": {},
+  "clearance": {
+    "autoClearanceEnabled": true,
+    "premiumThreshold": 5000.00,
+    "fuzzyMatchTolerance": 3
+  },
+  "enrichments": [],
+  "contractChecks": [
+    { "code": "CONTRACT_SIGNALS", "isComplete": true }
+  ],
+  "complianceChecks": [
+    { "code": "KYC_BASELINE", "isComplete": true }
+  ],
+  "parties": [
+    { "role": "Insured", "name": "Northwind Storage Ltd" }
+  ],
+  "claims": [
+    {
+      "claimReference": "CLM-EXCL-1",
+      "claimantName": "Northwind Storage Ltd",
+      "incurredAmount": 4500.00,
+      "reservedAmount": 500.00,
+      "affectedSectionCode": "PROP",
+      "affectedSubcoverCode": "FIRE",
+      "affectedPerilCode": "FLOOD"
+    }
+  ],
+  "sections": [
+    {
+      "sectionCode": "PROP",
+      "sectionName": "Property Damage",
+      "status": "Active",
+      "sumInsured": 500000.00,
+      "sectionPremium": 1000.00,
+      "subcovers": [
+        {
+          "subcoverCode": "FIRE",
+          "subcoverName": "Fire and Allied Perils",
+          "sumInsured": 500000.00,
+          "perOccurrenceLimit": 500000.00,
+          "aggregateLimit": 1000000.00,
+          "deductible": 1000.00,
+          "deductibleType": "Flat",
+          "premium": 1000.00,
+          "perils": [
+            { "code": "FIRE", "name": "Fire", "isCovered": true },
+            { "code": "FLOOD", "name": "Flood", "isCovered": false }
+          ],
+          "exclusions": [ "FLOOD", "WAR" ]
+        }
+      ]
+    }
+  ],
+  "sectionOperations": [],
+  "installments": []
+}
