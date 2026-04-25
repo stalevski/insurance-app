@@ -1,0 +1,16 @@
+{
+  "id": "evt-comp-0003",
+  "source": "SANCTIONSCAN",
+  "type": "ComplianceResult",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:27:00Z",
+  "correlationId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "data": {
+    "partyName": "Politically Exposed Example",
+    "screeningResult": "Clear",
+    "score": 40,
+    "isPoliticallyExposed": true,
+    "hasSanctionsHit": false,
+    "entityReference": "ENT-PEP-1"
+  }
+}

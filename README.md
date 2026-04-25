@@ -226,3 +226,10 @@ The current implementation delivers the first reusable risk ingest pattern:
 ```powershell
 dotnet build .\InsuranceIntegration.sln
 ```
+
+## Documentation
+
+- [docs/USAGE.md](docs/USAGE.md) — build, run, configuration, and per-endpoint request/response examples.
+- [docs/TESTING.md](docs/TESTING.md) — running the test suite, conventions, and manual end-to-end recipes.
+- [docs/API_EXAMPLES.md](docs/API_EXAMPLES.md) — manual-testing pack: mandatory fields, business rules, and per-scenario JSON payloads under `docs/examples/`.
+- [docs/postman/](docs/postman) — curated Postman collection + environment ready to import (see `docs/API_EXAMPLES.md` §9).
