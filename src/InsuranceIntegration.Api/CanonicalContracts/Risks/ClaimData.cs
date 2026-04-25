@@ -9,4 +9,10 @@ public sealed class ClaimData
     public decimal IncurredAmount { get; init; }
 
     public decimal ReservedAmount { get; init; }
+
+    public string? AffectedSectionCode { get; init; }
+
+    public string? AffectedSubcoverCode { get; init; }
+
+    public string? AffectedPerilCode { get; init; }
 }
