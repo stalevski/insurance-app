@@ -28,6 +28,18 @@ public sealed class FinalClaimResponse
 
     public decimal OutstandingAmount { get; init; }
 
+    public decimal DeductibleAmount { get; init; }
+
+    public decimal IndemnityAmount { get; init; }
+
+    public bool LimitBreached { get; init; }
+
+    public string? AffectedSectionCode { get; init; }
+
+    public string? AffectedSubcoverCode { get; init; }
+
+    public string? AffectedPerilCode { get; init; }
+
     public List<string> DecisionReasons { get; init; } = [];
 
     public string FinalStatus { get; init; } = string.Empty;

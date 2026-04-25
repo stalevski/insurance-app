@@ -14,12 +14,21 @@ public sealed class ClaimFlowService : IClaimFlowService
         var autoClosed = severity == "Low" && !fraudFlag && request.PaidAmount >= request.IncurredAmount;
         var outstanding = Math.Max(0m, request.IncurredAmount - request.PaidAmount);
 
+        var deductible = Math.Max(0m, Math.Min(request.DeductibleApplied, request.IncurredAmount));
+        var indemnityBeforeLimit = Math.Max(0m, request.IncurredAmount - deductible);
+        var limitBreached = request.PerOccurrenceLimit is { } limit && indemnityBeforeLimit > limit;
+        var indemnity = limitBreached
+            ? request.PerOccurrenceLimit!.Value
+            : indemnityBeforeLimit;
+
         var reasons = new List<string>
         {
             $"Severity resolved as {severity} from incurred {request.IncurredAmount:0.##}",
             $"Reserve status: {reserveStatus}",
             $"Fraud flag: {fraudFlag}",
             $"Triage decision: {triage}",
+            $"Deductible applied: {deductible:0.##}",
+            $"Indemnity payable: {indemnity:0.##}{(limitBreached ? " (capped by per-occurrence limit)" : string.Empty)}",
             autoClosed ? "Claim auto-closed due to low severity and full payment" : "Claim remains open"
         };
 
@@ -38,6 +47,12 @@ public sealed class ClaimFlowService : IClaimFlowService
             IncurredAmount = request.IncurredAmount,
             ReservedAmount = request.ReservedAmount,
             OutstandingAmount = outstanding,
+            DeductibleAmount = deductible,
+            IndemnityAmount = indemnity,
+            LimitBreached = limitBreached,
+            AffectedSectionCode = request.AffectedSectionCode,
+            AffectedSubcoverCode = request.AffectedSubcoverCode,
+            AffectedPerilCode = request.AffectedPerilCode,
             DecisionReasons = reasons,
             FinalStatus = autoClosed ? "Closed" : "Open"
         };
