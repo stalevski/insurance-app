@@ -47,7 +47,12 @@ public sealed class ClaimIngestHandler : IIngestHandler
             ReservedAmount = payload.EstimatedReserved,
             PaidAmount = payload.PaidAmount,
             CurrencyCode = payload.CurrencyCode,
-            FraudIndicator = payload.FraudIndicator
+            FraudIndicator = payload.FraudIndicator,
+            AffectedSectionCode = payload.AffectedSectionCode,
+            AffectedSubcoverCode = payload.AffectedSubcoverCode,
+            AffectedPerilCode = payload.AffectedPerilCode,
+            DeductibleApplied = payload.DeductibleApplied,
+            PerOccurrenceLimit = payload.PerOccurrenceLimit
         };
 
         return _claimFlowService.Process(request);

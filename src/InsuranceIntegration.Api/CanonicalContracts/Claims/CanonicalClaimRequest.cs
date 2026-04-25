@@ -33,4 +33,14 @@ public sealed class CanonicalClaimRequest
     public string CurrencyCode { get; init; } = "USD";
 
     public bool FraudIndicator { get; init; }
+
+    public string? AffectedSectionCode { get; init; }
+
+    public string? AffectedSubcoverCode { get; init; }
+
+    public string? AffectedPerilCode { get; init; }
+
+    public decimal DeductibleApplied { get; init; }
+
+    public decimal? PerOccurrenceLimit { get; init; }
 }
