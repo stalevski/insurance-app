@@ -1,0 +1,567 @@
+{
+  "info": {
+    "name": "InsuranceIntegration.Api",
+    "description": "Curated Postman collection for the InsuranceIntegration.Api service. Mirrors the scenarios in docs/API_EXAMPLES.md. Set `baseUrl` in the matching environment file (defaults to http://localhost:5000). Each request injects a fresh `X-Correlation-Id` via the collection-level pre-request script so log scopes are unique per send.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Generate a fresh correlation id per request so logs can be traced",
+          "pm.collectionVariables.set('correlationId', (pm.variables.replaceIn('{{$guid}}') || ''));",
+          "// Generate a fresh envelope id per send (used by ingest requests)",
+          "pm.collectionVariables.set('envelopeId', 'evt-' + Date.now());",
+          "// Stable UTC timestamp",
+          "pm.collectionVariables.set('nowUtc', new Date().toISOString());"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & catalog",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "health" ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/source-systems",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/source-systems",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "source-systems" ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "products" ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/products/COMMERCIAL_PROPERTY/rating",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/COMMERCIAL_PROPERTY/rating?annualRevenue=2200000&currencyCode=USD",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "products", "COMMERCIAL_PROPERTY", "rating" ],
+              "query": [
+                { "key": "annualRevenue", "value": "2200000" },
+                { "key": "currencyCode", "value": "USD" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/products/COMMERCIAL_PROPERTY/rating (large account)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/COMMERCIAL_PROPERTY/rating?annualRevenue=20000000",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "products", "COMMERCIAL_PROPERTY", "rating" ],
+              "query": [
+                { "key": "annualRevenue", "value": "20000000" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schemas",
+      "item": [
+        {
+          "name": "GET /api/v1/schemas/ingest/envelope",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schemas/ingest/envelope",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "schemas", "ingest", "envelope" ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/schemas/ingest/risk-request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schemas/ingest/risk-request",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "schemas", "ingest", "risk-request" ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/schemas/canonical/risk-request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schemas/canonical/risk-request",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "schemas", "canonical", "risk-request" ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/v1/schemas/final/risk-response",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schemas/final/risk-response",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "schemas", "final", "risk-response" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingest - Risk",
+      "item": [
+        {
+          "name": "POST /api/v1/ingest - Contoso RiskSubmission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"CONTOSO_UW\",\n  \"type\": \"RiskSubmission\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"quoteId\": \"Q-100045\",\n    \"insuredName\": \"Northwind Storage Ltd\",\n    \"trade\": \"CommercialProperty\",\n    \"estimatedPremium\": 12500.00\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - QuoteForge QuoteRequest",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"QUOTEFORGE\",\n  \"type\": \"QuoteRequest\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"quoteReference\": \"QT-2200\",\n    \"insuredName\": \"Harborline Services\",\n    \"productLine\": \"LIABILITY\",\n    \"brokerCode\": \"BRK-044\",\n    \"brokerName\": \"Harbor Broking\",\n    \"technicalPremium\": 8200.00,\n    \"brokerPremium\": 8450.00,\n    \"currencyCode\": \"USD\",\n    \"effectiveDate\": \"2026-05-01\",\n    \"expiryDate\": \"2027-04-30\",\n    \"underwritingYear\": 2026,\n    \"insuredRevenue\": 2200000.00,\n    \"insuredEmployeeCount\": 40,\n    \"insuredYearsInBusiness\": 8\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - BindPoint PolicyBindRequest",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"BINDPOINT\",\n  \"type\": \"PolicyBindRequest\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"policyReference\": \"POL-7781\",\n    \"quoteReference\": \"QT-2200\",\n    \"insuredName\": \"Harborline Services\",\n    \"productCode\": \"LIABILITY\",\n    \"brokerCode\": \"BRK-044\",\n    \"brokerName\": \"Harbor Broking\",\n    \"brokerHasDelegatedAuthority\": false,\n    \"brokerIsPreferredPartner\": true,\n    \"boundPremium\": 8450.00,\n    \"currencyCode\": \"USD\",\n    \"inceptionDate\": \"2026-05-01\",\n    \"expiryDate\": \"2027-04-30\",\n    \"boundDate\": \"2026-04-25\",\n    \"paymentMethod\": \"Invoice\",\n    \"installmentCount\": 4\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest/risks - QuoteForge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceSystem\": \"QUOTEFORGE\",\n  \"messageType\": \"QuoteRequest\",\n  \"payload\": {\n    \"quoteReference\": \"QT-2201\",\n    \"insuredName\": \"Harborline Services\",\n    \"productLine\": \"LIABILITY\",\n    \"brokerCode\": \"BRK-044\",\n    \"brokerName\": \"Harbor Broking\",\n    \"technicalPremium\": 8200.00,\n    \"brokerPremium\": 8450.00,\n    \"currencyCode\": \"USD\",\n    \"effectiveDate\": \"2026-05-01\",\n    \"expiryDate\": \"2027-04-30\",\n    \"underwritingYear\": 2026,\n    \"insuredRevenue\": 2200000.00,\n    \"insuredEmployeeCount\": 40,\n    \"insuredYearsInBusiness\": 8\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/risks",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest", "risks" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingest - Claims",
+      "item": [
+        {
+          "name": "POST /api/v1/ingest - Claim Notice (Low severity, auto-closes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"CLAIMFORGE\",\n  \"type\": \"ClaimNotice\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"claimReference\": \"CLM-1000\",\n    \"policyReference\": \"POL-7781\",\n    \"claimantName\": \"Avery Cole\",\n    \"lossDate\": \"2026-04-01\",\n    \"lossCause\": \"MinorCollision\",\n    \"estimatedIncurred\": 1200.00,\n    \"estimatedReserved\": 300.00,\n    \"paidAmount\": 1200.00,\n    \"currencyCode\": \"USD\",\n    \"fraudIndicator\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - Claim Notice (High severity, escalates)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"CLAIMFORGE\",\n  \"type\": \"ClaimNotice\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"claimReference\": \"CLM-1001\",\n    \"policyReference\": \"POL-7781\",\n    \"claimantName\": \"Northwind Storage Ltd\",\n    \"lossDate\": \"2026-02-15\",\n    \"lossCause\": \"FireDamage\",\n    \"estimatedIncurred\": 75000.00,\n    \"estimatedReserved\": 60000.00,\n    \"paidAmount\": 0.00,\n    \"currencyCode\": \"USD\",\n    \"fraudIndicator\": false,\n    \"affectedSectionCode\": \"PROP\",\n    \"affectedSubcoverCode\": \"BUILDINGS\",\n    \"affectedPerilCode\": \"FIRE\",\n    \"deductibleApplied\": 5000.00,\n    \"perOccurrenceLimit\": 50000.00\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - Claim Notice (Windstorm with deductible & limit)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"CLAIMFORGE\",\n  \"type\": \"ClaimNotice\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"claimReference\": \"CLM-1002\",\n    \"policyReference\": \"POL-7781\",\n    \"claimantName\": \"Atlas Manufacturing Inc\",\n    \"lossDate\": \"2026-03-20\",\n    \"lossCause\": \"Windstorm\",\n    \"estimatedIncurred\": 30000.00,\n    \"estimatedReserved\": 25000.00,\n    \"paidAmount\": 0.00,\n    \"currencyCode\": \"USD\",\n    \"fraudIndicator\": false,\n    \"affectedSectionCode\": \"PROP\",\n    \"affectedSubcoverCode\": \"BUILDINGS\",\n    \"affectedPerilCode\": \"WINDSTORM\",\n    \"deductibleApplied\": 5000.00,\n    \"perOccurrenceLimit\": 100000.00\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingest - Billing",
+      "item": [
+        {
+          "name": "POST /api/v1/ingest - Installment Schedule (Current)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"PAYMENTRAIL\",\n  \"type\": \"InstallmentSchedule\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"policyReference\": \"POL-7781\",\n    \"installmentCount\": 4,\n    \"totalAmount\": 12000.00,\n    \"currencyCode\": \"USD\",\n    \"firstDueDate\": \"2026-05-01\",\n    \"paidToDate\": 0.00,\n    \"missedPayments\": 0,\n    \"installments\": [\n      { \"sequenceNumber\": 1, \"dueDate\": \"2026-05-01\", \"amount\": 3000.00, \"status\": \"Issued\" },\n      { \"sequenceNumber\": 2, \"dueDate\": \"2026-08-01\", \"amount\": 3000.00, \"status\": \"Planned\" },\n      { \"sequenceNumber\": 3, \"dueDate\": \"2026-11-01\", \"amount\": 3000.00, \"status\": \"Planned\" },\n      { \"sequenceNumber\": 4, \"dueDate\": \"2027-02-01\", \"amount\": 3000.00, \"status\": \"Planned\" }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - Installment Schedule (Severely delinquent)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"PAYMENTRAIL\",\n  \"type\": \"InstallmentSchedule\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"policyReference\": \"POL-7782\",\n    \"installmentCount\": 12,\n    \"totalAmount\": 18000.00,\n    \"currencyCode\": \"USD\",\n    \"firstDueDate\": \"2026-01-01\",\n    \"paidToDate\": 4500.00,\n    \"missedPayments\": 3,\n    \"installments\": [\n      { \"sequenceNumber\": 1, \"dueDate\": \"2026-01-01\", \"amount\": 1500.00, \"status\": \"Paid\", \"paidDate\": \"2026-01-03\", \"paymentReference\": \"PMT-1001\" },\n      { \"sequenceNumber\": 2, \"dueDate\": \"2026-02-01\", \"amount\": 1500.00, \"status\": \"Paid\", \"paidDate\": \"2026-02-04\", \"paymentReference\": \"PMT-1002\" },\n      { \"sequenceNumber\": 3, \"dueDate\": \"2026-03-01\", \"amount\": 1500.00, \"status\": \"Paid\", \"paidDate\": \"2026-03-07\", \"paymentReference\": \"PMT-1003\" },\n      { \"sequenceNumber\": 4, \"dueDate\": \"2026-04-01\", \"amount\": 1500.00, \"status\": \"Overdue\" },\n      { \"sequenceNumber\": 5, \"dueDate\": \"2026-05-01\", \"amount\": 1500.00, \"status\": \"Overdue\" },\n      { \"sequenceNumber\": 6, \"dueDate\": \"2026-06-01\", \"amount\": 1500.00, \"status\": \"Overdue\" },\n      { \"sequenceNumber\": 7, \"dueDate\": \"2026-07-01\", \"amount\": 1500.00, \"status\": \"Issued\" },\n      { \"sequenceNumber\": 8, \"dueDate\": \"2026-08-01\", \"amount\": 1500.00, \"status\": \"Planned\" }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ingest - Compliance",
+      "item": [
+        {
+          "name": "POST /api/v1/ingest - Compliance (Clear)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"SANCTIONSCAN\",\n  \"type\": \"ComplianceResult\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"partyName\": \"Northwind Storage Ltd\",\n    \"screeningResult\": \"Clear\",\n    \"score\": 0,\n    \"isPoliticallyExposed\": false,\n    \"hasSanctionsHit\": false,\n    \"entityReference\": \"ENT-55\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - Compliance (Sanctions block)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"SANCTIONSCAN\",\n  \"type\": \"ComplianceResult\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"partyName\": \"Sanctioned Entity Example\",\n    \"screeningResult\": \"Flagged\",\n    \"score\": 92,\n    \"isPoliticallyExposed\": false,\n    \"hasSanctionsHit\": true,\n    \"entityReference\": \"ENT-999\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/ingest - Compliance (Politically exposed -> EDD)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{envelopeId}}\",\n  \"source\": \"SANCTIONSCAN\",\n  \"type\": \"ComplianceResult\",\n  \"schemaVersion\": \"1.0\",\n  \"occurredAtUtc\": \"{{nowUtc}}\",\n  \"correlationId\": \"{{correlationId}}\",\n  \"data\": {\n    \"partyName\": \"Politically Exposed Example\",\n    \"screeningResult\": \"Clear\",\n    \"score\": 40,\n    \"isPoliticallyExposed\": true,\n    \"hasSanctionsHit\": false,\n    \"entityReference\": \"ENT-PEP-1\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "ingest" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Risk - Canonical",
+      "item": [
+        {
+          "name": "POST /api/v1/risks - Auto-clear (rich coverage)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"externalReference\": \"EXT-AUTOCLEAR-0001\",\n  \"productCode\": \"COMMERCIAL_PROPERTY\",\n  \"sourceSystem\": \"BROKER_PORTAL\",\n  \"transactionType\": \"Submission\",\n  \"schemeCode\": \"STANDARD\",\n  \"transactionTimestampUtc\": \"{{nowUtc}}\",\n  \"annualizedGrossPremium\": 1000.00,\n  \"currencyCode\": \"USD\",\n  \"submission\": {\n    \"underwritingYear\": 2026,\n    \"channelCode\": \"Digital\",\n    \"brokerPremium\": 1000.00,\n    \"technicalPremium\": 950.00,\n    \"revenue\": 500000.00,\n    \"isRenewal\": false\n  },\n  \"broker\": {\n    \"brokerCode\": \"BRK-100\",\n    \"brokerName\": \"Summit Risk Partners\",\n    \"hasDelegatedAuthority\": false,\n    \"isPreferredPartner\": true\n  },\n  \"insured\": {\n    \"fullName\": \"Northwind Storage Ltd\",\n    \"tradingName\": \"Northwind Storage\",\n    \"segmentCode\": \"SME\",\n    \"annualRevenue\": 500000.00,\n    \"employeeCount\": 20,\n    \"yearsInBusiness\": 5\n  },\n  \"quote\": {\n    \"quoteReference\": \"QT-2001\",\n    \"effectiveDate\": \"2026-05-01\",\n    \"expiryDate\": \"2027-04-30\",\n    \"quoteStatusHint\": \"Indicative\"\n  },\n  \"policy\": {},\n  \"clearance\": {\n    \"autoClearanceEnabled\": true,\n    \"premiumThreshold\": 5000.00,\n    \"fuzzyMatchTolerance\": 3\n  },\n  \"enrichments\": [\n    { \"family\": \"Universal\", \"code\": \"TRIAGE_STANDARD\", \"description\": \"Universal triage baseline\", \"multiplier\": 1.02, \"isBlocking\": false, \"isDerived\": false }\n  ],\n  \"contractChecks\": [ { \"code\": \"CONTRACT_SIGNALS\", \"isComplete\": true } ],\n  \"complianceChecks\": [ { \"code\": \"KYC_BASELINE\", \"isComplete\": true } ],\n  \"parties\": [ { \"role\": \"Insured\", \"name\": \"Northwind Storage Ltd\" } ],\n  \"claims\": [\n    { \"claimReference\": \"CLM-100\", \"claimantName\": \"Northwind Storage Ltd\", \"incurredAmount\": 500.00, \"reservedAmount\": 100.00 }\n  ],\n  \"sections\": [\n    {\n      \"sectionCode\": \"PROP\",\n      \"sectionName\": \"Property Damage\",\n      \"status\": \"Active\",\n      \"sumInsured\": 750000.00,\n      \"sectionPremium\": 1000.00,\n      \"warranties\": [ \"Fire suppression system serviced annually\", \"Burglar alarm operational outside business hours\" ],\n      \"specialConditions\": [ \"Subject to satisfactory survey within 60 days\" ],\n      \"subcovers\": [\n        {\n          \"subcoverCode\": \"FIRE\",\n          \"subcoverName\": \"Fire and Allied Perils\",\n          \"sumInsured\": 750000.00,\n          \"perOccurrenceLimit\": 750000.00,\n          \"aggregateLimit\": 1500000.00,\n          \"deductible\": 1000.00,\n          \"deductibleType\": \"Flat\",\n          \"premium\": 1000.00,\n          \"perils\": [\n            { \"code\": \"FIRE\", \"name\": \"Fire\", \"isCovered\": true, \"subLimit\": 750000.00 },\n            { \"code\": \"LIGHTNING\", \"name\": \"Lightning\", \"isCovered\": true, \"subLimit\": 250000.00 },\n            { \"code\": \"EXPLOSION\", \"name\": \"Explosion\", \"isCovered\": true, \"subLimit\": 500000.00 },\n            { \"code\": \"FLOOD\", \"name\": \"Flood\", \"isCovered\": false }\n          ],\n          \"exclusions\": [ \"EARTHQUAKE\", \"WAR\" ]\n        }\n      ]\n    }\n  ],\n  \"sectionOperations\": [ { \"sectionCode\": \"PROP\", \"operationType\": \"AddSection\" } ],\n  \"installments\": [ { \"sequenceNumber\": 1, \"dueDate\": \"2026-06-01\", \"amount\": 500.00, \"isPaid\": false } ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/risks",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "risks" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/risks - Manual clearance (incomplete contract check)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"externalReference\": \"EXT-MANUAL-0002\",\n  \"productCode\": \"COMMERCIAL_PROPERTY\",\n  \"sourceSystem\": \"BROKER_PORTAL\",\n  \"transactionType\": \"Submission\",\n  \"transactionTimestampUtc\": \"{{nowUtc}}\",\n  \"annualizedGrossPremium\": 1000.00,\n  \"currencyCode\": \"USD\",\n  \"submission\": { \"underwritingYear\": 2026, \"brokerPremium\": 1000.00, \"technicalPremium\": 950.00, \"revenue\": 500000.00 },\n  \"broker\": { \"brokerCode\": \"BRK-100\", \"brokerName\": \"Summit Risk Partners\", \"isPreferredPartner\": true },\n  \"insured\": { \"fullName\": \"Northwind Storage Ltd\", \"segmentCode\": \"SME\", \"annualRevenue\": 500000.00, \"employeeCount\": 20, \"yearsInBusiness\": 5 },\n  \"quote\": { \"quoteReference\": \"QT-2002\", \"effectiveDate\": \"2026-05-01\", \"expiryDate\": \"2027-04-30\" },\n  \"clearance\": { \"autoClearanceEnabled\": true, \"premiumThreshold\": 5000.00, \"fuzzyMatchTolerance\": 3 },\n  \"contractChecks\": [ { \"code\": \"CONTRACT_SIGNALS\", \"isComplete\": false } ],\n  \"complianceChecks\": [ { \"code\": \"KYC_BASELINE\", \"isComplete\": true } ],\n  \"parties\": [ { \"role\": \"Insured\", \"name\": \"Northwind Storage Ltd\" } ],\n  \"claims\": [ { \"claimReference\": \"CLM-200\", \"claimantName\": \"Northwind Storage Ltd\", \"incurredAmount\": 500.00, \"reservedAmount\": 100.00 } ],\n  \"sections\": [ { \"sectionCode\": \"PROP\", \"sectionName\": \"Property Damage\", \"sumInsured\": 500000.00, \"subcovers\": [ { \"subcoverCode\": \"FIRE\", \"subcoverName\": \"Fire\", \"sumInsured\": 500000.00 } ] } ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/risks",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "risks" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/risks - Decline (claim incurred over $25k)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"externalReference\": \"EXT-DECLINE-0003\",\n  \"productCode\": \"COMMERCIAL_PROPERTY\",\n  \"sourceSystem\": \"BROKER_PORTAL\",\n  \"transactionType\": \"Submission\",\n  \"transactionTimestampUtc\": \"{{nowUtc}}\",\n  \"annualizedGrossPremium\": 1000.00,\n  \"currencyCode\": \"USD\",\n  \"submission\": { \"underwritingYear\": 2026, \"brokerPremium\": 1000.00, \"technicalPremium\": 950.00, \"revenue\": 500000.00 },\n  \"broker\": { \"brokerCode\": \"BRK-100\", \"brokerName\": \"Summit Risk Partners\", \"isPreferredPartner\": true },\n  \"insured\": { \"fullName\": \"Northwind Storage Ltd\", \"annualRevenue\": 500000.00, \"yearsInBusiness\": 5 },\n  \"quote\": { \"quoteReference\": \"QT-2003\", \"effectiveDate\": \"2026-05-01\", \"expiryDate\": \"2027-04-30\" },\n  \"clearance\": { \"autoClearanceEnabled\": true, \"premiumThreshold\": 5000.00, \"fuzzyMatchTolerance\": 3 },\n  \"contractChecks\": [ { \"code\": \"CONTRACT_SIGNALS\", \"isComplete\": true } ],\n  \"complianceChecks\": [ { \"code\": \"KYC_BASELINE\", \"isComplete\": true } ],\n  \"parties\": [ { \"role\": \"Insured\", \"name\": \"Northwind Storage Ltd\" } ],\n  \"claims\": [ { \"claimReference\": \"CLM-300\", \"claimantName\": \"Northwind Storage Ltd\", \"incurredAmount\": 30000.00, \"reservedAmount\": 8000.00 } ],\n  \"sections\": [ { \"sectionCode\": \"PROP\", \"sectionName\": \"Property\", \"sumInsured\": 500000.00, \"subcovers\": [ { \"subcoverCode\": \"FIRE\", \"subcoverName\": \"Fire\" } ] } ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/risks",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "risks" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/risks - Uncovered peril claim (blocking)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"externalReference\": \"EXT-UNCOVERED-PERIL-0004\",\n  \"productCode\": \"COMMERCIAL_PROPERTY\",\n  \"sourceSystem\": \"BROKER_PORTAL\",\n  \"transactionType\": \"Submission\",\n  \"transactionTimestampUtc\": \"{{nowUtc}}\",\n  \"annualizedGrossPremium\": 1000.00,\n  \"currencyCode\": \"USD\",\n  \"submission\": { \"underwritingYear\": 2026, \"brokerPremium\": 1000.00, \"revenue\": 500000.00 },\n  \"broker\": { \"brokerCode\": \"BRK-100\", \"brokerName\": \"Summit Risk Partners\", \"isPreferredPartner\": true },\n  \"insured\": { \"fullName\": \"Northwind Storage Ltd\", \"annualRevenue\": 500000.00, \"yearsInBusiness\": 5 },\n  \"quote\": { \"quoteReference\": \"QT-2004\", \"effectiveDate\": \"2026-05-01\", \"expiryDate\": \"2027-04-30\" },\n  \"clearance\": { \"autoClearanceEnabled\": true, \"premiumThreshold\": 5000.00, \"fuzzyMatchTolerance\": 3 },\n  \"contractChecks\": [ { \"code\": \"CONTRACT_SIGNALS\", \"isComplete\": true } ],\n  \"complianceChecks\": [ { \"code\": \"KYC_BASELINE\", \"isComplete\": true } ],\n  \"parties\": [ { \"role\": \"Insured\", \"name\": \"Northwind Storage Ltd\" } ],\n  \"claims\": [\n    { \"claimReference\": \"CLM-EXCL-1\", \"claimantName\": \"Northwind Storage Ltd\", \"incurredAmount\": 4500.00, \"reservedAmount\": 500.00, \"affectedSectionCode\": \"PROP\", \"affectedSubcoverCode\": \"FIRE\", \"affectedPerilCode\": \"FLOOD\" }\n  ],\n  \"sections\": [\n    {\n      \"sectionCode\": \"PROP\",\n      \"sectionName\": \"Property Damage\",\n      \"status\": \"Active\",\n      \"sumInsured\": 500000.00,\n      \"sectionPremium\": 1000.00,\n      \"subcovers\": [\n        {\n          \"subcoverCode\": \"FIRE\",\n          \"subcoverName\": \"Fire and Allied Perils\",\n          \"sumInsured\": 500000.00,\n          \"deductible\": 1000.00,\n          \"deductibleType\": \"Flat\",\n          \"premium\": 1000.00,\n          \"perils\": [ { \"code\": \"FIRE\", \"isCovered\": true }, { \"code\": \"FLOOD\", \"isCovered\": false } ],\n          \"exclusions\": [ \"FLOOD\", \"WAR\" ]\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/risks",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "risks" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Policies",
+      "item": [
+        {
+          "name": "POST /api/v1/policies/cancellations - Pro-rata",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"annualPremium\": 12000.00,\n  \"inceptionDate\": \"2026-01-01\",\n  \"expiryDate\": \"2026-12-31\",\n  \"cancellationDate\": \"2026-07-01\",\n  \"basis\": \"ProRata\",\n  \"shortRatePenaltyPercent\": 0.10,\n  \"minimumRetainedPremium\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/cancellations",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "cancellations" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/policies/cancellations - Short-rate (10% penalty)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"annualPremium\": 12000.00,\n  \"inceptionDate\": \"2026-01-01\",\n  \"expiryDate\": \"2026-12-31\",\n  \"cancellationDate\": \"2026-07-01\",\n  \"basis\": \"ShortRate\",\n  \"shortRatePenaltyPercent\": 0.10,\n  \"minimumRetainedPremium\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/cancellations",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "cancellations" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/policies/endorsements - Premium increase",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"currentAnnualPremium\": 12000.00,\n  \"newAnnualPremium\": 13500.00,\n  \"inceptionDate\": \"2026-01-01\",\n  \"expiryDate\": \"2026-12-31\",\n  \"effectiveDate\": \"2026-07-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/endorsements",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "endorsements" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/policies/endorsements - With section operations",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"currentAnnualPremium\": 12000.00,\n  \"newAnnualPremium\": 13800.00,\n  \"inceptionDate\": \"2026-01-01\",\n  \"expiryDate\": \"2026-12-31\",\n  \"effectiveDate\": \"2026-07-01\",\n  \"sectionOperations\": [\n    { \"operationType\": \"UpdateLimit\", \"sectionCode\": \"PROP\", \"subcoverCode\": \"BUILDINGS\", \"sumInsuredDelta\": 500000.00, \"premiumDelta\": 1200.00, \"reason\": \"New warehouse extension added to declarations\" },\n    { \"operationType\": \"UpdateDeductible\", \"sectionCode\": \"PROP\", \"subcoverCode\": \"BUILDINGS\", \"deductibleDelta\": -2500.00, \"premiumDelta\": 200.00, \"reason\": \"Deductible buy-down requested by insured\" },\n    { \"operationType\": \"AddSubcover\", \"sectionCode\": \"PROP\", \"subcoverCode\": \"STOCK\", \"sumInsuredDelta\": 250000.00, \"premiumDelta\": 400.00, \"reason\": \"Stock cover added\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/endorsements",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "endorsements" ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

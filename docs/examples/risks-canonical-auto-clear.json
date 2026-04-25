@@ -1,0 +1,110 @@
+{
+  "entityId": "e6f3c24a-a61a-4b3b-9f1b-58d08ef6da52",
+  "externalReference": "EXT-AUTOCLEAR-0001",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Submission",
+  "schemeCode": "STANDARD",
+  "transactionTimestampUtc": "2026-04-25T03:00:00Z",
+  "annualizedGrossPremium": 1000.00,
+  "currencyCode": "USD",
+  "underwriterName": "Manual Test",
+  "paymentMethod": "Invoice",
+  "submission": {
+    "underwritingYear": 2026,
+    "channelCode": "Digital",
+    "brokerPremium": 1000.00,
+    "technicalPremium": 950.00,
+    "revenue": 500000.00,
+    "isRenewal": false
+  },
+  "broker": {
+    "brokerCode": "BRK-100",
+    "brokerName": "Summit Risk Partners",
+    "hasDelegatedAuthority": false,
+    "isPreferredPartner": true
+  },
+  "insured": {
+    "fullName": "Northwind Storage Ltd",
+    "tradingName": "Northwind Storage",
+    "segmentCode": "SME",
+    "annualRevenue": 500000.00,
+    "employeeCount": 20,
+    "yearsInBusiness": 5
+  },
+  "quote": {
+    "quoteReference": "QT-2001",
+    "effectiveDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "quoteStatusHint": "Indicative"
+  },
+  "policy": {},
+  "clearance": {
+    "autoClearanceEnabled": true,
+    "premiumThreshold": 5000.00,
+    "fuzzyMatchTolerance": 3
+  },
+  "enrichments": [
+    {
+      "family": "Universal",
+      "code": "TRIAGE_STANDARD",
+      "description": "Universal triage baseline",
+      "multiplier": 1.02,
+      "isBlocking": false,
+      "isDerived": false
+    }
+  ],
+  "contractChecks": [
+    { "code": "CONTRACT_SIGNALS", "isComplete": true, "description": "Core contract indicators present" }
+  ],
+  "complianceChecks": [
+    { "code": "KYC_BASELINE", "isComplete": true, "description": "Baseline compliance record complete" }
+  ],
+  "parties": [
+    { "role": "Insured", "name": "Northwind Storage Ltd" }
+  ],
+  "claims": [
+    { "claimReference": "CLM-100", "claimantName": "Northwind Storage Ltd", "incurredAmount": 500.00, "reservedAmount": 100.00 }
+  ],
+  "sections": [
+    {
+      "sectionCode": "PROP",
+      "sectionName": "Property Damage",
+      "status": "Active",
+      "sumInsured": 750000.00,
+      "sectionPremium": 1000.00,
+      "warranties": [
+        "Fire suppression system serviced annually",
+        "Burglar alarm operational outside business hours"
+      ],
+      "specialConditions": [
+        "Subject to satisfactory survey within 60 days"
+      ],
+      "subcovers": [
+        {
+          "subcoverCode": "FIRE",
+          "subcoverName": "Fire and Allied Perils",
+          "sumInsured": 750000.00,
+          "perOccurrenceLimit": 750000.00,
+          "aggregateLimit": 1500000.00,
+          "deductible": 1000.00,
+          "deductibleType": "Flat",
+          "premium": 1000.00,
+          "perils": [
+            { "code": "FIRE", "name": "Fire", "isCovered": true, "subLimit": 750000.00, "waitingPeriodDays": 0 },
+            { "code": "LIGHTNING", "name": "Lightning", "isCovered": true, "subLimit": 250000.00, "waitingPeriodDays": 0 },
+            { "code": "EXPLOSION", "name": "Explosion", "isCovered": true, "subLimit": 500000.00, "waitingPeriodDays": 0 },
+            { "code": "FLOOD", "name": "Flood", "isCovered": false }
+          ],
+          "exclusions": [ "EARTHQUAKE", "WAR" ]
+        }
+      ]
+    }
+  ],
+  "sectionOperations": [
+    { "sectionCode": "PROP", "operationType": "AddSection", "subcoverCode": null, "removeAllSubcovers": false }
+  ],
+  "installments": [
+    { "sequenceNumber": 1, "dueDate": "2026-06-01", "amount": 500.00, "isPaid": false }
+  ]
+}

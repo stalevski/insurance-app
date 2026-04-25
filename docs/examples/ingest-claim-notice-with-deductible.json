@@ -1,0 +1,25 @@
+{
+  "id": "evt-clm-0003",
+  "source": "CLAIMFORGE",
+  "type": "ClaimNotice",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:18:00Z",
+  "correlationId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  "data": {
+    "claimReference": "CLM-1002",
+    "policyReference": "POL-7781",
+    "claimantName": "Atlas Manufacturing Inc",
+    "lossDate": "2026-03-20",
+    "lossCause": "Windstorm",
+    "estimatedIncurred": 30000.00,
+    "estimatedReserved": 25000.00,
+    "paidAmount": 0.00,
+    "currencyCode": "USD",
+    "fraudIndicator": false,
+    "affectedSectionCode": "PROP",
+    "affectedSubcoverCode": "BUILDINGS",
+    "affectedPerilCode": "WINDSTORM",
+    "deductibleApplied": 5000.00,
+    "perOccurrenceLimit": 100000.00
+  }
+}

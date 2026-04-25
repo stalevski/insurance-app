@@ -1,0 +1,34 @@
+{
+  "policyReference": "POL-7781",
+  "currentAnnualPremium": 12000.00,
+  "newAnnualPremium": 13800.00,
+  "inceptionDate": "2026-01-01",
+  "expiryDate": "2026-12-31",
+  "effectiveDate": "2026-07-01",
+  "sectionOperations": [
+    {
+      "operationType": "UpdateLimit",
+      "sectionCode": "PROP",
+      "subcoverCode": "BUILDINGS",
+      "sumInsuredDelta": 500000.00,
+      "premiumDelta": 1200.00,
+      "reason": "New warehouse extension added to declarations"
+    },
+    {
+      "operationType": "UpdateDeductible",
+      "sectionCode": "PROP",
+      "subcoverCode": "BUILDINGS",
+      "deductibleDelta": -2500.00,
+      "premiumDelta": 200.00,
+      "reason": "Deductible buy-down requested by insured"
+    },
+    {
+      "operationType": "AddSubcover",
+      "sectionCode": "PROP",
+      "subcoverCode": "STOCK",
+      "sumInsuredDelta": 250000.00,
+      "premiumDelta": 400.00,
+      "reason": "Stock cover added"
+    }
+  ]
+}
