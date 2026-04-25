@@ -56,5 +56,13 @@ public sealed class FinalRiskResponse
 
     public List<string> SectionActions { get; init; } = [];
 
+    public decimal TotalSumInsured { get; init; }
+
+    public decimal TotalSectionPremium { get; init; }
+
+    public bool PremiumAllocationBalanced { get; init; }
+
+    public List<string> CoverageWarnings { get; init; } = [];
+
     public string FinalStatus { get; init; } = string.Empty;
 }

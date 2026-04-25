@@ -23,8 +23,10 @@ public sealed class RiskFlowService : IRiskFlowService
 
     public FinalRiskResponse Process(CanonicalRiskRequest request)
     {
+        var coverageEnrichments = DeriveCoverageEnrichments(request, out var coverageWarnings);
         var allEnrichments = request.Enrichments
             .Concat(DeriveEnrichments(request))
+            .Concat(coverageEnrichments)
             .ToList();
 
         var blockingEnrichmentCount = allEnrichments.Count(item => item.IsBlocking);
@@ -49,7 +51,10 @@ public sealed class RiskFlowService : IRiskFlowService
         }
 
         var sectionActions = DescribeSectionActions(request);
+        var (totalSumInsured, totalSectionPremium, premiumAllocationBalanced) = SummarizeCoverage(request, basePremium);
         var decisionReasons = BuildDecisionReasons(request, blockingEnrichmentCount, totalIncurred, totalReserved, bestDistance, bestDescription, brokerDecision, insuredDecision, autoCleared);
+        decisionReasons.Add($"Total sum insured across active sections: {totalSumInsured:0.##}");
+        decisionReasons.Add($"Total section premium: {totalSectionPremium:0.##}; allocation balanced: {premiumAllocationBalanced}");
         if (submissionClearance is not null)
         {
             decisionReasons.Add($"Submission clearance outcome: {submissionClearance.Outcome}");
@@ -89,8 +94,159 @@ public sealed class RiskFlowService : IRiskFlowService
             DecisionReasons = decisionReasons,
             AppliedEnrichments = allEnrichments.Select(item => $"{item.Family}:{item.Code}").ToList(),
             SectionActions = sectionActions,
+            TotalSumInsured = totalSumInsured,
+            TotalSectionPremium = totalSectionPremium,
+            PremiumAllocationBalanced = premiumAllocationBalanced,
+            CoverageWarnings = coverageWarnings,
             FinalStatus = finalStatus
         };
+    }
+
+    private static (decimal TotalSumInsured, decimal TotalSectionPremium, bool PremiumAllocationBalanced) SummarizeCoverage(CanonicalRiskRequest request, decimal basePremium)
+    {
+        var activeSections = request.Sections.Where(section => SectionStatus.IsActive(section.Status)).ToList();
+        var totalSumInsured = activeSections.Sum(section => section.SumInsured);
+        var totalSectionPremium = activeSections.Sum(section => section.SectionPremium);
+
+        var hasSectionPremium = activeSections.Any(section => section.SectionPremium > 0m);
+        if (!hasSectionPremium || basePremium <= 0m)
+        {
+            return (totalSumInsured, totalSectionPremium, true);
+        }
+
+        var tolerance = Math.Max(1m, basePremium * 0.01m);
+        var balanced = Math.Abs(totalSectionPremium - basePremium) <= tolerance;
+        return (totalSumInsured, totalSectionPremium, balanced);
+    }
+
+    private static IReadOnlyCollection<EnrichmentItem> DeriveCoverageEnrichments(CanonicalRiskRequest request, out List<string> warnings)
+    {
+        warnings = [];
+        var enrichments = new List<EnrichmentItem>();
+
+        foreach (var section in request.Sections.Where(section => SectionStatus.IsActive(section.Status)))
+        {
+            var subcoverPremium = section.Subcovers.Sum(subcover => subcover.Premium);
+            if (section.SectionPremium > 0m && subcoverPremium > 0m
+                && Math.Abs(section.SectionPremium - subcoverPremium) > Math.Max(1m, section.SectionPremium * 0.01m))
+            {
+                warnings.Add($"Section {section.SectionCode}: declared premium {section.SectionPremium:0.##} differs from subcover total {subcoverPremium:0.##}");
+            }
+
+            foreach (var subcover in section.Subcovers)
+            {
+                if (subcover.Deductible > subcover.SumInsured && subcover.SumInsured > 0m)
+                {
+                    warnings.Add($"Subcover {section.SectionCode}/{subcover.SubcoverCode}: deductible {subcover.Deductible:0.##} exceeds sum insured {subcover.SumInsured:0.##}");
+                }
+
+                if (subcover.PerOccurrenceLimit is { } perOccurrence
+                    && subcover.AggregateLimit is { } aggregate
+                    && aggregate < perOccurrence)
+                {
+                    warnings.Add($"Subcover {section.SectionCode}/{subcover.SubcoverCode}: aggregate limit {aggregate:0.##} below per-occurrence limit {perOccurrence:0.##}");
+                }
+
+                if (!DeductibleType.IsRecognized(subcover.DeductibleType))
+                {
+                    warnings.Add($"Subcover {section.SectionCode}/{subcover.SubcoverCode}: unrecognized deductible type '{subcover.DeductibleType}'");
+                }
+
+                foreach (var peril in subcover.Perils)
+                {
+                    if (peril.SubLimit is { } sublimit && subcover.SumInsured > 0m && sublimit > subcover.SumInsured)
+                    {
+                        warnings.Add($"Peril {section.SectionCode}/{subcover.SubcoverCode}/{peril.Code}: sub-limit {sublimit:0.##} exceeds subcover sum insured {subcover.SumInsured:0.##}");
+                    }
+                }
+            }
+        }
+
+        if (HasUncoveredPerilClaim(request))
+        {
+            enrichments.Add(new EnrichmentItem
+            {
+                Family = "Coverage",
+                Code = "UNCOVERED_PERIL_CLAIM",
+                Description = "Claim references a peril that is excluded or not covered",
+                Multiplier = 1m,
+                IsDerived = true,
+                IsBlocking = true
+            });
+        }
+
+        if (warnings.Count > 0)
+        {
+            enrichments.Add(new EnrichmentItem
+            {
+                Family = "Coverage",
+                Code = "STRUCTURE_WARNING",
+                Description = "Coverage structure produced warnings",
+                Multiplier = 1m,
+                IsDerived = true,
+                IsBlocking = false
+            });
+        }
+
+        return enrichments;
+    }
+
+    private static bool HasUncoveredPerilClaim(CanonicalRiskRequest request)
+    {
+        foreach (var claim in request.Claims)
+        {
+            if (string.IsNullOrWhiteSpace(claim.AffectedPerilCode))
+            {
+                continue;
+            }
+
+            var section = string.IsNullOrWhiteSpace(claim.AffectedSectionCode)
+                ? null
+                : request.Sections.FirstOrDefault(item => string.Equals(item.SectionCode, claim.AffectedSectionCode, StringComparison.OrdinalIgnoreCase));
+
+            if (section is null)
+            {
+                continue;
+            }
+
+            var subcovers = string.IsNullOrWhiteSpace(claim.AffectedSubcoverCode)
+                ? section.Subcovers
+                : section.Subcovers.Where(item => string.Equals(item.SubcoverCode, claim.AffectedSubcoverCode, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (subcovers.Count == 0)
+            {
+                return true;
+            }
+
+            var matched = false;
+            foreach (var subcover in subcovers)
+            {
+                if (subcover.Exclusions.Any(exclusion => string.Equals(exclusion, claim.AffectedPerilCode, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+
+                var peril = subcover.Perils.FirstOrDefault(item => string.Equals(item.Code, claim.AffectedPerilCode, StringComparison.OrdinalIgnoreCase));
+                if (peril is null)
+                {
+                    continue;
+                }
+
+                if (!peril.IsCovered)
+                {
+                    return true;
+                }
+
+                matched = true;
+            }
+
+            if (!matched && subcovers.Any(item => item.Perils.Count > 0))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static decimal ResolveBasePremium(CanonicalRiskRequest request)
