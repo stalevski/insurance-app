@@ -1,0 +1,20 @@
+{
+  "id": "evt-clm-0001",
+  "source": "CLAIMFORGE",
+  "type": "ClaimNotice",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:15:00Z",
+  "correlationId": "44444444-4444-4444-4444-444444444444",
+  "data": {
+    "claimReference": "CLM-1000",
+    "policyReference": "POL-7781",
+    "claimantName": "Avery Cole",
+    "lossDate": "2026-04-01",
+    "lossCause": "MinorCollision",
+    "estimatedIncurred": 1200.00,
+    "estimatedReserved": 300.00,
+    "paidAmount": 1200.00,
+    "currencyCode": "USD",
+    "fraudIndicator": false
+  }
+}

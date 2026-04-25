@@ -1,0 +1,16 @@
+{
+  "id": "evt-comp-0002",
+  "source": "SANCTIONSCAN",
+  "type": "ComplianceResult",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:26:00Z",
+  "correlationId": "99999999-9999-9999-9999-999999999999",
+  "data": {
+    "partyName": "Sanctioned Entity Example",
+    "screeningResult": "Flagged",
+    "score": 92,
+    "isPoliticallyExposed": false,
+    "hasSanctionsHit": true,
+    "entityReference": "ENT-999"
+  }
+}

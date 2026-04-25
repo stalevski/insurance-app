@@ -1,0 +1,16 @@
+{
+  "id": "evt-comp-0001",
+  "source": "SANCTIONSCAN",
+  "type": "ComplianceResult",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:25:00Z",
+  "correlationId": "88888888-8888-8888-8888-888888888888",
+  "data": {
+    "partyName": "Northwind Storage Ltd",
+    "screeningResult": "Clear",
+    "score": 0,
+    "isPoliticallyExposed": false,
+    "hasSanctionsHit": false,
+    "entityReference": "ENT-55"
+  }
+}

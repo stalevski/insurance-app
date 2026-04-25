@@ -1,0 +1,20 @@
+{
+  "sourceSystem": "QUOTEFORGE",
+  "messageType": "QuoteRequest",
+  "payload": {
+    "quoteReference": "QT-2201",
+    "insuredName": "Harborline Services",
+    "productLine": "LIABILITY",
+    "brokerCode": "BRK-044",
+    "brokerName": "Harbor Broking",
+    "technicalPremium": 8200.00,
+    "brokerPremium": 8450.00,
+    "currencyCode": "USD",
+    "effectiveDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "underwritingYear": 2026,
+    "insuredRevenue": 2200000.00,
+    "insuredEmployeeCount": 40,
+    "insuredYearsInBusiness": 8
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "evt-polaris-0001",
+  "source": "POLARIS_UW",
+  "type": "RiskSubmission",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:00:00Z",
+  "correlationId": "11111111-1111-1111-1111-111111111111",
+  "data": {
+    "quoteId": "Q-100045",
+    "insuredName": "Northwind Storage Ltd",
+    "trade": "CommercialProperty",
+    "estimatedPremium": 12500.00
+  }
+}

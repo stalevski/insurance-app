@@ -1,0 +1,25 @@
+{
+  "id": "evt-bp-0001",
+  "source": "BINDPOINT",
+  "type": "PolicyBindRequest",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:10:00Z",
+  "correlationId": "33333333-3333-3333-3333-333333333333",
+  "data": {
+    "policyReference": "POL-7781",
+    "quoteReference": "QT-2200",
+    "insuredName": "Harborline Services",
+    "productCode": "LIABILITY",
+    "brokerCode": "BRK-044",
+    "brokerName": "Harbor Broking",
+    "brokerHasDelegatedAuthority": false,
+    "brokerIsPreferredPartner": true,
+    "boundPremium": 8450.00,
+    "currencyCode": "USD",
+    "inceptionDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "boundDate": "2026-04-25",
+    "paymentMethod": "Invoice",
+    "installmentCount": 4
+  }
+}

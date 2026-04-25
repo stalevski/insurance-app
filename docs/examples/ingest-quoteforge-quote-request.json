@@ -1,0 +1,24 @@
+{
+  "id": "evt-qf-0001",
+  "source": "QUOTEFORGE",
+  "type": "QuoteRequest",
+  "schemaVersion": "1.0",
+  "occurredAtUtc": "2026-04-25T03:05:00Z",
+  "correlationId": "22222222-2222-2222-2222-222222222222",
+  "data": {
+    "quoteReference": "QT-2200",
+    "insuredName": "Harborline Services",
+    "productLine": "LIABILITY",
+    "brokerCode": "BRK-044",
+    "brokerName": "Harbor Broking",
+    "technicalPremium": 8200.00,
+    "brokerPremium": 8450.00,
+    "currencyCode": "USD",
+    "effectiveDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "underwritingYear": 2026,
+    "insuredRevenue": 2200000.00,
+    "insuredEmployeeCount": 40,
+    "insuredYearsInBusiness": 8
+  }
+}

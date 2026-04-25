@@ -1,0 +1,69 @@
+{
+  "externalReference": "EXT-MANUAL-0002",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Submission",
+  "schemeCode": "STANDARD",
+  "transactionTimestampUtc": "2026-04-25T03:00:00Z",
+  "annualizedGrossPremium": 1000.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 1000.00,
+    "technicalPremium": 950.00,
+    "revenue": 500000.00,
+    "isRenewal": false
+  },
+  "broker": {
+    "brokerCode": "BRK-100",
+    "brokerName": "Summit Risk Partners",
+    "hasDelegatedAuthority": false,
+    "isPreferredPartner": true
+  },
+  "insured": {
+    "fullName": "Northwind Storage Ltd",
+    "tradingName": "Northwind Storage",
+    "segmentCode": "SME",
+    "annualRevenue": 500000.00,
+    "employeeCount": 20,
+    "yearsInBusiness": 5
+  },
+  "quote": {
+    "quoteReference": "QT-2002",
+    "effectiveDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "quoteStatusHint": "Indicative"
+  },
+  "policy": {},
+  "clearance": {
+    "autoClearanceEnabled": true,
+    "premiumThreshold": 5000.00,
+    "fuzzyMatchTolerance": 3
+  },
+  "enrichments": [
+    { "family": "Universal", "code": "TRIAGE_STANDARD", "description": "Universal triage baseline", "multiplier": 1.02, "isBlocking": false, "isDerived": false }
+  ],
+  "contractChecks": [
+    { "code": "CONTRACT_SIGNALS", "isComplete": false, "description": "Contract signals incomplete" }
+  ],
+  "complianceChecks": [
+    { "code": "KYC_BASELINE", "isComplete": true, "description": "Baseline compliance record complete" }
+  ],
+  "parties": [
+    { "role": "Insured", "name": "Northwind Storage Ltd" }
+  ],
+  "claims": [
+    { "claimReference": "CLM-200", "claimantName": "Northwind Storage Ltd", "incurredAmount": 500.00, "reservedAmount": 100.00 }
+  ],
+  "sections": [
+    {
+      "sectionCode": "PROP",
+      "sectionName": "Property Damage",
+      "subcovers": [ { "subcoverCode": "FIRE", "subcoverName": "Fire" } ]
+    }
+  ],
+  "sectionOperations": [
+    { "sectionCode": "PROP", "operationType": "AddSection" }
+  ],
+  "installments": []
+}

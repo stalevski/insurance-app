@@ -1,0 +1,67 @@
+{
+  "externalReference": "EXT-DECLINE-0003",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Submission",
+  "schemeCode": "STANDARD",
+  "transactionTimestampUtc": "2026-04-25T03:00:00Z",
+  "annualizedGrossPremium": 1000.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 1000.00,
+    "technicalPremium": 950.00,
+    "revenue": 500000.00,
+    "isRenewal": false
+  },
+  "broker": {
+    "brokerCode": "BRK-100",
+    "brokerName": "Summit Risk Partners",
+    "hasDelegatedAuthority": false,
+    "isPreferredPartner": true
+  },
+  "insured": {
+    "fullName": "Northwind Storage Ltd",
+    "tradingName": "Northwind Storage",
+    "segmentCode": "SME",
+    "annualRevenue": 500000.00,
+    "employeeCount": 20,
+    "yearsInBusiness": 5
+  },
+  "quote": {
+    "quoteReference": "QT-2003",
+    "effectiveDate": "2026-05-01",
+    "expiryDate": "2027-04-30",
+    "quoteStatusHint": "Indicative"
+  },
+  "policy": {},
+  "clearance": {
+    "autoClearanceEnabled": true,
+    "premiumThreshold": 5000.00,
+    "fuzzyMatchTolerance": 3
+  },
+  "enrichments": [],
+  "contractChecks": [
+    { "code": "CONTRACT_SIGNALS", "isComplete": true, "description": "Core contract indicators present" }
+  ],
+  "complianceChecks": [
+    { "code": "KYC_BASELINE", "isComplete": true, "description": "Baseline compliance record complete" }
+  ],
+  "parties": [
+    { "role": "Insured", "name": "Northwind Storage Ltd" }
+  ],
+  "claims": [
+    { "claimReference": "CLM-300", "claimantName": "Northwind Storage Ltd", "incurredAmount": 30000.00, "reservedAmount": 8000.00 }
+  ],
+  "sections": [
+    {
+      "sectionCode": "PROP",
+      "sectionName": "Property Damage",
+      "subcovers": [ { "subcoverCode": "FIRE", "subcoverName": "Fire" } ]
+    }
+  ],
+  "sectionOperations": [
+    { "sectionCode": "PROP", "operationType": "AddSection" }
+  ],
+  "installments": []
+}
