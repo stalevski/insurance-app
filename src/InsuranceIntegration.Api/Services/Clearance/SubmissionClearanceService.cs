@@ -59,9 +59,14 @@ public sealed class SubmissionClearanceService : ISubmissionClearanceService
                 Outcome = SubmissionClearanceOutcome.Cleared,
                 IsCleared = true,
                 BestFuzzyMatchDistance = 0,
+                BestFuzzyMatchDescription = "No comparable prior submissions",
                 Reasons = reasons
             };
         }
+
+        var matchDescription = !string.IsNullOrWhiteSpace(duplicateReference)
+            ? $"Insured to known submission '{duplicateReference}'"
+            : "Insured to known submissions";
 
         reasons.Add($"Best fuzzy distance against known submissions: {bestDistance}");
 
@@ -74,6 +79,7 @@ public sealed class SubmissionClearanceService : ISubmissionClearanceService
                 IsCleared = false,
                 DuplicateExternalReference = duplicateReference,
                 BestFuzzyMatchDistance = bestDistance,
+                BestFuzzyMatchDescription = matchDescription,
                 Reasons = reasons
             };
         }
@@ -87,6 +93,7 @@ public sealed class SubmissionClearanceService : ISubmissionClearanceService
                 IsCleared = false,
                 DuplicateExternalReference = duplicateReference,
                 BestFuzzyMatchDistance = bestDistance,
+                BestFuzzyMatchDescription = matchDescription,
                 Reasons = reasons
             };
         }
@@ -100,6 +107,7 @@ public sealed class SubmissionClearanceService : ISubmissionClearanceService
                 IsCleared = false,
                 DuplicateExternalReference = duplicateReference,
                 BestFuzzyMatchDistance = bestDistance,
+                BestFuzzyMatchDescription = matchDescription,
                 Reasons = reasons
             };
         }
@@ -110,6 +118,7 @@ public sealed class SubmissionClearanceService : ISubmissionClearanceService
             Outcome = SubmissionClearanceOutcome.Cleared,
             IsCleared = true,
             BestFuzzyMatchDistance = bestDistance,
+            BestFuzzyMatchDescription = matchDescription,
             Reasons = reasons
         };
     }

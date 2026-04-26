@@ -10,5 +10,7 @@ public sealed class SubmissionClearanceResult
 
     public int BestFuzzyMatchDistance { get; init; }
 
+    public string BestFuzzyMatchDescription { get; init; } = string.Empty;
+
     public List<string> Reasons { get; init; } = [];
 }

@@ -12,7 +12,7 @@ public sealed class RiskFlowCoverageTests
         var calculator = new LevenshteinDistanceCalculator();
         var registry = new InMemorySubmissionRegistry();
         var clearance = new SubmissionClearanceService(registry, calculator);
-        return new RiskFlowService(calculator, clearance, registry);
+        return new RiskFlowService(clearance, registry);
     }
 
     [Test]

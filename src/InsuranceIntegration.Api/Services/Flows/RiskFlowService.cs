@@ -1,22 +1,18 @@
 using InsuranceIntegration.Api.CanonicalContracts.Risks;
 using InsuranceIntegration.Api.Responses.Risks;
 using InsuranceIntegration.Api.Services.Clearance;
-using InsuranceIntegration.Api.Services.Matching;
 
 namespace InsuranceIntegration.Api.Services.Flows;
 
 public sealed class RiskFlowService : IRiskFlowService
 {
-    private readonly ILevenshteinDistanceCalculator _distanceCalculator;
     private readonly ISubmissionClearanceService _submissionClearanceService;
     private readonly ISubmissionRegistry _submissionRegistry;
 
     public RiskFlowService(
-        ILevenshteinDistanceCalculator distanceCalculator,
         ISubmissionClearanceService submissionClearanceService,
         ISubmissionRegistry submissionRegistry)
     {
-        _distanceCalculator = distanceCalculator;
         _submissionClearanceService = submissionClearanceService;
         _submissionRegistry = submissionRegistry;
     }
@@ -35,7 +31,11 @@ public sealed class RiskFlowService : IRiskFlowService
         var basePremium = ResolveBasePremium(request);
         var enrichmentMultiplier = allEnrichments.Aggregate(1m, (current, item) => current * item.Multiplier);
         var adjustedPremium = Math.Round(basePremium * enrichmentMultiplier, 2, MidpointRounding.AwayFromZero);
-        var (bestDistance, bestDescription) = CalculateBestDistance(request);
+
+        var submissionClearance = EvaluateSubmissionClearance(request);
+        var bestDistance = submissionClearance?.BestFuzzyMatchDistance ?? 0;
+        var bestDescription = submissionClearance?.BestFuzzyMatchDescription ?? string.Empty;
+
         var brokerDecision = ResolveBrokerDecision(request);
         var insuredDecision = ResolveInsuredDecision(request, totalIncurred, bestDistance, blockingEnrichmentCount);
         var submissionStatus = ResolveSubmissionStatus(blockingEnrichmentCount, insuredDecision);
@@ -43,7 +43,6 @@ public sealed class RiskFlowService : IRiskFlowService
         var policyStatus = ResolvePolicyStatus(request, quoteStatus, brokerDecision, insuredDecision);
         var (clearanceDecision, autoCleared) = ResolveClearanceDecision(request, adjustedPremium, totalIncurred, blockingEnrichmentCount, bestDistance, brokerDecision, insuredDecision);
 
-        var submissionClearance = EvaluateSubmissionClearance(request);
         if (submissionClearance is not null && !submissionClearance.IsCleared)
         {
             clearanceDecision = "ManualClearance";
@@ -318,29 +317,6 @@ public sealed class RiskFlowService : IRiskFlowService
         }
 
         return enrichments;
-    }
-
-    private (int Distance, string Description) CalculateBestDistance(CanonicalRiskRequest request)
-    {
-        var candidates = new List<(int Distance, string Description)>();
-        var insuredName = request.Insured.FullName ?? string.Empty;
-
-        foreach (var party in request.Parties)
-        {
-            candidates.Add((_distanceCalculator.Calculate(insuredName, party.Name), $"Insured to party '{party.Name}'"));
-        }
-
-        foreach (var claim in request.Claims)
-        {
-            candidates.Add((_distanceCalculator.Calculate(insuredName, claim.ClaimantName), $"Insured to claimant '{claim.ClaimantName}'"));
-        }
-
-        if (candidates.Count == 0)
-        {
-            return (0, "No matching candidates supplied");
-        }
-
-        return candidates.OrderBy(item => item.Distance).First();
     }
 
     private static string ResolveBrokerDecision(CanonicalRiskRequest request)

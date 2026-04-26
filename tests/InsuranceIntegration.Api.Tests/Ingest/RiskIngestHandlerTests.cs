@@ -69,7 +69,7 @@ public sealed class RiskIngestHandlerTests
         var calculator = new LevenshteinDistanceCalculator();
         var registry = new InMemorySubmissionRegistry();
         var clearanceService = new SubmissionClearanceService(registry, calculator);
-        var riskFlowService = new RiskFlowService(calculator, clearanceService, registry);
+        var riskFlowService = new RiskFlowService(clearanceService, registry);
         var riskIngestMapper = new RiskIngestMapper([new PolarisRiskMapper(), new QuoteForgeRiskMapper(), new BindPointRiskMapper()]);
         return new RiskIngestHandler(riskIngestMapper, riskFlowService, new NoOpRiskSnapshotRouter(), TimeProvider.System);
     }
