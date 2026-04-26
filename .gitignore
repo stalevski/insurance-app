@@ -12,3 +12,6 @@ artifacts/
 *.db-journal
 *.db-shm
 *.db-wal
+
+# IDE
+.vscode/
