@@ -260,8 +260,8 @@ $response = Invoke-RestMethod `
   -ContentType application/json `
   -Body $body
 
-$response.handlerName    # RiskIngestHandler
-$response.result.finalStatus
+$response.processedBy    # RiskIngestHandler
+$response.outcome.finalStatus
 ```
 
 ### 7.3 Idempotency verification
@@ -276,10 +276,10 @@ $again = Invoke-RestMethod `
   -Body $body
 
 # Same envelopeId + source → same result instance returned by the dispatcher
-$response.result.entityId -eq $again.result.entityId
+$response.outcome.entityId -eq $again.outcome.entityId
 ```
 
-Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestAcceptedResult` — this matches the behavior asserted by `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`.
+Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` — this matches the behavior asserted by `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
 
 ### 7.4 Canonical risk submission
 

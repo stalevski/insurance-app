@@ -66,10 +66,10 @@ The context (`IntegrationDbContext`) owns three tables:
 | Table | Purpose |
 |---|---|
 | `KnownSubmissions` | Clearance registry for previously seen submissions |
-| `InboxMessages` | Idempotency cache keyed by `(Source, EnvelopeId)` |
+| `IngestEntries` | Idempotency cache keyed by `(Source, EnvelopeId)` and queryable via `GET /api/v1/ingest/{source}/{envelopeId}` |
 | `OutboxMessages` | Events awaiting dispatch by the background worker |
 
-Generated migrations live in `../src/InsuranceIntegration.Api/Persistence/Migrations`.
+Generated migrations live in `../src/InsuranceIntegration.Api/Migrations`.
 
 ## 5. Discover the API
 
@@ -109,11 +109,45 @@ Always pass `X-Correlation-Id` from upstream systems to make tracing possible.
 
 ### Idempotency for ingest
 
-`POST /api/v1/ingest` is idempotent per `(Source, Id)`. When the same envelope `Id` is sent again for the same `Source`, the dispatcher returns the previously stored `IngestAcceptedResult` without re-running the handler (`../src/InsuranceIntegration.Api/Services/Ingest/IngestDispatcher.cs:17-41`). This is persisted in `InboxMessages` via `EfCoreIdempotencyStore`.
+`POST /api/v1/ingest` is idempotent per `(Source, Id)`. When the same envelope `Id` is sent again for the same `Source`, the dispatcher returns the previously stored `IngestReceipt` without re-running the handler (`../src/InsuranceIntegration.Api/Services/Ingest/IngestDispatcher.cs`). This is persisted in `IngestEntries` via `EfCoreIdempotencyStore` and can also be retrieved later with `GET /api/v1/ingest/{source}/{envelopeId}`.
 
 ### Outbox
 
 Canonical flows (risk, claim, billing, compliance) can enqueue events via `IOutboxWriter` into the `OutboxMessages` table. The `OutboxDispatcher` background service polls every 2 seconds, batches up to 50 pending rows, logs a dispatch line per event, and marks them dispatched (`../src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`). Real transport integration is not implemented yet — logs are the current sink.
+
+### Domain snapshots (consolidated views per business key)
+
+Each `POST /api/v1/ingest` produces an `IngestReceipt` for that one envelope (per-event view). On top of that, the platform also builds **per-business-key snapshots**: one growing document per quote and per policy, merged from every event we have seen about it.
+
+| Snapshot | Key | Updated by | Read endpoint |
+|---|---|---|---|
+| `QuoteSnapshot` | `quoteReference` (or `externalReference` when no quote ref) | every Risk-domain ingest (Contoso RiskSubmission, QuoteForge QuoteRequest, BindPoint PolicyBindRequest) | `GET /api/v1/quotes/{quoteReference}` |
+| `PolicySnapshot` | `policyReference` | any Risk-domain ingest that includes a `policyReference` (typically the bind event and any later endorsements) | `GET /api/v1/policies/{policyReference}` |
+
+The pipeline runs inside `RiskIngestHandler` after the flow service computes the `FinalRiskResponse`:
+
+```
+SourceIngestEnvelope
+  → IRiskIngestMapper (source DTO → CanonicalRiskRequest)
+  → IRiskFlowService.Process (decisions → FinalRiskResponse)
+  → IRiskSnapshotRouter.Route
+        ├── IQuoteSnapshotService.Apply (always, when a quote ref or external ref is present)
+        └── IPolicySnapshotService.Apply (only when policyReference is present)
+  → IngestReceipt (returned to caller)
+```
+
+Sources `../src/InsuranceIntegration.Api/Services/Snapshots/RiskSnapshotRouter.cs`, `PolicySnapshotProjector.cs`, `QuoteSnapshotProjector.cs`.
+
+**Merge rules** (`SnapshotMerge.cs`):
+
+- Scalar string fields use last-write-wins **only if the new event has a value** — empty/null incoming values do not wipe existing data.
+- Premium / coverage blocks are only overwritten when the new event actually carries that data (e.g. a billing-only event won't wipe coverage warnings).
+- `History` is append-only — every event that touches the snapshot adds an entry recording `source`, `envelopeId`, `messageType`, and `transactionType`.
+- `ExternalReferences` is a `Dictionary<sourceSystem, externalReference>` so you can see how each source identifies the same business entity.
+
+**Smaller-source case**: a Contoso-only ingest produces a thin `QuoteSnapshot` with insured / premium hint / quote status filled but no broker block, no bind data, no claims. As more events arrive (a QuoteForge quote with broker info, a BindPoint bind that creates the policy), the same snapshot is enriched in place. Same shape for everyone — just partially filled until more is known.
+
+**Persistence**: snapshots live in `PolicySnapshots` / `QuoteSnapshots` tables. Each row stores a `SnapshotJson` column with the full document plus a few denormalized columns (`ProductCode`, `UnderwritingYear`, `CurrentPhase`, `LastUpdatedUtc`, `IsBound`) for filterable list queries. Idempotent ingest replays do not double-append history because the dispatcher short-circuits at the receipt layer before the projector ever runs.
 
 ## 7. Endpoint reference
 
@@ -129,9 +163,14 @@ Summary:
 | `GET` | `/api/v1/products/{productCode}/rating` | On-demand rating calculation for a product |
 | `POST` | `/api/v1/ingest` | Generic envelope ingest — dispatched by `(Source, Type)` with idempotency |
 | `POST` | `/api/v1/ingest/risks` | Source-shape risk ingest (selects a source-specific mapper) |
+| `GET` | `/api/v1/ingest/{source}/{envelopeId}` | Retrieve the persisted `IngestReceipt` for a previously processed envelope |
 | `POST` | `/api/v1/risks` | Canonical risk submission (skips source mapping) |
 | `POST` | `/api/v1/policies/cancellations` | Pro-rata or short-rate cancellation calculation |
 | `POST` | `/api/v1/policies/endorsements` | Mid-term endorsement delta calculation |
+| `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
+| `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
+| `GET` | `/api/v1/quotes` | List recent quote snapshots (paginated, summary fields only) |
+| `GET` | `/api/v1/quotes/{quoteReference}` | Full `QuoteSnapshot` consolidated from all events for that key |
 | `GET` | `/api/v1/schemas/ingest/envelope` | JSON schema for `SourceIngestEnvelope` |
 | `GET` | `/api/v1/schemas/ingest/risk-request` | JSON schema for `SourceIngestRequest` |
 | `GET` | `/api/v1/schemas/canonical/risk-request` | JSON schema for `CanonicalRiskRequest` |
@@ -299,16 +338,18 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-**Response (200 OK)** — outer envelope is `IngestAcceptedResult` with the handler's own output in `result` (for risks this is a `FinalRiskResponse`):
+**Response (200 OK)** — outer envelope is `IngestReceipt` with the handler's own output in `outcome` (for risks this is a `FinalRiskResponse`). The `self` link is what you can `GET` later to retrieve the same receipt; `(source, envelopeId)` together is the searchable key in the `IngestEntries` table:
 
 ```json
 {
-  "envelopeId": "evt-0001",
   "source": "CONTOSO_UW",
-  "type": "RiskSubmission",
-  "handlerName": "RiskIngestHandler",
+  "envelopeId": "evt-0001",
+  "messageType": "RiskSubmission",
+  "processedBy": "RiskIngestHandler",
   "correlationId": "7f3d...",
-  "result": {
+  "receivedAtUtc": "2026-04-26T01:30:00Z",
+  "self": "/api/v1/ingest/CONTOSO_UW/evt-0001",
+  "outcome": {
     "entityId": "…",
     "externalReference": "Q-100045",
     "productCode": "COMMERCIALPROPERTY",
@@ -375,7 +416,7 @@ For a complete end-to-end sample body, see `../README.md:85-203`.
 
 ### 7.8 `FinalRiskResponse` fields
 
-Shape returned by `POST /api/v1/risks` and by the risk branches of `POST /api/v1/ingest` and `POST /api/v1/ingest/risks` (`../src/InsuranceIntegration.Api/FinalMessages/Risks/FinalRiskResponse.cs`).
+Shape returned by `POST /api/v1/risks` and by the risk branches of `POST /api/v1/ingest` and `POST /api/v1/ingest/risks` (`../src/InsuranceIntegration.Api/Responses/Risks/FinalRiskResponse.cs`).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -487,7 +528,48 @@ Computes the pro-rata premium delta for a mid-term endorsement (`../src/Insuranc
 
 ---
 
-### 7.11 Schema endpoints
+### 7.11 Snapshot read endpoints
+
+Consolidated views per business key, fed by every Risk-domain ingest. See §6.4 (Domain snapshots) for the merge semantics. Endpoints live in `../src/InsuranceIntegration.Api/Endpoints/PolicyReadEndpoints.cs` and `../src/InsuranceIntegration.Api/Endpoints/QuoteReadEndpoints.cs`.
+
+**`GET /api/v1/policies/{policyReference}`** — returns the full `PolicySnapshot` (404 if no events have ever included this `policyReference`).
+
+```powershell
+Invoke-RestMethod http://localhost:5000/api/v1/policies/POL-7781
+```
+
+Response shape (abbreviated):
+
+```json
+{
+  "policyReference": "POL-7781",
+  "quoteReference": "QT-2201",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "underwritingYear": 2026,
+  "currencyCode": "USD",
+  "insured":   { "name": "Northwind Storage Ltd", "tradingName": "Northwind Storage Ltd" },
+  "broker":    { "code": "BRK-044", "name": "Harbor Broking" },
+  "lifecycle": { "submissionStatus": "Received", "quoteStatus": "Quoted", "policyStatus": "Bound", "currentPhase": "Bound", "autoCleared": true, "finalStatus": "ReadyForDownstreamDispatch", "clearanceDecision": "AutoCleared" },
+  "premium":   { "base": 12500.0, "adjusted": 13750.0 },
+  "coverage":  { "sectionCount": 3, "totalSumInsured": 5000000.0, "totalSectionPremium": 12500.0, "premiumAllocationBalanced": true, "warnings": [] },
+  "dates":     { "inceptionDate": "2026-05-01", "expiryDate": "2027-04-30", "boundDate": "2026-04-25" },
+  "externalReferences": { "CONTOSO_UW": "Q-100045", "QUOTEFORGE": "QT-2201", "BINDPOINT": "POL-7781" },
+  "history": [
+    { "atUtc": "2026-04-25T03:10:00Z", "source": "BINDPOINT", "messageType": "PolicyBindRequest", "envelopeId": "evt-bp-001", "transactionType": "PolicyBind" }
+  ],
+  "lastUpdatedUtc": "2026-04-25T03:10:00Z"
+}
+```
+
+**`GET /api/v1/policies?skip=0&take=100`** — paginated summary list (newest first). `take` is clamped to `[1..500]`; default 100. Each item has `policyReference`, `quoteReference`, `productCode`, `underwritingYear`, `currentPhase`, `lastUpdatedUtc`, and a `self` link to the full snapshot.
+
+**`GET /api/v1/quotes/{quoteReference}`** — same shape as policy snapshot but keyed by quote reference, with `lifecycle.isBound` and a top-level `policyReference` populated once a bind event arrives. `lifecycle.currentPhase` advances to `Bound` at the same time.
+
+**`GET /api/v1/quotes?skip=0&take=100`** — paginated summary list of quote snapshots.
+
+---
+
+### 7.12 Schema endpoints
 
 Each schema endpoint returns the JSON Schema document for the referenced C# type (`../src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`, `../src/InsuranceIntegration.Api/Services/Schemas`).
 
@@ -515,7 +597,7 @@ The same `X-Correlation-Id` value appears in the response header and in the serv
 
 ### Exercise idempotency
 
-Send the same envelope twice with the same `id` + `source`; the `handlerName` and `result` fields will be identical, and the server logs will not show a second pass through the handler (see `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` for the test that asserts this).
+Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) — it returns the persisted `IngestReceipt` (see `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
 
 ### Observe the outbox
 

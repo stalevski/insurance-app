@@ -37,13 +37,15 @@ src/InsuranceIntegration.Api/
   Endpoints/
   SourceContracts/
   CanonicalContracts/
-  FinalMessages/
+  Responses/
+  Snapshots/
   Mappers/
   Services/
     Catalog/
     Matching/
     Flows/
     Schemas/
+    Snapshots/
   ReferenceData/
 ```
 
@@ -53,8 +55,10 @@ src/InsuranceIntegration.Api/
   - Source-facing DTOs such as the generic ingest envelope and invented Contoso risk payload.
 - **CanonicalContracts**
   - Platform-owned normalized insurance contracts for internal processing.
-- **FinalMessages**
-  - Outbound processed response models for downstream use.
+- **Responses**
+  - Outbound processed response models returned to callers (e.g. `IngestReceipt`, `FinalRiskResponse`).
+- **Snapshots**
+  - Consolidated read-model documents (`PolicySnapshot`, `QuoteSnapshot`) keyed by business reference. Updated by `Services/Snapshots/*` projectors after each Risk-domain ingest so multiple events from different sources merge into one growing JSON document per policy/quote.
 - **Mappers**
   - Source-specific mapping into canonical contracts.
 - **Services**
@@ -66,6 +70,9 @@ src/InsuranceIntegration.Api/
 
 - `GET /health`
 - `GET /api/v1/source-systems`
+- `POST /api/v1/ingest` and `GET /api/v1/ingest/{source}/{envelopeId}` (per-envelope receipt + replay)
+- `GET /api/v1/policies/{policyReference}` and `GET /api/v1/policies` (consolidated `PolicySnapshot` per policy key, see [docs/USAGE.md §6.4](docs/USAGE.md))
+- `GET /api/v1/quotes/{quoteReference}` and `GET /api/v1/quotes` (consolidated `QuoteSnapshot` per quote key)
 - `POST /api/v1/ingest/risks`
 - `POST /api/v1/risks`
 - `GET /api/v1/schemas/ingest/risk-request`

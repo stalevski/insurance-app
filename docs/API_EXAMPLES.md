@@ -418,7 +418,8 @@ For one-off testing without importing anything:
 
 ### 9.4 Postman tips that matter for this API
 
-- **Idempotency on ingest**: only the `(source, id)` pair is keyed. If you reuse the same `id` you'll get the cached `IngestAcceptedResult` back without the handler running again. The collection's pre-request script avoids this by default; remove the script (Collection → Pre-request Script tab) if you want idempotency to kick in across runs.
+- **Idempotency on ingest**: only the `(source, id)` pair is keyed. If you reuse the same `id` you'll get the cached `IngestReceipt` back without the handler running again. The collection's pre-request script avoids this by default; remove the script (Collection → Pre-request Script tab) if you want idempotency to kick in across runs.
+- **Verify what was stored**: every successful `POST /api/v1/ingest` returns an `IngestReceipt` containing `source`, `envelopeId`, `receivedAtUtc`, and a `self` link. Either `GET` the `self` URL to retrieve the persisted receipt, or query the `IngestEntries` table directly with `WHERE Source='...' AND EnvelopeId='...'`.
 - **Trace a request end-to-end**: copy `X-Correlation-Id` from the response headers and grep your server console for that GUID — every log line emitted while handling the request is scoped with it.
 - **`X-Causation-Id`**: optional second header (also a GUID). Add it manually under any request's **Headers** tab when you want to model a downstream call caused by an upstream event; it joins the log scope but does not change behavior.
 - **Schema responses are large**: the `/api/v1/schemas/*` endpoints return JSON Schema documents. In Postman use **Pretty** view and the JSONPath filter (`$..properties.foo`) to navigate.
