@@ -38,11 +38,39 @@ public sealed class RiskFlowTransactionTypeTests
         var service = CreateService();
         var request = TestRiskRequestFactory.Create(
             underwritingYear: DateTime.UtcNow.Year,
-            transactionType: QuoteTransactionType.Bind);
+            transactionType: QuoteTransactionType.Bind,
+            policyReference: "POL-BOUND-001");
 
         var result = service.Process(request);
 
         Assert.That(result.PolicyStatus, Is.EqualTo(PolicyStatusValue.Bound));
+    }
+
+    [Test]
+    public void Process_BindEventWithoutInsuredProfile_StillProducesBoundAndAutoCleared()
+    {
+        // Real-world bind events from BindPoint do not re-supply the full insured profile
+        // (no YearsInBusiness, etc.). They must not be re-underwritten; the bind only needs
+        // valid broker authority, a policy reference, a premium and complete contract/compliance checks.
+        var service = CreateService();
+        var request = TestRiskRequestFactory.Create(
+            underwritingYear: DateTime.UtcNow.Year,
+            transactionType: "PolicyBind",
+            yearsInBusiness: 0,
+            insuredName: string.Empty,
+            preferredBroker: true,
+            delegatedAuthority: true,
+            policyReference: "POL-REAL-001");
+
+        var result = service.Process(request);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.PolicyStatus, Is.EqualTo(PolicyStatusValue.Bound));
+            Assert.That(result.ClearanceDecision, Is.EqualTo("AutoCleared"));
+            Assert.That(result.AutoCleared, Is.True);
+            Assert.That(result.FinalStatus, Is.EqualTo("ReadyForDownstreamDispatch"));
+        });
     }
 
     [Test]
