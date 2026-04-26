@@ -32,7 +32,7 @@ public sealed class IdempotencyDispatchTests
         var second = dispatcher.Dispatch(envelope);
 
         Assert.That(counter.HandleCount, Is.EqualTo(1));
-        Assert.That(second.Result, Is.SameAs(first.Result));
+        Assert.That(second.Outcome, Is.SameAs(first.Outcome));
     }
 
     private sealed class CountingStubHandler : IIngestHandler
