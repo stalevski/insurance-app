@@ -174,7 +174,7 @@ public sealed class SnapshotPipelineTests : IDisposable
         var calculator = new LevenshteinDistanceCalculator();
         var registry = new EfCoreSubmissionRegistry(context, TimeProvider.System);
         var clearanceService = new SubmissionClearanceService(registry, calculator);
-        var riskFlowService = new RiskFlowService(calculator, clearanceService, registry);
+        var riskFlowService = new RiskFlowService(clearanceService, registry);
         var riskIngestMapper = new RiskIngestMapper(new ISourceRiskMapper[]
         {
             new ContosoRiskMapper(),

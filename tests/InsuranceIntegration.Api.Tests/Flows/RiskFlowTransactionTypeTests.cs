@@ -12,7 +12,7 @@ public sealed class RiskFlowTransactionTypeTests
         var calculator = new LevenshteinDistanceCalculator();
         var submissionRegistry = registry ?? new InMemorySubmissionRegistry();
         var clearanceService = new SubmissionClearanceService(submissionRegistry, calculator);
-        return new RiskFlowService(calculator, clearanceService, submissionRegistry);
+        return new RiskFlowService(clearanceService, submissionRegistry);
     }
 
     [TestCase(PolicyTransactionType.NewBusiness, PolicyStatusValue.ReadyToBind)]
