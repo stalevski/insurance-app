@@ -19,9 +19,11 @@ public sealed class IngestDispatcherTests
 
         Assert.That(response.EnvelopeId, Is.EqualTo("evt-1"));
         Assert.That(response.Source, Is.EqualTo("POLARIS_UW"));
-        Assert.That(response.Type, Is.EqualTo("RiskSubmission"));
-        Assert.That(response.HandlerName, Is.EqualTo("SupportedHandler"));
+        Assert.That(response.MessageType, Is.EqualTo("RiskSubmission"));
+        Assert.That(response.ProcessedBy, Is.EqualTo("SupportedHandler"));
         Assert.That(response.CorrelationId, Is.EqualTo("corr-1"));
+        Assert.That(response.ReceivedAtUtc, Is.Not.EqualTo(default(DateTime)));
+        Assert.That(response.Self, Is.EqualTo("/api/v1/ingest/POLARIS_UW/evt-1"));
     }
 
     [Test]

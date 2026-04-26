@@ -1,9 +1,11 @@
-using InsuranceIntegration.Api.FinalMessages.Risks;
+using InsuranceIntegration.Api.CanonicalContracts.Risks;
+using InsuranceIntegration.Api.Responses.Risks;
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
+using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 using System.Text.Json;
 
@@ -69,7 +71,14 @@ public sealed class RiskIngestHandlerTests
         var clearanceService = new SubmissionClearanceService(registry, calculator);
         var riskFlowService = new RiskFlowService(calculator, clearanceService, registry);
         var riskIngestMapper = new RiskIngestMapper([new PolarisRiskMapper(), new QuoteForgeRiskMapper(), new BindPointRiskMapper()]);
-        return new RiskIngestHandler(riskIngestMapper, riskFlowService);
+        return new RiskIngestHandler(riskIngestMapper, riskFlowService, new NoOpRiskSnapshotRouter(), TimeProvider.System);
+    }
+
+    private sealed class NoOpRiskSnapshotRouter : IRiskSnapshotRouter
+    {
+        public void Route(CanonicalRiskRequest request, FinalRiskResponse response, IngestContext context)
+        {
+        }
     }
 
     private static SourceIngestEnvelope CreateEnvelope(string type)
