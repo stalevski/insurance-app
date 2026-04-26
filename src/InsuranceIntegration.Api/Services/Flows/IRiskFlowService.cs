@@ -1,5 +1,5 @@
 using InsuranceIntegration.Api.CanonicalContracts.Risks;
-using InsuranceIntegration.Api.FinalMessages.Risks;
+using InsuranceIntegration.Api.Responses.Risks;
 
 namespace InsuranceIntegration.Api.Services.Flows;
 

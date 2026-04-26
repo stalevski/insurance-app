@@ -3,24 +3,21 @@ using System;
 using InsuranceIntegration.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace InsuranceIntegration.Api.Persistence.Migrations
+namespace InsuranceIntegration.Api.Migrations
 {
     [DbContext(typeof(IntegrationDbContext))]
-    [Migration("20260424140533_InitialSchema")]
-    partial class InitialSchema
+    partial class IntegrationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
 
-            modelBuilder.Entity("InsuranceIntegration.Api.Persistence.InboxMessageEntity", b =>
+            modelBuilder.Entity("InsuranceIntegration.Api.Persistence.IngestEntryEntity", b =>
                 {
                     b.Property<string>("Source")
                         .HasMaxLength(64)
@@ -34,28 +31,28 @@ namespace InsuranceIntegration.Api.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("HandlerName")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("ProcessedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ResultJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
+                    b.Property<string>("MessageType")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OutcomeJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProcessedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Source", "EnvelopeId");
 
-                    b.HasIndex("ProcessedAtUtc");
+                    b.HasIndex("ReceivedAtUtc");
 
-                    b.ToTable("InboxMessages");
+                    b.ToTable("IngestEntries");
                 });
 
             modelBuilder.Entity("InsuranceIntegration.Api.Persistence.KnownSubmissionEntity", b =>
@@ -143,6 +140,91 @@ namespace InsuranceIntegration.Api.Persistence.Migrations
                     b.HasIndex("DispatchedAtUtc", "OccurredAtUtc");
 
                     b.ToTable("OutboxMessages");
+                });
+
+            modelBuilder.Entity("InsuranceIntegration.Api.Persistence.PolicySnapshotEntity", b =>
+                {
+                    b.Property<string>("PolicyReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentPhase")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QuoteReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UnderwritingYear")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PolicyReference");
+
+                    b.HasIndex("LastUpdatedUtc");
+
+                    b.HasIndex("QuoteReference");
+
+                    b.HasIndex("ProductCode", "UnderwritingYear");
+
+                    b.ToTable("PolicySnapshots");
+                });
+
+            modelBuilder.Entity("InsuranceIntegration.Api.Persistence.QuoteSnapshotEntity", b =>
+                {
+                    b.Property<string>("QuoteReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentPhase")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBound")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastUpdatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PolicyReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UnderwritingYear")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("QuoteReference");
+
+                    b.HasIndex("LastUpdatedUtc");
+
+                    b.HasIndex("PolicyReference");
+
+                    b.HasIndex("ProductCode", "UnderwritingYear");
+
+                    b.ToTable("QuoteSnapshots");
                 });
 #pragma warning restore 612, 618
         }

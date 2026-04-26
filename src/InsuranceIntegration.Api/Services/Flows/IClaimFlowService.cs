@@ -1,5 +1,5 @@
 using InsuranceIntegration.Api.CanonicalContracts.Claims;
-using InsuranceIntegration.Api.FinalMessages.Claims;
+using InsuranceIntegration.Api.Responses.Claims;
 
 namespace InsuranceIntegration.Api.Services.Flows;
 

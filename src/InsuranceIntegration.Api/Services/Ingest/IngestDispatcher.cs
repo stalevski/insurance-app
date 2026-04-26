@@ -1,4 +1,4 @@
-using InsuranceIntegration.Api.FinalMessages.Ingest;
+using InsuranceIntegration.Api.Responses.Ingest;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 
 namespace InsuranceIntegration.Api.Services.Ingest;
@@ -7,14 +7,19 @@ public sealed class IngestDispatcher : IIngestDispatcher
 {
     private readonly IReadOnlyCollection<IIngestHandler> _handlers;
     private readonly IIdempotencyStore _idempotencyStore;
+    private readonly TimeProvider _timeProvider;
 
-    public IngestDispatcher(IEnumerable<IIngestHandler> handlers, IIdempotencyStore idempotencyStore)
+    public IngestDispatcher(
+        IEnumerable<IIngestHandler> handlers,
+        IIdempotencyStore idempotencyStore,
+        TimeProvider? timeProvider = null)
     {
         _handlers = handlers.ToArray();
         _idempotencyStore = idempotencyStore;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public IngestAcceptedResult Dispatch(SourceIngestEnvelope envelope)
+    public IngestReceipt Dispatch(SourceIngestEnvelope envelope)
     {
         if (_idempotencyStore.TryGet(envelope.Source, envelope.Id, out var existing) && existing is not null)
         {
@@ -24,19 +29,26 @@ public sealed class IngestDispatcher : IIngestDispatcher
         var handler = _handlers.FirstOrDefault(candidate => candidate.CanHandle(envelope))
             ?? throw new InvalidOperationException($"No ingest handler registered for source '{envelope.Source}' and type '{envelope.Type}'.");
 
-        var result = handler.Handle(envelope);
+        var outcome = handler.Handle(envelope);
 
-        var accepted = new IngestAcceptedResult
+        var receipt = new IngestReceipt
         {
-            EnvelopeId = envelope.Id,
             Source = envelope.Source,
-            Type = envelope.Type,
-            HandlerName = handler.Name,
+            EnvelopeId = envelope.Id,
+            MessageType = envelope.Type,
+            ProcessedBy = handler.Name,
             CorrelationId = envelope.CorrelationId,
-            Result = result
+            ReceivedAtUtc = _timeProvider.GetUtcNow().UtcDateTime,
+            Self = BuildSelfLink(envelope.Source, envelope.Id),
+            Outcome = outcome
         };
 
-        _idempotencyStore.Store(envelope.Source, envelope.Id, accepted);
-        return accepted;
+        _idempotencyStore.Store(envelope.Source, envelope.Id, receipt);
+        return receipt;
+    }
+
+    private static string BuildSelfLink(string source, string envelopeId)
+    {
+        return $"/api/v1/ingest/{Uri.EscapeDataString(source)}/{Uri.EscapeDataString(envelopeId)}";
     }
 }

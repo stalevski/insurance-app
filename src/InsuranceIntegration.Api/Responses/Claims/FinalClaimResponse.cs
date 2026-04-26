@@ -1,4 +1,4 @@
-namespace InsuranceIntegration.Api.FinalMessages.Claims;
+namespace InsuranceIntegration.Api.Responses.Claims;
 
 public sealed class FinalClaimResponse
 {

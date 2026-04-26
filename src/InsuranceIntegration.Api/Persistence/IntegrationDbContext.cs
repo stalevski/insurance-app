@@ -11,9 +11,13 @@ public sealed class IntegrationDbContext : DbContext
 
     public DbSet<KnownSubmissionEntity> KnownSubmissions => Set<KnownSubmissionEntity>();
 
-    public DbSet<InboxMessageEntity> InboxMessages => Set<InboxMessageEntity>();
+    public DbSet<IngestEntryEntity> IngestEntries => Set<IngestEntryEntity>();
 
     public DbSet<OutboxMessageEntity> OutboxMessages => Set<OutboxMessageEntity>();
+
+    public DbSet<PolicySnapshotEntity> PolicySnapshots => Set<PolicySnapshotEntity>();
+
+    public DbSet<QuoteSnapshotEntity> QuoteSnapshots => Set<QuoteSnapshotEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,16 +32,42 @@ public sealed class IntegrationDbContext : DbContext
             entity.HasIndex(record => new { record.ProductCode, record.UnderwritingYear });
         });
 
-        modelBuilder.Entity<InboxMessageEntity>(entity =>
+        modelBuilder.Entity<PolicySnapshotEntity>(entity =>
+        {
+            entity.HasKey(record => record.PolicyReference);
+            entity.Property(record => record.PolicyReference).HasMaxLength(128);
+            entity.Property(record => record.QuoteReference).HasMaxLength(128);
+            entity.Property(record => record.ProductCode).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.CurrentPhase).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.SnapshotJson).IsRequired();
+            entity.HasIndex(record => record.QuoteReference);
+            entity.HasIndex(record => new { record.ProductCode, record.UnderwritingYear });
+            entity.HasIndex(record => record.LastUpdatedUtc);
+        });
+
+        modelBuilder.Entity<QuoteSnapshotEntity>(entity =>
+        {
+            entity.HasKey(record => record.QuoteReference);
+            entity.Property(record => record.QuoteReference).HasMaxLength(128);
+            entity.Property(record => record.PolicyReference).HasMaxLength(128);
+            entity.Property(record => record.ProductCode).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.CurrentPhase).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.SnapshotJson).IsRequired();
+            entity.HasIndex(record => record.PolicyReference);
+            entity.HasIndex(record => new { record.ProductCode, record.UnderwritingYear });
+            entity.HasIndex(record => record.LastUpdatedUtc);
+        });
+
+        modelBuilder.Entity<IngestEntryEntity>(entity =>
         {
             entity.HasKey(record => new { record.Source, record.EnvelopeId });
             entity.Property(record => record.Source).IsRequired().HasMaxLength(64);
             entity.Property(record => record.EnvelopeId).IsRequired().HasMaxLength(128);
-            entity.Property(record => record.Type).IsRequired().HasMaxLength(64);
-            entity.Property(record => record.HandlerName).IsRequired().HasMaxLength(128);
+            entity.Property(record => record.MessageType).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.ProcessedBy).IsRequired().HasMaxLength(128);
             entity.Property(record => record.CorrelationId).HasMaxLength(64);
-            entity.Property(record => record.ResultJson).IsRequired();
-            entity.HasIndex(record => record.ProcessedAtUtc);
+            entity.Property(record => record.OutcomeJson).IsRequired();
+            entity.HasIndex(record => record.ReceivedAtUtc);
         });
 
         modelBuilder.Entity<OutboxMessageEntity>(entity =>

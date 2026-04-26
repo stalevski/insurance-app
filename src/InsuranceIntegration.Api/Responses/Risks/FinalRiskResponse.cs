@@ -1,4 +1,4 @@
-namespace InsuranceIntegration.Api.FinalMessages.Risks;
+namespace InsuranceIntegration.Api.Responses.Risks;
 
 public sealed class FinalRiskResponse
 {

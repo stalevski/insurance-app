@@ -1,5 +1,6 @@
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.Services.Flows;
+using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 
 namespace InsuranceIntegration.Api.Services.Ingest;
@@ -15,11 +16,19 @@ public sealed class RiskIngestHandler : IIngestHandler
 
     private readonly IRiskIngestMapper _riskIngestMapper;
     private readonly IRiskFlowService _riskFlowService;
+    private readonly IRiskSnapshotRouter _snapshotRouter;
+    private readonly TimeProvider _timeProvider;
 
-    public RiskIngestHandler(IRiskIngestMapper riskIngestMapper, IRiskFlowService riskFlowService)
+    public RiskIngestHandler(
+        IRiskIngestMapper riskIngestMapper,
+        IRiskFlowService riskFlowService,
+        IRiskSnapshotRouter snapshotRouter,
+        TimeProvider timeProvider)
     {
         _riskIngestMapper = riskIngestMapper;
         _riskFlowService = riskFlowService;
+        _snapshotRouter = snapshotRouter;
+        _timeProvider = timeProvider;
     }
 
     public string Name => "RiskIngestHandler";
@@ -39,6 +48,18 @@ public sealed class RiskIngestHandler : IIngestHandler
         };
 
         var canonicalRequest = _riskIngestMapper.Map(request);
-        return _riskFlowService.Process(canonicalRequest);
+        var response = _riskFlowService.Process(canonicalRequest);
+
+        var ingestContext = new IngestContext
+        {
+            Source = envelope.Source,
+            EnvelopeId = envelope.Id,
+            MessageType = envelope.Type,
+            CorrelationId = envelope.CorrelationId,
+            ReceivedAtUtc = _timeProvider.GetUtcNow().UtcDateTime
+        };
+        _snapshotRouter.Route(canonicalRequest, response, ingestContext);
+
+        return response;
     }
 }
