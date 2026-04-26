@@ -25,7 +25,8 @@ internal static class TestRiskRequestFactory
         string transactionType = "Submission",
         string insuredName = "Northwind Storage Ltd",
         string externalReference = "EXT-1001",
-        string? brokerCode = "BRK-1")
+        string? brokerCode = "BRK-1",
+        string? policyReference = null)
     {
         var claims = Enumerable.Range(1, claimCount)
             .Select(index => new ClaimData
@@ -90,7 +91,12 @@ internal static class TestRiskRequestFactory
                 ExpiryDate = new DateOnly(2027, 4, 30),
                 QuoteStatusHint = "Indicative"
             },
-            Policy = new PolicyData(),
+            Policy = new PolicyData
+            {
+                PolicyReference = policyReference ?? string.Empty,
+                InceptionDate = new DateOnly(underwritingYear, 1, 1),
+                ExpiryDate = new DateOnly(underwritingYear, 12, 31)
+            },
             Clearance = new ClearanceData
             {
                 AutoClearanceEnabled = autoClearanceEnabled,

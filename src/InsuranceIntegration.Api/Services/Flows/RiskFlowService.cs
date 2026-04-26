@@ -38,10 +38,11 @@ public sealed class RiskFlowService : IRiskFlowService
 
         var brokerDecision = ResolveBrokerDecision(request);
         var insuredDecision = ResolveInsuredDecision(request, totalIncurred, bestDistance, blockingEnrichmentCount);
+        var bindValid = IsBindRequestValid(request, adjustedPremium, blockingEnrichmentCount, brokerDecision);
         var submissionStatus = ResolveSubmissionStatus(blockingEnrichmentCount, insuredDecision);
         var quoteStatus = ResolveQuoteStatus(request, blockingEnrichmentCount, adjustedPremium, insuredDecision);
-        var policyStatus = ResolvePolicyStatus(request, quoteStatus, brokerDecision, insuredDecision);
-        var (clearanceDecision, autoCleared) = ResolveClearanceDecision(request, adjustedPremium, totalIncurred, blockingEnrichmentCount, bestDistance, brokerDecision, insuredDecision);
+        var policyStatus = ResolvePolicyStatus(request, quoteStatus, brokerDecision, insuredDecision, bindValid);
+        var (clearanceDecision, autoCleared) = ResolveClearanceDecision(request, adjustedPremium, totalIncurred, blockingEnrichmentCount, bestDistance, brokerDecision, insuredDecision, bindValid);
 
         if (submissionClearance is not null && !submissionClearance.IsCleared)
         {
@@ -399,7 +400,7 @@ public sealed class RiskFlowService : IRiskFlowService
         return QuoteStatusValue.NotQuoted;
     }
 
-    private static string ResolvePolicyStatus(CanonicalRiskRequest request, string quoteStatus, string brokerDecision, string insuredDecision)
+    private static string ResolvePolicyStatus(CanonicalRiskRequest request, string quoteStatus, string brokerDecision, string insuredDecision, bool bindValid)
     {
         var transactionType = request.TransactionType;
         var brokerEligible = brokerDecision is "DelegatedBindAuthority" or "PreferredBroker";
@@ -425,15 +426,38 @@ public sealed class RiskFlowService : IRiskFlowService
             return insuredEligible ? PolicyStatusValue.Endorsed : PolicyStatusValue.Draft;
         }
 
-        if (string.Equals(transactionType, "PolicyBind", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(transactionType, QuoteTransactionType.Bind, StringComparison.OrdinalIgnoreCase))
+        if (IsBindTransaction(transactionType))
         {
-            return insuredEligible && brokerEligible ? PolicyStatusValue.Bound : PolicyStatusValue.Draft;
+            // Bind events are downstream confirmations of an already-underwritten quote.
+            // Validate bind metadata (broker authority, policy reference, premium, checks),
+            // not the full insured-underwriting gates that apply to fresh submissions.
+            return bindValid ? PolicyStatusValue.Bound : PolicyStatusValue.Draft;
         }
 
         return quoteStatus == QuoteStatusValue.Quoted && brokerEligible && insuredEligible
             ? PolicyStatusValue.ReadyToBind
             : PolicyStatusValue.Draft;
+    }
+
+    private static bool IsBindTransaction(string transactionType)
+    {
+        return string.Equals(transactionType, "PolicyBind", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(transactionType, QuoteTransactionType.Bind, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBindRequestValid(CanonicalRiskRequest request, decimal adjustedPremium, int blockingEnrichmentCount, string brokerDecision)
+    {
+        if (!IsBindTransaction(request.TransactionType))
+        {
+            return false;
+        }
+
+        var brokerEligible = brokerDecision is "DelegatedBindAuthority" or "PreferredBroker";
+        var hasPolicyReference = !string.IsNullOrWhiteSpace(request.Policy.PolicyReference);
+        var hasPremium = adjustedPremium > 0m;
+        var checksComplete = request.ContractChecks.All(item => item.IsComplete)
+            && request.ComplianceChecks.All(item => item.IsComplete);
+        return brokerEligible && hasPolicyReference && hasPremium && blockingEnrichmentCount == 0 && checksComplete;
     }
 
     private SubmissionClearanceResult? EvaluateSubmissionClearance(CanonicalRiskRequest request)
@@ -463,8 +487,15 @@ public sealed class RiskFlowService : IRiskFlowService
         });
     }
 
-    private static (string Decision, bool AutoCleared) ResolveClearanceDecision(CanonicalRiskRequest request, decimal adjustedPremium, decimal totalIncurred, int blockingEnrichmentCount, int bestDistance, string brokerDecision, string insuredDecision)
+    private static (string Decision, bool AutoCleared) ResolveClearanceDecision(CanonicalRiskRequest request, decimal adjustedPremium, decimal totalIncurred, int blockingEnrichmentCount, int bestDistance, string brokerDecision, string insuredDecision, bool bindValid)
     {
+        // Bind transactions are confirmations of an already-cleared quote; a valid bind
+        // is auto-cleared. The full underwriting clearance gates apply only to submissions.
+        if (IsBindTransaction(request.TransactionType))
+        {
+            return bindValid ? ("AutoCleared", true) : ("ManualClearance", false);
+        }
+
         var checksComplete = request.ContractChecks.All(item => item.IsComplete) && request.ComplianceChecks.All(item => item.IsComplete);
         var brokerEligible = brokerDecision is "DelegatedBindAuthority" or "PreferredBroker";
         var insuredEligible = insuredDecision == "AcceptableInsured";
