@@ -89,6 +89,9 @@ tests/InsuranceIntegration.Api.Tests/
     PolicyAdjustmentServiceTests.cs
   Pricing/
     RatingServiceTests.cs
+  Snapshots/
+    PolicySnapshotProjectorTests.cs         # pure projector merge rules
+    SnapshotPipelineTests.cs                # 3-event end-to-end through dispatcher + EF
   GlobalUsings.cs
   InsuranceIntegration.Api.Tests.csproj
 ```
@@ -219,6 +222,7 @@ Use this table when debugging a failure or extending a feature:
 | Cancellation / endorsement math | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
 | Rating / catalog math | `../tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
 | Correlation ID scoping | `../tests/InsuranceIntegration.Api.Tests/Correlation/*` |
+| Policy / Quote snapshot projection | `../tests/InsuranceIntegration.Api.Tests/Snapshots/*` (projector merge rules + 3-event pipeline) |
 
 ## 7. Manual end-to-end testing
 
