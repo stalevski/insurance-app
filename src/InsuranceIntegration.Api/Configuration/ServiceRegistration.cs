@@ -11,6 +11,7 @@ using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Pricing;
 using InsuranceIntegration.Api.Services.Products;
 using InsuranceIntegration.Api.Services.Schemas;
+using InsuranceIntegration.Api.Services.Snapshots;
 using Microsoft.EntityFrameworkCore;
 
 namespace InsuranceIntegration.Api.Configuration;
@@ -49,6 +50,12 @@ public static class ServiceRegistration
         services.AddScoped<IClaimFlowService, ClaimFlowService>();
         services.AddScoped<IBillingFlowService, BillingFlowService>();
         services.AddScoped<IComplianceFlowService, ComplianceFlowService>();
+
+        services.AddSingleton<IPolicySnapshotProjector, PolicySnapshotProjector>();
+        services.AddSingleton<IQuoteSnapshotProjector, QuoteSnapshotProjector>();
+        services.AddScoped<IPolicySnapshotService, PolicySnapshotService>();
+        services.AddScoped<IQuoteSnapshotService, QuoteSnapshotService>();
+        services.AddScoped<IRiskSnapshotRouter, RiskSnapshotRouter>();
 
         services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
         services.AddScoped<IIngestHandler, RiskIngestHandler>();

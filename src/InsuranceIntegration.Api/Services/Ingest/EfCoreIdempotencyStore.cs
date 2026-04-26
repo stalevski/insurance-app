@@ -1,6 +1,6 @@
 using System.Text.Json;
-using InsuranceIntegration.Api.FinalMessages.Ingest;
 using InsuranceIntegration.Api.Persistence;
+using InsuranceIntegration.Api.Responses.Ingest;
 
 namespace InsuranceIntegration.Api.Services.Ingest;
 
@@ -17,45 +17,46 @@ public sealed class EfCoreIdempotencyStore : IIdempotencyStore
         _timeProvider = timeProvider;
     }
 
-    public bool TryGet(string source, string envelopeId, out IngestAcceptedResult? existingResult)
+    public bool TryGet(string source, string envelopeId, out IngestReceipt? existingReceipt)
     {
-        var entry = _context.InboxMessages.Find(source, envelopeId);
-        if (entry is null)
-        {
-            existingResult = null;
-            return false;
-        }
-
-        existingResult = JsonSerializer.Deserialize<IngestAcceptedResult>(entry.ResultJson, SerializerOptions);
-        return existingResult is not null;
+        existingReceipt = Find(source, envelopeId);
+        return existingReceipt is not null;
     }
 
-    public void Store(string source, string envelopeId, IngestAcceptedResult result)
+    public IngestReceipt? Find(string source, string envelopeId)
     {
-        var existing = _context.InboxMessages.Find(source, envelopeId);
-        var json = JsonSerializer.Serialize(result, SerializerOptions);
+        var entry = _context.IngestEntries.Find(source, envelopeId);
+        return entry is null
+            ? null
+            : JsonSerializer.Deserialize<IngestReceipt>(entry.OutcomeJson, SerializerOptions);
+    }
+
+    public void Store(string source, string envelopeId, IngestReceipt receipt)
+    {
+        var existing = _context.IngestEntries.Find(source, envelopeId);
+        var json = JsonSerializer.Serialize(receipt, SerializerOptions);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (existing is null)
         {
-            _context.InboxMessages.Add(new InboxMessageEntity
+            _context.IngestEntries.Add(new IngestEntryEntity
             {
                 Source = source,
                 EnvelopeId = envelopeId,
-                Type = result.Type,
-                HandlerName = result.HandlerName,
-                CorrelationId = result.CorrelationId,
-                ResultJson = json,
-                ProcessedAtUtc = now
+                MessageType = receipt.MessageType,
+                ProcessedBy = receipt.ProcessedBy,
+                CorrelationId = receipt.CorrelationId,
+                OutcomeJson = json,
+                ReceivedAtUtc = now
             });
         }
         else
         {
-            existing.Type = result.Type;
-            existing.HandlerName = result.HandlerName;
-            existing.CorrelationId = result.CorrelationId;
-            existing.ResultJson = json;
-            existing.ProcessedAtUtc = now;
+            existing.MessageType = receipt.MessageType;
+            existing.ProcessedBy = receipt.ProcessedBy;
+            existing.CorrelationId = receipt.CorrelationId;
+            existing.OutcomeJson = json;
+            existing.ReceivedAtUtc = now;
         }
 
         _context.SaveChanges();

@@ -44,6 +44,8 @@ app.MapRiskEndpoints();
 app.MapSchemaEndpoints();
 app.MapProductEndpoints();
 app.MapPolicyEndpoints();
+app.MapPolicyReadEndpoints();
+app.MapQuoteReadEndpoints();
 
 app.Run();
 

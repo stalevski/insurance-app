@@ -1,27 +1,32 @@
 using System.Collections.Concurrent;
-using InsuranceIntegration.Api.FinalMessages.Ingest;
+using InsuranceIntegration.Api.Responses.Ingest;
 
 namespace InsuranceIntegration.Api.Services.Ingest;
 
 public sealed class InMemoryIdempotencyStore : IIdempotencyStore
 {
-    private readonly ConcurrentDictionary<string, IngestAcceptedResult> _entries = new();
+    private readonly ConcurrentDictionary<string, IngestReceipt> _entries = new();
 
-    public bool TryGet(string source, string envelopeId, out IngestAcceptedResult? existingResult)
+    public bool TryGet(string source, string envelopeId, out IngestReceipt? existingReceipt)
     {
         if (_entries.TryGetValue(BuildKey(source, envelopeId), out var found))
         {
-            existingResult = found;
+            existingReceipt = found;
             return true;
         }
 
-        existingResult = null;
+        existingReceipt = null;
         return false;
     }
 
-    public void Store(string source, string envelopeId, IngestAcceptedResult result)
+    public IngestReceipt? Find(string source, string envelopeId)
     {
-        _entries[BuildKey(source, envelopeId)] = result;
+        return _entries.TryGetValue(BuildKey(source, envelopeId), out var found) ? found : null;
+    }
+
+    public void Store(string source, string envelopeId, IngestReceipt receipt)
+    {
+        _entries[BuildKey(source, envelopeId)] = receipt;
     }
 
     private static string BuildKey(string source, string envelopeId)

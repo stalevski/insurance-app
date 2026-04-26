@@ -3,21 +3,24 @@ using System;
 using InsuranceIntegration.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace InsuranceIntegration.Api.Persistence.Migrations
+namespace InsuranceIntegration.Api.Migrations
 {
     [DbContext(typeof(IntegrationDbContext))]
-    partial class IntegrationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260426013746_InitialSchema")]
+    partial class InitialSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
 
-            modelBuilder.Entity("InsuranceIntegration.Api.Persistence.InboxMessageEntity", b =>
+            modelBuilder.Entity("InsuranceIntegration.Api.Persistence.IngestEntryEntity", b =>
                 {
                     b.Property<string>("Source")
                         .HasMaxLength(64)
@@ -31,28 +34,28 @@ namespace InsuranceIntegration.Api.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("HandlerName")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("ProcessedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ResultJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
+                    b.Property<string>("MessageType")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OutcomeJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProcessedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Source", "EnvelopeId");
 
-                    b.HasIndex("ProcessedAtUtc");
+                    b.HasIndex("ReceivedAtUtc");
 
-                    b.ToTable("InboxMessages");
+                    b.ToTable("IngestEntries");
                 });
 
             modelBuilder.Entity("InsuranceIntegration.Api.Persistence.KnownSubmissionEntity", b =>

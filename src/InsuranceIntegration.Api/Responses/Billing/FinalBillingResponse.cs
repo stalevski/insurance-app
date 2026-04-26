@@ -1,4 +1,4 @@
-namespace InsuranceIntegration.Api.FinalMessages.Billing;
+namespace InsuranceIntegration.Api.Responses.Billing;
 
 public sealed class FinalBillingResponse
 {

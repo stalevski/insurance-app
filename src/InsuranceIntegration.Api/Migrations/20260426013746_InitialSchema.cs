@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace InsuranceIntegration.Api.Persistence.Migrations
+namespace InsuranceIntegration.Api.Migrations
 {
     /// <inheritdoc />
     public partial class InitialSchema : Migration
@@ -12,20 +12,20 @@ namespace InsuranceIntegration.Api.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "InboxMessages",
+                name: "IngestEntries",
                 columns: table => new
                 {
                     Source = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     EnvelopeId = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
-                    Type = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    HandlerName = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    MessageType = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    ProcessedBy = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                     CorrelationId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
-                    ResultJson = table.Column<string>(type: "TEXT", nullable: false),
-                    ProcessedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    OutcomeJson = table.Column<string>(type: "TEXT", nullable: false),
+                    ReceivedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_InboxMessages", x => new { x.Source, x.EnvelopeId });
+                    table.PrimaryKey("PK_IngestEntries", x => new { x.Source, x.EnvelopeId });
                 });
 
             migrationBuilder.CreateTable(
@@ -67,9 +67,9 @@ namespace InsuranceIntegration.Api.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_InboxMessages_ProcessedAtUtc",
-                table: "InboxMessages",
-                column: "ProcessedAtUtc");
+                name: "IX_IngestEntries_ReceivedAtUtc",
+                table: "IngestEntries",
+                column: "ReceivedAtUtc");
 
             migrationBuilder.CreateIndex(
                 name: "IX_KnownSubmissions_ProductCode_UnderwritingYear",
@@ -91,7 +91,7 @@ namespace InsuranceIntegration.Api.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "InboxMessages");
+                name: "IngestEntries");
 
             migrationBuilder.DropTable(
                 name: "KnownSubmissions");

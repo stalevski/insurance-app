@@ -1,4 +1,4 @@
-namespace InsuranceIntegration.Api.FinalMessages.Compliance;
+namespace InsuranceIntegration.Api.Responses.Compliance;
 
 public sealed class FinalComplianceResponse
 {

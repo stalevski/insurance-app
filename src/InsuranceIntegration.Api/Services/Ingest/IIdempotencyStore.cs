@@ -1,10 +1,12 @@
-using InsuranceIntegration.Api.FinalMessages.Ingest;
+using InsuranceIntegration.Api.Responses.Ingest;
 
 namespace InsuranceIntegration.Api.Services.Ingest;
 
 public interface IIdempotencyStore
 {
-    bool TryGet(string source, string envelopeId, out IngestAcceptedResult? existingResult);
+    bool TryGet(string source, string envelopeId, out IngestReceipt? existingReceipt);
 
-    void Store(string source, string envelopeId, IngestAcceptedResult result);
+    IngestReceipt? Find(string source, string envelopeId);
+
+    void Store(string source, string envelopeId, IngestReceipt receipt);
 }
