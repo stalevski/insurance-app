@@ -38,6 +38,24 @@ public sealed class QuoteSnapshotProjector : IQuoteSnapshotProjector
         snapshot.Lifecycle.IsBound = snapshot.Lifecycle.IsBound || !string.IsNullOrWhiteSpace(request.Policy.PolicyReference);
         snapshot.Lifecycle.CurrentPhase = SnapshotMerge.ResolveQuotePhase(response.QuoteStatus, response.SubmissionStatus, snapshot.Lifecycle.CurrentPhase, snapshot.Lifecycle.IsBound);
 
+        if (IsQuoteIssuance(request.TransactionType, request.Policy.PolicyReference))
+        {
+            snapshot.Lifecycle.Version++;
+            snapshot.Lifecycle.IssuedAtUtc = context.ReceivedAtUtc;
+            snapshot.Lifecycle.ValidUntilUtc = context.ReceivedAtUtc.AddDays(snapshot.Lifecycle.ValidityDays);
+        }
+
+        // A successful bind clears any prior rejection reason.
+        if (snapshot.Lifecycle.IsBound)
+        {
+            snapshot.Lifecycle.BindRejectionReason = null;
+        }
+        // A bind that arrived with a rejection reason on the response surfaces it.
+        else if (!string.IsNullOrWhiteSpace(response.BindRejectionReason))
+        {
+            snapshot.Lifecycle.BindRejectionReason = response.BindRejectionReason;
+        }
+
         if (response.BasePremium > 0m)
         {
             snapshot.Premium.Base = response.BasePremium;
@@ -76,5 +94,20 @@ public sealed class QuoteSnapshotProjector : IQuoteSnapshotProjector
 
         snapshot.LastUpdatedUtc = context.ReceivedAtUtc;
         return snapshot;
+    }
+
+    private static bool IsQuoteIssuance(string transactionType, string? policyReference)
+    {
+        // A request that already carries a policy reference is a bind / post-bind lifecycle
+        // event, not a (re-)issuance of the quote.
+        if (!string.IsNullOrWhiteSpace(policyReference))
+        {
+            return false;
+        }
+
+        // Anything that's not an explicit policy-lifecycle transaction and is observed on
+        // the quote aggregate is a (re-)issuance: Submission, Quote, Quoted, Quotable, ...
+        return !PolicyTransactionType.IsPolicyLifecycleTransaction(transactionType)
+            && !string.Equals(transactionType, QuoteTransactionType.Bind, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -43,6 +43,7 @@ public static class ServiceRegistration
         services.AddScoped<IPolicyLifecycleService, PolicyLifecycleService>();
 
         services.AddScoped<ISubmissionClearanceService, SubmissionClearanceService>();
+        services.AddScoped<IBindPreconditionService, BindPreconditionService>();
         services.AddScoped<IRiskFlowService, RiskFlowService>();
         services.AddScoped<IRiskIngestMapper, RiskIngestMapper>();
         services.AddScoped<ISourceRiskMapper, ContosoRiskMapper>();
