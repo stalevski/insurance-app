@@ -6,16 +6,38 @@ public static class PolicyEndpoints
 {
     public static IEndpointRouteBuilder MapPolicyEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/v1/policies/cancellations", (CancellationRequest request, IPolicyAdjustmentService service) =>
+        endpoints.MapPost("/api/v1/policies/cancellations", (CancellationRequest request, IPolicyLifecycleService lifecycle) =>
         {
-            var result = service.CalculateCancellation(request);
-            return Results.Ok(result);
+            try
+            {
+                var result = lifecycle.ApplyCancellation(request);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Policy not found");
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid cancellation request");
+            }
         });
 
-        endpoints.MapPost("/api/v1/policies/endorsements", (EndorsementRequest request, IPolicyAdjustmentService service) =>
+        endpoints.MapPost("/api/v1/policies/endorsements", (EndorsementRequest request, IPolicyLifecycleService lifecycle) =>
         {
-            var result = service.CalculateEndorsement(request);
-            return Results.Ok(result);
+            try
+            {
+                var result = lifecycle.ApplyEndorsement(request);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Policy not found");
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid endorsement request");
+            }
         });
 
         return endpoints;

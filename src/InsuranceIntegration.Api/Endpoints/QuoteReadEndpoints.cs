@@ -18,6 +18,12 @@ public static class QuoteReadEndpoints
             return snapshot is null ? Results.NotFound() : Results.Ok(snapshot);
         });
 
+        endpoints.MapPost("/api/v1/snapshots/quotes/{quoteReference}/rebuild", (string quoteReference, ISnapshotRebuildService rebuild) =>
+        {
+            var result = rebuild.RebuildQuote(quoteReference);
+            return result.EventsApplied == 0 ? Results.NotFound() : Results.Ok(result);
+        });
+
         return endpoints;
     }
 }

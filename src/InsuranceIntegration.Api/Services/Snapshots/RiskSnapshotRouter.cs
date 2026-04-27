@@ -48,8 +48,9 @@ public sealed class RiskSnapshotRouter : IRiskSnapshotRouter
 
         var payloadJson = JsonSerializer.Serialize(new RiskEventPayload(request, response), PayloadSerializerOptions);
         var recordedAtUtc = _time.GetUtcNow().UtcDateTime;
+        var isPolicyLifecycleOnly = PolicyTransactionType.IsPolicyLifecycleTransaction(request.TransactionType);
 
-        if (hasQuoteReference)
+        if (hasQuoteReference && !isPolicyLifecycleOnly)
         {
             _eventLog.Append(BuildEvent(
                 eventType: ResolveQuoteEventType(request.TransactionType, hasPolicyReference),
@@ -146,5 +147,4 @@ public sealed class RiskSnapshotRouter : IRiskSnapshotRouter
             || string.Equals(transactionType, QuoteTransactionType.Bind, StringComparison.OrdinalIgnoreCase);
     }
 
-    private sealed record RiskEventPayload(CanonicalRiskRequest CanonicalRequest, FinalRiskResponse FinalResponse);
 }
