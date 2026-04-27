@@ -135,6 +135,14 @@ public sealed class SnapshotPipelineTests : IDisposable
         Assert.That(quote.History, Has.Count.EqualTo(3));
         Assert.That(quote.History.Select(h => h.Source), Is.EquivalentTo(new[] { "POLARIS_UW", "QUOTEFORGE", "BINDPOINT" }));
         Assert.That(quote.ExternalReferences.Keys, Is.EquivalentTo(new[] { "POLARIS_UW", "QUOTEFORGE", "BINDPOINT" }));
+
+        // Versioning: two issuance envelopes (Polaris + QuoteForge) bump Version twice,
+        // the bind does NOT bump Version (it just flips IsBound).
+        Assert.That(quote.Lifecycle.Version, Is.EqualTo(2));
+        Assert.That(quote.Lifecycle.IssuedAtUtc, Is.Not.Null);
+        Assert.That(quote.Lifecycle.ValidUntilUtc, Is.Not.Null);
+        Assert.That(quote.Lifecycle.ValidUntilUtc, Is.EqualTo(quote.Lifecycle.IssuedAtUtc!.Value.AddDays(quote.Lifecycle.ValidityDays)));
+        Assert.That(quote.Lifecycle.BindRejectionReason, Is.Null);
     }
 
     [Test]

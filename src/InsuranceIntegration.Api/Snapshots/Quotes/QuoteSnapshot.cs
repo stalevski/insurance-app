@@ -50,4 +50,30 @@ public sealed class QuoteLifecycle
     public string CurrentPhase { get; set; } = string.Empty;
 
     public bool IsBound { get; set; }
+
+    /// <summary>
+    /// Increments each time the quote is (re-)issued. Stays put on bind / cancel /
+    /// endorse. Version 1 is the initial issuance.
+    /// </summary>
+    public int Version { get; set; }
+
+    /// <summary>
+    /// UTC timestamp of the most recent quote issuance.
+    /// </summary>
+    public DateTime? IssuedAtUtc { get; set; }
+
+    /// <summary>
+    /// UTC instant after which the quote can no longer be bound without re-quoting.
+    /// </summary>
+    public DateTime? ValidUntilUtc { get; set; }
+
+    /// <summary>
+    /// Days the quote remains bindable after issuance. Default 30.
+    /// </summary>
+    public int ValidityDays { get; set; } = 30;
+
+    /// <summary>
+    /// When a bind attempt is rejected, the human-readable reason. Null otherwise.
+    /// </summary>
+    public string? BindRejectionReason { get; set; }
 }

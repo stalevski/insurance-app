@@ -65,4 +65,10 @@ public sealed class FinalRiskResponse
     public List<string> CoverageWarnings { get; init; } = [];
 
     public string FinalStatus { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Populated when a bind transaction is rejected by the bind precondition service
+    /// (quote missing / expired / already bound / not in a bindable status). Null otherwise.
+    /// </summary>
+    public string? BindRejectionReason { get; init; }
 }

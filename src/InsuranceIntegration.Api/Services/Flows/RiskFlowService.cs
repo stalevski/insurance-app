@@ -8,13 +8,16 @@ public sealed class RiskFlowService : IRiskFlowService
 {
     private readonly ISubmissionClearanceService _submissionClearanceService;
     private readonly ISubmissionRegistry _submissionRegistry;
+    private readonly IBindPreconditionService? _bindPreconditionService;
 
     public RiskFlowService(
         ISubmissionClearanceService submissionClearanceService,
-        ISubmissionRegistry submissionRegistry)
+        ISubmissionRegistry submissionRegistry,
+        IBindPreconditionService? bindPreconditionService = null)
     {
         _submissionClearanceService = submissionClearanceService;
         _submissionRegistry = submissionRegistry;
+        _bindPreconditionService = bindPreconditionService;
     }
 
     public FinalRiskResponse Process(CanonicalRiskRequest request)
@@ -38,7 +41,18 @@ public sealed class RiskFlowService : IRiskFlowService
 
         var brokerDecision = ResolveBrokerDecision(request);
         var insuredDecision = ResolveInsuredDecision(request, totalIncurred, bestDistance, blockingEnrichmentCount);
-        var bindValid = IsBindRequestValid(request, adjustedPremium, blockingEnrichmentCount, brokerDecision);
+        var bindRequestValid = IsBindRequestValid(request, adjustedPremium, blockingEnrichmentCount, brokerDecision);
+        var bindPrecondition = _bindPreconditionService?.Evaluate(request);
+        string? bindRejectionReason = null;
+        if (!bindRequestValid && IsBindTransaction(request.TransactionType))
+        {
+            bindRejectionReason = "Bind metadata invalid (broker authority / policy reference / premium / checks)";
+        }
+        else if (bindPrecondition is { IsValid: false, RejectionReason: var preconditionReason })
+        {
+            bindRejectionReason = preconditionReason;
+        }
+        var bindValid = bindRequestValid && (bindPrecondition?.IsValid ?? true);
         var submissionStatus = ResolveSubmissionStatus(blockingEnrichmentCount, insuredDecision);
         var quoteStatus = ResolveQuoteStatus(request, blockingEnrichmentCount, adjustedPremium, insuredDecision);
         var policyStatus = ResolvePolicyStatus(request, quoteStatus, brokerDecision, insuredDecision, bindValid);
@@ -63,7 +77,12 @@ public sealed class RiskFlowService : IRiskFlowService
 
         RegisterSubmissionIfApplicable(request);
 
-        var finalStatus = ResolveFinalStatus(request.TransactionType, autoCleared, quoteStatus, policyStatus);
+        if (!string.IsNullOrWhiteSpace(bindRejectionReason))
+        {
+            decisionReasons.Add($"Bind rejected: {bindRejectionReason}");
+        }
+
+        var finalStatus = ResolveFinalStatus(request.TransactionType, autoCleared, quoteStatus, policyStatus, bindValid, bindRejectionReason);
 
         return new FinalRiskResponse
         {
@@ -98,7 +117,8 @@ public sealed class RiskFlowService : IRiskFlowService
             TotalSectionPremium = totalSectionPremium,
             PremiumAllocationBalanced = premiumAllocationBalanced,
             CoverageWarnings = coverageWarnings,
-            FinalStatus = finalStatus
+            FinalStatus = finalStatus,
+            BindRejectionReason = bindRejectionReason
         };
     }
 
@@ -447,13 +467,25 @@ public sealed class RiskFlowService : IRiskFlowService
             || string.Equals(transactionType, QuoteTransactionType.Bind, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ResolveFinalStatus(string transactionType, bool autoCleared, string quoteStatus, string policyStatus)
+    private static string ResolveFinalStatus(
+        string transactionType,
+        bool autoCleared,
+        string quoteStatus,
+        string policyStatus,
+        bool bindValid,
+        string? bindRejectionReason)
     {
         // Post-bind lifecycle operations finalize on their resulting policy status, not on
         // the underwriting auto-clearance pipeline.
         if (PolicyTransactionType.IsPolicyLifecycleTransaction(transactionType))
         {
             return policyStatus;
+        }
+
+        // Bind that failed precondition / metadata checks finalizes as BindRejected.
+        if (IsBindTransaction(transactionType) && !bindValid && !string.IsNullOrWhiteSpace(bindRejectionReason))
+        {
+            return "BindRejected";
         }
 
         return autoCleared && quoteStatus != QuoteStatusValue.Blocked
