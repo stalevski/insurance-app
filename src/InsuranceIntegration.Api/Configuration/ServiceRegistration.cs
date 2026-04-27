@@ -3,6 +3,7 @@ using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Services.Catalog;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Correlation;
+using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
@@ -55,6 +56,7 @@ public static class ServiceRegistration
         services.AddSingleton<IQuoteSnapshotProjector, QuoteSnapshotProjector>();
         services.AddScoped<IPolicySnapshotService, PolicySnapshotService>();
         services.AddScoped<IQuoteSnapshotService, QuoteSnapshotService>();
+        services.AddScoped<IDomainEventLog, DomainEventLog>();
         services.AddScoped<IRiskSnapshotRouter, RiskSnapshotRouter>();
 
         services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();

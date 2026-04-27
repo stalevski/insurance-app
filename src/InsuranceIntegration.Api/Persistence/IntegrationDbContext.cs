@@ -19,6 +19,8 @@ public sealed class IntegrationDbContext : DbContext
 
     public DbSet<QuoteSnapshotEntity> QuoteSnapshots => Set<QuoteSnapshotEntity>();
 
+    public DbSet<DomainEventEntity> DomainEvents => Set<DomainEventEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<KnownSubmissionEntity>(entity =>
@@ -80,6 +82,22 @@ public sealed class IntegrationDbContext : DbContext
             entity.Property(record => record.LastError).HasMaxLength(1024);
             entity.HasIndex(record => new { record.DispatchedAtUtc, record.OccurredAtUtc });
             entity.HasIndex(record => new { record.AggregateType, record.AggregateId });
+        });
+
+        modelBuilder.Entity<DomainEventEntity>(entity =>
+        {
+            entity.HasKey(record => record.Id);
+            entity.Property(record => record.Id).ValueGeneratedNever();
+            entity.Property(record => record.EventType).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.AggregateKind).IsRequired().HasMaxLength(32);
+            entity.Property(record => record.AggregateKey).IsRequired().HasMaxLength(128);
+            entity.Property(record => record.Source).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.EnvelopeId).HasMaxLength(128);
+            entity.Property(record => record.CorrelationId).HasMaxLength(64);
+            entity.Property(record => record.PayloadJson).IsRequired();
+            entity.HasIndex(record => new { record.AggregateKind, record.AggregateKey, record.OccurredAtUtc });
+            entity.HasIndex(record => new { record.EventType, record.OccurredAtUtc });
+            entity.HasIndex(record => new { record.Source, record.EnvelopeId });
         });
     }
 }

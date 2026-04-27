@@ -1,6 +1,8 @@
+using InsuranceIntegration.Api.Events;
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Services.Clearance;
+using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
@@ -136,6 +138,109 @@ public sealed class SnapshotPipelineTests : IDisposable
     }
 
     [Test]
+    public void IngestingThreeRelatedEnvelopes_WritesDomainEventsForEachAffectedAggregate()
+    {
+        var (_, dispatcher) = BuildPipeline();
+
+        dispatcher.Dispatch(new SourceIngestEnvelope
+        {
+            Id = "evt-contoso-evt-001",
+            Source = "CONTOSO_UW",
+            Type = "RiskSubmission",
+            SchemaVersion = "1.0",
+            OccurredAtUtc = new DateTime(2026, 4, 25, 3, 0, 0, DateTimeKind.Utc),
+            CorrelationId = "corr-evt-1",
+            Data = JsonSerializer.SerializeToElement(new
+            {
+                quoteId = "QT-EVT-001",
+                insuredName = "Eventful Storage Ltd",
+                trade = "CommercialProperty",
+                estimatedPremium = 8000m
+            })
+        });
+
+        dispatcher.Dispatch(new SourceIngestEnvelope
+        {
+            Id = "evt-qf-evt-001",
+            Source = "QUOTEFORGE",
+            Type = "QuoteRequest",
+            SchemaVersion = "1.0",
+            OccurredAtUtc = new DateTime(2026, 4, 25, 3, 5, 0, DateTimeKind.Utc),
+            CorrelationId = "corr-evt-2",
+            Data = JsonSerializer.SerializeToElement(new
+            {
+                quoteReference = "QT-EVT-001",
+                insuredName = "Eventful Storage Ltd",
+                productLine = "COMMERCIAL_PROPERTY",
+                brokerCode = "BRK-EVT",
+                brokerName = "Eventful Brokers",
+                technicalPremium = 8000m,
+                brokerPremium = 8500m,
+                currencyCode = "USD",
+                effectiveDate = "2026-05-01",
+                expiryDate = "2027-04-30",
+                underwritingYear = 2026,
+                insuredRevenue = 1_000_000m,
+                insuredEmployeeCount = 10,
+                insuredYearsInBusiness = 6
+            })
+        });
+
+        dispatcher.Dispatch(new SourceIngestEnvelope
+        {
+            Id = "evt-bp-evt-001",
+            Source = "BINDPOINT",
+            Type = "PolicyBindRequest",
+            SchemaVersion = "1.0",
+            OccurredAtUtc = new DateTime(2026, 4, 25, 3, 10, 0, DateTimeKind.Utc),
+            CorrelationId = "corr-evt-3",
+            Data = JsonSerializer.SerializeToElement(new
+            {
+                policyReference = "POL-EVT-001",
+                quoteReference = "QT-EVT-001",
+                insuredName = "Eventful Storage Ltd",
+                productCode = "COMMERCIAL_PROPERTY",
+                brokerCode = "BRK-EVT",
+                brokerName = "Eventful Brokers",
+                brokerHasDelegatedAuthority = true,
+                brokerIsPreferredPartner = true,
+                boundPremium = 8500m,
+                currencyCode = "USD",
+                inceptionDate = "2026-05-01",
+                expiryDate = "2027-04-30",
+                boundDate = "2026-04-25"
+            })
+        });
+
+        using var verifyContext = new IntegrationDbContext(_options);
+        var eventLog = new DomainEventLog(verifyContext);
+
+        var quoteEvents = eventLog.GetByAggregate(DomainEventAggregateKind.Quote, "QT-EVT-001");
+        var policyEvents = eventLog.GetByAggregate(DomainEventAggregateKind.Policy, "POL-EVT-001");
+
+        Assert.Multiple(() =>
+        {
+            // Three envelopes that touched the quote -> three quote events.
+            Assert.That(quoteEvents, Has.Count.EqualTo(3));
+            Assert.That(quoteEvents.Select(e => e.EventType), Is.EqualTo(new[]
+            {
+                DomainEventType.RiskSubmissionReceived,
+                DomainEventType.QuoteIssued,
+                DomainEventType.QuoteBound
+            }));
+            Assert.That(quoteEvents.Select(e => e.Source), Is.EqualTo(new[] { "CONTOSO_UW", "QUOTEFORGE", "BINDPOINT" }));
+            Assert.That(quoteEvents.Select(e => e.CorrelationId), Is.EqualTo(new[] { "corr-evt-1", "corr-evt-2", "corr-evt-3" }));
+
+            // Only the bind envelope produced a policy aggregate event.
+            Assert.That(policyEvents, Has.Count.EqualTo(1));
+            Assert.That(policyEvents[0].EventType, Is.EqualTo(DomainEventType.PolicyBound));
+            Assert.That(policyEvents[0].Source, Is.EqualTo("BINDPOINT"));
+            Assert.That(policyEvents[0].EnvelopeId, Is.EqualTo("evt-bp-evt-001"));
+            Assert.That(policyEvents[0].PayloadJson, Is.Not.Empty);
+        });
+    }
+
+    [Test]
     public void IdempotentReplay_DoesNotDoubleAppendHistory()
     {
         var (_, dispatcher) = BuildPipeline();
@@ -163,9 +268,15 @@ public sealed class SnapshotPipelineTests : IDisposable
         using var verifyContext = new IntegrationDbContext(_options);
         var quoteService = new QuoteSnapshotService(verifyContext, new QuoteSnapshotProjector());
         var quote = quoteService.Find("QT-REPLAY");
+        var eventLog = new DomainEventLog(verifyContext);
+        var quoteEvents = eventLog.GetByAggregate(DomainEventAggregateKind.Quote, "QT-REPLAY");
 
-        Assert.That(quote, Is.Not.Null);
-        Assert.That(quote!.History, Has.Count.EqualTo(1), "Idempotent replays must not double-append history");
+        Assert.Multiple(() =>
+        {
+            Assert.That(quote, Is.Not.Null);
+            Assert.That(quote!.History, Has.Count.EqualTo(1), "Idempotent replays must not double-append history");
+            Assert.That(quoteEvents, Has.Count.EqualTo(1), "Idempotent replays must not double-write domain events");
+        });
     }
 
     private (RiskIngestHandler handler, IngestDispatcher dispatcher) BuildPipeline()
@@ -186,7 +297,8 @@ public sealed class SnapshotPipelineTests : IDisposable
         var quoteProjector = new QuoteSnapshotProjector();
         var policyService = new PolicySnapshotService(context, policyProjector);
         var quoteService = new QuoteSnapshotService(context, quoteProjector);
-        var router = new RiskSnapshotRouter(policyService, quoteService);
+        var eventLog = new DomainEventLog(context);
+        var router = new RiskSnapshotRouter(policyService, quoteService, eventLog, TimeProvider.System);
 
         var handler = new RiskIngestHandler(riskIngestMapper, riskFlowService, router, TimeProvider.System);
         var idempotency = new EfCoreIdempotencyStore(context, TimeProvider.System);
