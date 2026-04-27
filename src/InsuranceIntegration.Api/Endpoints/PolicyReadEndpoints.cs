@@ -18,6 +18,12 @@ public static class PolicyReadEndpoints
             return snapshot is null ? Results.NotFound() : Results.Ok(snapshot);
         });
 
+        endpoints.MapPost("/api/v1/snapshots/policies/{policyReference}/rebuild", (string policyReference, ISnapshotRebuildService rebuild) =>
+        {
+            var result = rebuild.RebuildPolicy(policyReference);
+            return result.EventsApplied == 0 ? Results.NotFound() : Results.Ok(result);
+        });
+
         return endpoints;
     }
 }

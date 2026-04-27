@@ -25,4 +25,16 @@ public static class PolicyTransactionType
     {
         return All.Any(value => string.Equals(value, transactionType, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>
+    /// Post-bind policy lifecycle operations. These do not re-quote and should not write
+    /// a quote-aggregate event when routed through the snapshot router.
+    /// </summary>
+    public static bool IsPolicyLifecycleTransaction(string transactionType)
+    {
+        return string.Equals(transactionType, Cancellation, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(transactionType, MidTermAdjustment, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(transactionType, Renewal, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(transactionType, Reinstatement, StringComparison.OrdinalIgnoreCase);
+    }
 }

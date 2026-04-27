@@ -63,7 +63,7 @@ public sealed class RiskFlowService : IRiskFlowService
 
         RegisterSubmissionIfApplicable(request);
 
-        var finalStatus = autoCleared && quoteStatus != QuoteStatusValue.Blocked ? "ReadyForDownstreamDispatch" : "ManualUnderwritingReview";
+        var finalStatus = ResolveFinalStatus(request.TransactionType, autoCleared, quoteStatus, policyStatus);
 
         return new FinalRiskResponse
         {
@@ -423,7 +423,9 @@ public sealed class RiskFlowService : IRiskFlowService
 
         if (string.Equals(transactionType, PolicyTransactionType.MidTermAdjustment, StringComparison.OrdinalIgnoreCase))
         {
-            return insuredEligible ? PolicyStatusValue.Endorsed : PolicyStatusValue.Draft;
+            // Endorsements operate on an already-underwritten policy; do not re-gate on
+            // insured-eligibility, the policy was cleared at bind.
+            return PolicyStatusValue.Endorsed;
         }
 
         if (IsBindTransaction(transactionType))
@@ -443,6 +445,20 @@ public sealed class RiskFlowService : IRiskFlowService
     {
         return string.Equals(transactionType, "PolicyBind", StringComparison.OrdinalIgnoreCase)
             || string.Equals(transactionType, QuoteTransactionType.Bind, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveFinalStatus(string transactionType, bool autoCleared, string quoteStatus, string policyStatus)
+    {
+        // Post-bind lifecycle operations finalize on their resulting policy status, not on
+        // the underwriting auto-clearance pipeline.
+        if (PolicyTransactionType.IsPolicyLifecycleTransaction(transactionType))
+        {
+            return policyStatus;
+        }
+
+        return autoCleared && quoteStatus != QuoteStatusValue.Blocked
+            ? "ReadyForDownstreamDispatch"
+            : "ManualUnderwritingReview";
     }
 
     private static bool IsBindRequestValid(CanonicalRiskRequest request, decimal adjustedPremium, int blockingEnrichmentCount, string brokerDecision)

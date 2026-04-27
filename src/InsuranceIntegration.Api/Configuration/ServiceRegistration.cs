@@ -40,6 +40,7 @@ public static class ServiceRegistration
 
         services.AddScoped<IRatingService, RatingService>();
         services.AddScoped<IPolicyAdjustmentService, PolicyAdjustmentService>();
+        services.AddScoped<IPolicyLifecycleService, PolicyLifecycleService>();
 
         services.AddScoped<ISubmissionClearanceService, SubmissionClearanceService>();
         services.AddScoped<IRiskFlowService, RiskFlowService>();
@@ -57,6 +58,7 @@ public static class ServiceRegistration
         services.AddScoped<IPolicySnapshotService, PolicySnapshotService>();
         services.AddScoped<IQuoteSnapshotService, QuoteSnapshotService>();
         services.AddScoped<IDomainEventLog, DomainEventLog>();
+        services.AddScoped<ISnapshotRebuildService, SnapshotRebuildService>();
         services.AddScoped<IRiskSnapshotRouter, RiskSnapshotRouter>();
 
         services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
