@@ -24,6 +24,9 @@ jobs:
       - name: Restore
         run: dotnet restore InsuranceIntegration.sln
 
+      - name: Verify formatting
+        run: dotnet format InsuranceIntegration.sln --verify-no-changes --severity warn --no-restore
+
       - name: Build
         run: dotnet build InsuranceIntegration.sln --configuration Release --no-restore
 

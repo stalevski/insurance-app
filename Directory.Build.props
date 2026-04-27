@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Settings here apply to every .csproj in the repository.
+    Documented at: https://learn.microsoft.com/visualstudio/msbuild/customize-by-directory
+  -->
+
+  <PropertyGroup>
+    <!--
+      Promotes IDExxxx code-style diagnostics (configured in .editorconfig) from
+      "design-time only" to "visible at build time". Without this, `dotnet build`
+      ignores style rules and only the IDE surfaces them.
+    -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!--
+      Pulls in the latest recommended set of CAxxxx analyzer rules.
+      'recommended' is less strict than 'all'; tunable later if needed.
+    -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>
