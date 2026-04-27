@@ -8,7 +8,9 @@ How to run, extend, and manually exercise the test suite for **InsuranceIntegrat
 - **Test runner**: `dotnet test` via `Microsoft.NET.Test.Sdk` + `NUnit3TestAdapter`
 - **Coverage**: `coverlet.collector` is available for producing Cobertura reports
 - **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory (`DataSource=:memory:`) — no external DB required
+- **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in `../tests/InsuranceIntegration.Api.Tests/GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
+- **Total tests**: 114 (and counting). Run `dotnet test` to see the current tally.
 
 ## 2. Run the tests
 
@@ -64,10 +66,12 @@ tests/InsuranceIntegration.Api.Tests/
   Correlation/                              # CorrelationContext scoping
   Flows/
     BillingFlowServiceTests.cs
+    BindPreconditionServiceTests.cs         # FakeTimeProvider quote-expiry tests
     ClaimFlowServiceTests.cs
     ComplianceFlowServiceTests.cs
     RiskFlowServiceTests.cs
     RiskFlowTransactionTypeTests.cs
+    RiskFlowCoverageTests.cs
     TestRiskRequestFactory.cs               # shared canonical request builder
   Ingest/
     EfCoreIdempotencyStoreTests.cs
@@ -86,12 +90,15 @@ tests/InsuranceIntegration.Api.Tests/
     OutboxDispatcherTests.cs                # in-memory SQLite + EF Core
     OutboxWriterTests.cs
   Policies/
-    PolicyAdjustmentServiceTests.cs
+    PolicyAdjustmentServiceTests.cs         # pure cancellation/endorsement math
+    PolicyLifecycleServiceTests.cs          # cancel/endorse end-to-end through router + events
+    PolicyRenewalServiceTests.cs            # loss-ratio bands + lineage assertions
   Pricing/
     RatingServiceTests.cs
   Snapshots/
     PolicySnapshotProjectorTests.cs         # pure projector merge rules
-    SnapshotPipelineTests.cs                # 3-event end-to-end through dispatcher + EF
+    SnapshotPipelineTests.cs                # 3-event end-to-end + DomainEvents assertions
+    SnapshotRebuildServiceTests.cs          # replay events -> rebuilt snapshot matches live
   GlobalUsings.cs
   InsuranceIntegration.Api.Tests.csproj
 ```
@@ -214,15 +221,20 @@ Use this table when debugging a failure or extending a feature:
 |---|---|
 | Endpoint routing or wiring | `../src/InsuranceIntegration.Api/Endpoints`, `../src/InsuranceIntegration.Api/Program.cs` |
 | Dependency registration | `../src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs` |
-| Risk flow behavior | `../tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs`, `.../RiskFlowTransactionTypeTests.cs` |
+| Risk flow behavior | `../tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs`, `.../RiskFlowTransactionTypeTests.cs`, `.../RiskFlowCoverageTests.cs` |
+| Bind preconditions (expired / wrong-status / already-bound quote) | `../tests/InsuranceIntegration.Api.Tests/Flows/BindPreconditionServiceTests.cs` |
 | Source mappers | `../tests/InsuranceIntegration.Api.Tests/Mappers/Risks/*` |
 | Ingest dispatch + idempotency | `../tests/InsuranceIntegration.Api.Tests/Ingest/*` |
 | Clearance / fuzzy matching | `../tests/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
 | Outbox background dispatch | `../tests/InsuranceIntegration.Api.Tests/Outbox/*` |
-| Cancellation / endorsement math | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
+| Cancellation / endorsement math (pure) | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
+| Cancellation / endorsement end-to-end (snapshot + DomainEvents) | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyLifecycleServiceTests.cs` |
+| Renewal pricing + lineage | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyRenewalServiceTests.cs` |
 | Rating / catalog math | `../tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
 | Correlation ID scoping | `../tests/InsuranceIntegration.Api.Tests/Correlation/*` |
-| Policy / Quote snapshot projection | `../tests/InsuranceIntegration.Api.Tests/Snapshots/*` (projector merge rules + 3-event pipeline) |
+| Policy / Quote snapshot projection | `../tests/InsuranceIntegration.Api.Tests/Snapshots/PolicySnapshotProjectorTests.cs`, `.../SnapshotPipelineTests.cs` |
+| Snapshot rebuild from DomainEvents | `../tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotRebuildServiceTests.cs` |
+| DomainEvents row writes / idempotent replay | `../tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
 
 ## 7. Manual end-to-end testing
 
@@ -299,7 +311,11 @@ Invoke-RestMethod `
 
 Inspect `clearanceDecision`, `quoteStatus`, `policyStatus`, and `finalStatus` on the response.
 
-### 7.5 Policy math
+### 7.5 Policy lifecycle (cancel / endorse / renew)
+
+These endpoints all require the policy to already exist in `PolicySnapshots` — run §7.2 (Polaris) and a BindPoint envelope first to seed `POL-7781`. Each endpoint returns a `PolicyLifecycleResult` (cancel / endorse) or a `RenewalResult` and writes a row to `DomainEvents` in the same EF transaction as the snapshot mutation.
+
+#### 7.5.1 Cancellation
 
 ```powershell
 $cancel = @{
@@ -313,14 +329,86 @@ $cancel = @{
   minimumRetainedPremium = 0
 } | ConvertTo-Json
 
-Invoke-RestMethod `
+$result = Invoke-RestMethod `
   -Uri http://localhost:5000/api/v1/policies/cancellations `
   -Method Post `
   -ContentType application/json `
   -Body $cancel
+
+$result.policyStatus              # Cancelled
+$result.cancellation.returnPremium # 6032.97 for the sample above
+$result.domainEventType            # PolicyCancelled
 ```
 
-Expected values for the sample above: `earnedPremium=5967.03`, `unearnedPremium=6032.97`, `returnPremium=6032.97` (see §7.9 in `./USAGE.md`). The same values are asserted — within a range — by `PolicyAdjustmentServiceTests`.
+Expected math: `earnedPremium=5967.03`, `unearnedPremium=6032.97`, `returnPremium=6032.97` (see §7.9 in `./USAGE.md`). The same values are asserted by `PolicyAdjustmentServiceTests`; `PolicyLifecycleServiceTests` further asserts the snapshot transition and the `PolicyCancelled` domain event row.
+
+#### 7.5.2 Endorsement
+
+```powershell
+$endorse = @{
+  policyReference = "POL-7781"
+  currentAnnualPremium = 12000
+  newAnnualPremium = 13500
+  inceptionDate = "2026-01-01"
+  expiryDate = "2026-12-31"
+  effectiveDate = "2026-07-01"
+} | ConvertTo-Json
+
+$result = Invoke-RestMethod `
+  -Uri http://localhost:5000/api/v1/policies/endorsements `
+  -Method Post `
+  -ContentType application/json `
+  -Body $endorse
+
+$result.policyStatus                      # Endorsed
+$result.endorsement.proRataAdjustment     # 754.12 for the sample above
+```
+
+#### 7.5.3 Renewal
+
+```powershell
+$renew = @{
+  policyReference = "POL-7781"
+  newQuoteReference = "QT-RENEWAL-7781"
+  newInceptionDate = "2027-01-01"
+  newExpiryDate = "2027-12-31"
+  priorAnnualPremium = 10000
+  priorClaimsPaid = 4500
+  revenueDeltaPercent = 0.10
+  overrideLoadPercent = $null
+} | ConvertTo-Json
+
+$result = Invoke-RestMethod `
+  -Uri http://localhost:5000/api/v1/policies/renewals `
+  -Method Post `
+  -ContentType application/json `
+  -Body $renew
+
+$result.lossRatioBand                # Standard (45% loss ratio)
+$result.renewalPremium               # 10500 (5% exposure load only)
+```
+
+Then confirm the prior policy is now Renewed and a new QuoteSnapshot exists:
+
+```powershell
+(Invoke-RestMethod http://localhost:5000/api/v1/policies/POL-7781).lifecycle.currentPhase     # Renewed
+(Invoke-RestMethod http://localhost:5000/api/v1/quotes/QT-RENEWAL-7781).priorPolicyReference  # POL-7781
+```
+
+Loss-ratio bands and pricing math are exhaustively asserted by `PolicyRenewalServiceTests` (parameterised over `Excellent`/`Standard`/`Loaded`/`HeavilyLoaded`/`Distressed`).
+
+#### 7.5.4 Snapshot rebuild from DomainEvents
+
+After running cancel / endorse / renew, replay the policy's events through the projector and compare the rebuilt snapshot against the live one:
+
+```powershell
+$rebuilt = Invoke-RestMethod -Method Post http://localhost:5000/api/v1/snapshots/policies/POL-7781/rebuild
+
+$rebuilt.eventsApplied                       # number of policy events replayed
+$rebuilt.snapshot.lifecycle.policyStatus     # should match the live snapshot
+```
+
+The rebuild is asserted to reproduce the live state by `SnapshotRebuildServiceTests`.
 
 ### 7.6 Outbox dispatch
 
