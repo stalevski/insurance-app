@@ -41,6 +41,7 @@ public static class ServiceRegistration
         services.AddScoped<IRatingService, RatingService>();
         services.AddScoped<IPolicyAdjustmentService, PolicyAdjustmentService>();
         services.AddScoped<IPolicyLifecycleService, PolicyLifecycleService>();
+        services.AddScoped<IPolicyRenewalService, PolicyRenewalService>();
 
         services.AddScoped<ISubmissionClearanceService, SubmissionClearanceService>();
         services.AddScoped<IBindPreconditionService, BindPreconditionService>();

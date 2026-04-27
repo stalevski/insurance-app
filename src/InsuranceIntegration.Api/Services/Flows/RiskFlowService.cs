@@ -438,7 +438,10 @@ public sealed class RiskFlowService : IRiskFlowService
 
         if (string.Equals(transactionType, PolicyTransactionType.Renewal, StringComparison.OrdinalIgnoreCase))
         {
-            return insuredEligible ? PolicyStatusValue.Renewed : PolicyStatusValue.Draft;
+            // Renewals derive from an already-underwritten prior policy; eligibility is
+            // expressed via the renewal pricing (loss-ratio loading), not via the broad
+            // insured-eligibility gate that requires fresh underwriting metadata.
+            return PolicyStatusValue.Renewed;
         }
 
         if (string.Equals(transactionType, PolicyTransactionType.MidTermAdjustment, StringComparison.OrdinalIgnoreCase))
