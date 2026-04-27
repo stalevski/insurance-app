@@ -13,4 +13,10 @@ public sealed class SubmissionData
     public decimal? Revenue { get; init; }
 
     public bool IsRenewal { get; init; }
+
+    /// <summary>
+    /// When IsRenewal is true, the policy reference being renewed. Lets downstream
+    /// projectors and consumers link the new quote back to its lineage.
+    /// </summary>
+    public string? PriorPolicyReference { get; init; }
 }

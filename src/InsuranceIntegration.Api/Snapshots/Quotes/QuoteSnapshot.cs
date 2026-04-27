@@ -8,6 +8,12 @@ public sealed class QuoteSnapshot
 
     public string? PolicyReference { get; set; }
 
+    /// <summary>
+    /// When this quote is a renewal of a prior policy, the prior policy reference.
+    /// Null for non-renewal quotes.
+    /// </summary>
+    public string? PriorPolicyReference { get; set; }
+
     public string ProductCode { get; set; } = string.Empty;
 
     public int UnderwritingYear { get; set; }

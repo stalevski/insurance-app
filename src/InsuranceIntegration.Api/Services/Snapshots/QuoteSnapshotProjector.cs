@@ -23,6 +23,7 @@ public sealed class QuoteSnapshotProjector : IQuoteSnapshotProjector
 
         snapshot.QuoteReference = SnapshotMerge.CoalesceRequired(snapshot.QuoteReference, quoteRef);
         snapshot.PolicyReference = SnapshotMerge.Coalesce(snapshot.PolicyReference, request.Policy.PolicyReference);
+        snapshot.PriorPolicyReference = SnapshotMerge.Coalesce(snapshot.PriorPolicyReference, request.Submission.PriorPolicyReference);
         snapshot.ProductCode = SnapshotMerge.CoalesceRequired(snapshot.ProductCode, request.ProductCode);
         snapshot.UnderwritingYear = request.Submission.UnderwritingYear > 0 ? request.Submission.UnderwritingYear : snapshot.UnderwritingYear;
         snapshot.CurrencyCode = SnapshotMerge.CoalesceRequired(snapshot.CurrencyCode, request.CurrencyCode, fallback: "USD");

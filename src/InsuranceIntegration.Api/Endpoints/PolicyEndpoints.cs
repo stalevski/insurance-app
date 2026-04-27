@@ -40,6 +40,23 @@ public static class PolicyEndpoints
             }
         });
 
+        endpoints.MapPost("/api/v1/policies/renewals", (RenewalRequest request, IPolicyRenewalService renewal) =>
+        {
+            try
+            {
+                var result = renewal.ApplyRenewal(request);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Policy not found");
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid renewal request");
+            }
+        });
+
         return endpoints;
     }
 }
