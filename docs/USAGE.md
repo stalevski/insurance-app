@@ -61,13 +61,16 @@ $env:ConnectionStrings__Integration = "Data Source=C:\data\integration.db"
 dotnet run --project .\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj -- --ConnectionStrings:Integration="Data Source=C:\data\integration.db"
 ```
 
-The context (`IntegrationDbContext`) owns three tables:
+The context (`IntegrationDbContext`) owns six tables:
 
 | Table | Purpose |
 |---|---|
 | `KnownSubmissions` | Clearance registry for previously seen submissions |
 | `IngestEntries` | Idempotency cache keyed by `(Source, EnvelopeId)` and queryable via `GET /api/v1/ingest/{source}/{envelopeId}` |
 | `OutboxMessages` | Events awaiting dispatch by the background worker |
+| `PolicySnapshots` | One row per policy with the JSON snapshot blob and a few denormalized columns for filterable list queries |
+| `QuoteSnapshots` | Same shape as `PolicySnapshots`, keyed by quote reference |
+| `DomainEvents` | Append-only log of canonical-shaped business events, queryable per aggregate (`Policy`/`Quote`) and per event type. Replay-source for `POST /api/v1/snapshots/.../rebuild`. |
 
 Generated migrations live in `../src/InsuranceIntegration.Api/Migrations`.
 
@@ -122,7 +125,7 @@ Each `POST /api/v1/ingest` produces an `IngestReceipt` for that one envelope (pe
 | Snapshot | Key | Updated by | Read endpoint |
 |---|---|---|---|
 | `QuoteSnapshot` | `quoteReference` (or `externalReference` when no quote ref) | every Risk-domain ingest (Contoso RiskSubmission, QuoteForge QuoteRequest, BindPoint PolicyBindRequest) | `GET /api/v1/quotes/{quoteReference}` |
-| `PolicySnapshot` | `policyReference` | any Risk-domain ingest that includes a `policyReference` (typically the bind event and any later endorsements) | `GET /api/v1/policies/{policyReference}` |
+| `PolicySnapshot` | `policyReference` | any Risk-domain ingest that includes a `policyReference`, plus internal lifecycle ops (cancel / endorse / renew) | `GET /api/v1/policies/{policyReference}` |
 
 The pipeline runs inside `RiskIngestHandler` after the flow service computes the `FinalRiskResponse`:
 
@@ -131,8 +134,9 @@ SourceIngestEnvelope
   → IRiskIngestMapper (source DTO → CanonicalRiskRequest)
   → IRiskFlowService.Process (decisions → FinalRiskResponse)
   → IRiskSnapshotRouter.Route
-        ├── IQuoteSnapshotService.Apply (always, when a quote ref or external ref is present)
-        └── IPolicySnapshotService.Apply (only when policyReference is present)
+        ├── IDomainEventLog.Append (one event per affected aggregate)
+        ├── IQuoteSnapshotService.Apply (when a quote ref is present and txn is not policy-lifecycle)
+        └── IPolicySnapshotService.Apply (when policyReference is present)
   → IngestReceipt (returned to caller)
 ```
 
@@ -148,6 +152,54 @@ Sources `../src/InsuranceIntegration.Api/Services/Snapshots/RiskSnapshotRouter.c
 **Smaller-source case**: a Contoso-only ingest produces a thin `QuoteSnapshot` with insured / premium hint / quote status filled but no broker block, no bind data, no claims. As more events arrive (a QuoteForge quote with broker info, a BindPoint bind that creates the policy), the same snapshot is enriched in place. Same shape for everyone — just partially filled until more is known.
 
 **Persistence**: snapshots live in `PolicySnapshots` / `QuoteSnapshots` tables. Each row stores a `SnapshotJson` column with the full document plus a few denormalized columns (`ProductCode`, `UnderwritingYear`, `CurrentPhase`, `LastUpdatedUtc`, `IsBound`) for filterable list queries. Idempotent ingest replays do not double-append history because the dispatcher short-circuits at the receipt layer before the projector ever runs.
+
+### Domain events (cross-aggregate timeline)
+
+Alongside the snapshot writes, every business state change also appends a row to the `DomainEvents` table. This gives you a queryable cross-aggregate timeline that the snapshot's embedded `History[]` cannot — for example "every cancellation in the last week" or "every event for policy POL-7781 in arrival order".
+
+| Column | Notes |
+|---|---|
+| `Id` | Primary key (Guid) |
+| `EventType` | `RiskSubmissionReceived`, `QuoteIssued`, `QuoteBound`, `PolicyBound`, `PolicyEndorsed`, `PolicyCancelled`, `PolicyRenewed`, `PolicyReinstated` |
+| `AggregateKind` | `Policy` or `Quote` |
+| `AggregateKey` | the policy or quote reference |
+| `Source` | `CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`, ..., or `internal` for cancel / endorse / renew |
+| `EnvelopeId` | the source envelope id when applicable; a synthetic id for internal events |
+| `OccurredAtUtc` | when the source event happened |
+| `RecordedAtUtc` | when this platform persisted the row |
+| `PayloadJson` | a `RiskEventPayload { canonicalRequest, finalResponse }` — enough to deterministically replay through the projector |
+
+The event log is the **source of truth for replay**. `POST /api/v1/snapshots/policies/{ref}/rebuild` (and the equivalent for quotes) reads every event for an aggregate, runs the projector across them in memory, and returns the rebuilt snapshot — useful for sanity-comparing against the live row, recovering after schema changes, or testing new projector logic against historical data.
+
+Three storage tiers, three replay scopes:
+
+| Tier | Replay from | Recovers |
+|---|---|---|
+| `IngestEntries` (raw envelopes) | source envelopes | full pipeline rebuild from scratch |
+| `DomainEvents` (canonical events) | event payloads | any snapshot from its events |
+| `PolicySnapshot` / `QuoteSnapshot` | the rebuilt state | fast reads |
+
+Sources: `../src/InsuranceIntegration.Api/Services/Events/DomainEventLog.cs`, `../src/InsuranceIntegration.Api/Services/Snapshots/SnapshotRebuildService.cs`.
+
+### Quote versioning, validity, and bind preconditions
+
+Quotes are first-class versioned objects. The `QuoteSnapshot.Lifecycle` block carries:
+
+- `Version` — increments on each quote-issuance event (Contoso `RiskSubmission`, QuoteForge `QuoteRequest`, ...). Stays put on bind / cancel / endorse.
+- `IssuedAtUtc` — UTC of the most recent issuance.
+- `ValidUntilUtc` — `IssuedAtUtc + ValidityDays` (default 30).
+- `ValidityDays` — per-quote validity window.
+- `BindRejectionReason` — populated when a bind attempt was rejected, cleared on a successful bind.
+
+Before a `PolicyBind` produces a `Bound` policy, `BindPreconditionService` checks the existing quote and rejects when:
+
+- the bind has no `quoteReference`
+- no quote exists for that reference
+- the quote is already bound to a different policy
+- `now > ValidUntilUtc` (expired)
+- the quote's `QuoteStatus` is not in `{Quoted, Indicative}`
+
+A rejected bind produces `policyStatus=Draft`, `finalStatus=BindRejected`, and `bindRejectionReason` populated on the `FinalRiskResponse`. The QuoteSnapshot mirrors the rejection reason on `lifecycle.bindRejectionReason`. Source: `../src/InsuranceIntegration.Api/Services/Flows/BindPreconditionService.cs`.
 
 ## 7. Endpoint reference
 
@@ -165,12 +217,15 @@ Summary:
 | `POST` | `/api/v1/ingest/risks` | Source-shape risk ingest (selects a source-specific mapper) |
 | `GET` | `/api/v1/ingest/{source}/{envelopeId}` | Retrieve the persisted `IngestReceipt` for a previously processed envelope |
 | `POST` | `/api/v1/risks` | Canonical risk submission (skips source mapping) |
-| `POST` | `/api/v1/policies/cancellations` | Pro-rata or short-rate cancellation calculation |
-| `POST` | `/api/v1/policies/endorsements` | Mid-term endorsement delta calculation |
+| `POST` | `/api/v1/policies/cancellations` | Apply a cancellation to an existing policy (math + snapshot + `PolicyCancelled` event) |
+| `POST` | `/api/v1/policies/endorsements` | Apply a mid-term endorsement (math + snapshot + `PolicyEndorsed` event) |
+| `POST` | `/api/v1/policies/renewals` | Generate a renewal quote with loss-ratio and exposure-driven re-pricing |
 | `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
+| `POST` | `/api/v1/snapshots/policies/{policyReference}/rebuild` | Replay the policy's `DomainEvents` through the projector and return the rebuilt snapshot |
 | `GET` | `/api/v1/quotes` | List recent quote snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/quotes/{quoteReference}` | Full `QuoteSnapshot` consolidated from all events for that key |
+| `POST` | `/api/v1/snapshots/quotes/{quoteReference}/rebuild` | Replay the quote's `DomainEvents` through the projector and return the rebuilt snapshot |
 | `GET` | `/api/v1/schemas/ingest/envelope` | JSON schema for `SourceIngestEnvelope` |
 | `GET` | `/api/v1/schemas/ingest/risk-request` | JSON schema for `SourceIngestRequest` |
 | `GET` | `/api/v1/schemas/canonical/risk-request` | JSON schema for `CanonicalRiskRequest` |
@@ -438,13 +493,14 @@ Shape returned by `POST /api/v1/risks` and by the risk branches of `POST /api/v1
 | `bestFuzzyMatchDistance` | int | Levenshtein distance to nearest known submission |
 | `bestFuzzyMatchDescription` | string | Human-readable match label |
 | `decisionReasons`, `appliedEnrichments`, `sectionActions` | string[] | Audit trails |
-| `finalStatus` | string | e.g. `ReadyForDownstreamDispatch` |
+| `finalStatus` | string | `ReadyForDownstreamDispatch`, `ManualUnderwritingReview`, `BindRejected`, or a policy-lifecycle status (`Cancelled` / `Endorsed` / `Renewed` / `Reinstated`) |
+| `bindRejectionReason` | string \| null | Populated when a bind transaction failed metadata or precondition checks (quote missing / expired / not in a bindable status); null otherwise |
 
 ---
 
 ### 7.9 `POST /api/v1/policies/cancellations`
 
-Computes a pro-rata or short-rate cancellation (`../src/InsuranceIntegration.Api/Endpoints/PolicyEndpoints.cs:9-13`, `../src/InsuranceIntegration.Api/Services/Policies`).
+Applies a pro-rata or short-rate cancellation to a previously bound policy. Updates the `PolicySnapshot` to status `Cancelled` and writes a `PolicyCancelled` row to `DomainEvents` in the same EF transaction. Returns 404 if the policy reference is unknown, 400 if the input is invalid (`../src/InsuranceIntegration.Api/Services/Policies/PolicyLifecycleService.cs`).
 
 **Request body** (`CancellationRequest`)
 
@@ -463,26 +519,35 @@ Computes a pro-rata or short-rate cancellation (`../src/InsuranceIntegration.Api
 
 `basis` accepts `ProRata` or `ShortRate` (`../src/InsuranceIntegration.Api/Services/Policies/CancellationBasis.cs`).
 
-**Response (200 OK)** (`CancellationResult`)
+**Response (200 OK)** (`PolicyLifecycleResult`)
 
 ```json
 {
   "policyReference": "POL-7781",
-  "earnedPremium": 5967.03,
-  "unearnedPremium": 6032.97,
-  "returnPremium": 6032.97,
-  "shortRatePenalty": 0,
-  "retainedPremium": 5967.03,
-  "basis": "ProRata",
-  "reasons": [
-    "Earned fraction: 0.4973 over 364 days",
-    "Earned premium: 5967.03",
-    "Unearned premium: 6032.97",
-    "Basis applied: ProRata",
-    "No short-rate penalty applied",
-    "Return premium: 6032.97",
-    "Retained premium: 5967.03"
-  ]
+  "transactionType": "Cancellation",
+  "policyStatus": "Cancelled",
+  "currentPhase": "Cancelled",
+  "domainEventId": "6c6c6e2c-...",
+  "domainEventType": "PolicyCancelled",
+  "cancellation": {
+    "policyReference": "POL-7781",
+    "earnedPremium": 5967.03,
+    "unearnedPremium": 6032.97,
+    "returnPremium": 6032.97,
+    "shortRatePenalty": 0,
+    "retainedPremium": 5967.03,
+    "basis": "ProRata",
+    "reasons": [
+      "Earned fraction: 0.4973 over 364 days",
+      "Earned premium: 5967.03",
+      "Unearned premium: 6032.97",
+      "Basis applied: ProRata",
+      "No short-rate penalty applied",
+      "Return premium: 6032.97",
+      "Retained premium: 5967.03"
+    ]
+  },
+  "endorsement": null
 }
 ```
 
@@ -492,7 +557,7 @@ With `"basis": "ShortRate"` a penalty of `unearnedPremium * shortRatePenaltyPerc
 
 ### 7.10 `POST /api/v1/policies/endorsements`
 
-Computes the pro-rata premium delta for a mid-term endorsement (`../src/InsuranceIntegration.Api/Endpoints/PolicyEndpoints.cs:15-19`).
+Applies a mid-term endorsement to a previously bound policy. Updates the `PolicySnapshot` to status `Endorsed` and writes a `PolicyEndorsed` row to `DomainEvents`. 404 / 400 semantics match cancellations.
 
 **Request body** (`EndorsementRequest`)
 
@@ -507,20 +572,29 @@ Computes the pro-rata premium delta for a mid-term endorsement (`../src/Insuranc
 }
 ```
 
-**Response (200 OK)** (`EndorsementResult`)
+**Response (200 OK)** (`PolicyLifecycleResult`)
 
 ```json
 {
   "policyReference": "POL-7781",
-  "premiumDelta": 1500.00,
-  "proRataAdjustment": 754.12,
-  "adjustmentDirection": "AdditionalPremium",
-  "reasons": [
-    "Premium delta: 1500",
-    "Remaining days: 183 of 364",
-    "Pro-rata adjustment: 754.12",
-    "Direction: AdditionalPremium"
-  ]
+  "transactionType": "MidTermAdjustment",
+  "policyStatus": "Endorsed",
+  "currentPhase": "Endorsed",
+  "domainEventId": "7d8c...",
+  "domainEventType": "PolicyEndorsed",
+  "cancellation": null,
+  "endorsement": {
+    "policyReference": "POL-7781",
+    "premiumDelta": 1500.00,
+    "proRataAdjustment": 754.12,
+    "adjustmentDirection": "AdditionalPremium",
+    "reasons": [
+      "Premium delta: 1500",
+      "Remaining days: 183 of 364",
+      "Pro-rata adjustment: 754.12",
+      "Direction: AdditionalPremium"
+    ]
+  }
 }
 ```
 
@@ -528,9 +602,75 @@ Computes the pro-rata premium delta for a mid-term endorsement (`../src/Insuranc
 
 ---
 
-### 7.11 Snapshot read endpoints
+### 7.11 `POST /api/v1/policies/renewals`
 
-Consolidated views per business key, fed by every Risk-domain ingest. See §6.4 (Domain snapshots) for the merge semantics. Endpoints live in `../src/InsuranceIntegration.Api/Endpoints/PolicyReadEndpoints.cs` and `../src/InsuranceIntegration.Api/Endpoints/QuoteReadEndpoints.cs`.
+Generates a renewal quote for a bound policy with premium re-priced from the prior term's loss ratio and the broker's exposure delta. Two domain events are produced in two distinct EF transactions:
+
+1. The prior policy gets a `PolicyRenewed` event and its `PolicySnapshot` transitions to `policyStatus=Renewed`.
+2. A fresh `QuoteSnapshot` is created for the new term with `lifecycle.version=1`, a fresh `validUntilUtc`, and `priorPolicyReference` set to the renewed policy. A `QuoteIssued` event is emitted on the new quote aggregate.
+
+Source: `../src/InsuranceIntegration.Api/Services/Policies/PolicyRenewalService.cs`.
+
+**Request body** (`RenewalRequest`)
+
+```json
+{
+  "policyReference": "POL-7781",
+  "newQuoteReference": "QT-RENEWAL-7781",
+  "newInceptionDate": "2027-01-01",
+  "newExpiryDate": "2027-12-31",
+  "priorAnnualPremium": 10000.00,
+  "priorClaimsPaid": 4500.00,
+  "revenueDeltaPercent": 0.10,
+  "overrideLoadPercent": null
+}
+```
+
+Pricing model:
+
+| Loss ratio | Band | Load |
+|---|---|---|
+| `< 30%` | Excellent | -5% |
+| `30-60%` | Standard | 0% |
+| `60-80%` | Loaded | +10% |
+| `80-100%` | HeavilyLoaded | +25% |
+| `> 100%` | Distressed | +40% |
+
+`exposureLoad = revenueDeltaPercent / 2` (so +20% revenue → +10% premium load). `overrideLoadPercent` is an optional underwriter adjustment. Total renewal premium = `priorAnnualPremium * (1 + lossLoad + exposureLoad + overrideLoad)`.
+
+**Response (200 OK)** (`RenewalResult`)
+
+```json
+{
+  "priorPolicyReference": "POL-7781",
+  "newQuoteReference": "QT-RENEWAL-7781",
+  "priorAnnualPremium": 10000.00,
+  "lossRatio": 0.45,
+  "lossRatioBand": "Standard",
+  "lossRatioLoadPercent": 0.00,
+  "exposureLoadPercent": 0.05,
+  "overrideLoadPercent": 0.00,
+  "renewalPremium": 10500.00,
+  "policyRenewedEventId": "7d8c...",
+  "quoteIssuedEventId": "a1b2...",
+  "reasons": [
+    "Loss ratio: 0.4500 (Standard)",
+    "Loss-ratio load: 0.00%",
+    "Exposure load (50% of revenue delta +10.00%): +5.00%",
+    "Override load: 0.00%",
+    "Total load applied to prior premium 10000.00: +5.00%",
+    "Renewal premium: 10500.00"
+  ]
+}
+```
+
+Returns 404 if the prior policy is unknown, 400 if it's already cancelled, already renewed, or the new dates are invalid. Once issued, the renewal quote can be bound through the standard `POST /api/v1/ingest` BindPoint flow — the bind preconditions on `validUntilUtc` and `quoteStatus` apply.
+
+---
+
+### 7.12 Snapshot read endpoints
+
+Consolidated views per business key, fed by every Risk-domain ingest. See [Domain snapshots](#domain-snapshots-consolidated-views-per-business-key) for the merge semantics. Endpoints live in `../src/InsuranceIntegration.Api/Endpoints/PolicyReadEndpoints.cs` and `../src/InsuranceIntegration.Api/Endpoints/QuoteReadEndpoints.cs`.
 
 **`GET /api/v1/policies/{policyReference}`** — returns the full `PolicySnapshot` (404 if no events have ever included this `policyReference`).
 
@@ -569,7 +709,40 @@ Response shape (abbreviated):
 
 ---
 
-### 7.12 Schema endpoints
+### 7.13 Snapshot rebuild endpoints
+
+Replay the aggregate's domain events through the projector in memory and return the rebuilt snapshot. Useful for sanity-checking the live snapshot row, recovering after a projector change, or testing new business rules against historical data without mutating the current state.
+
+**`POST /api/v1/snapshots/policies/{policyReference}/rebuild`**
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:5000/api/v1/snapshots/policies/POL-7781/rebuild
+```
+
+**`POST /api/v1/snapshots/quotes/{quoteReference}/rebuild`**
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:5000/api/v1/snapshots/quotes/QT-2201/rebuild
+```
+
+Response shape (`SnapshotRebuildResult<TSnapshot>`):
+
+```json
+{
+  "aggregateKind": "Policy",
+  "aggregateKey": "POL-7781",
+  "eventsApplied": 3,
+  "firstEventAtUtc": "2026-04-25T03:10:00Z",
+  "lastEventAtUtc": "2026-09-01T11:00:00Z",
+  "snapshot": { /* fully-populated PolicySnapshot or QuoteSnapshot */ }
+}
+```
+
+Returns 404 when no events exist for the aggregate. Source: `../src/InsuranceIntegration.Api/Services/Snapshots/SnapshotRebuildService.cs`.
+
+---
+
+### 7.14 Schema endpoints
 
 Each schema endpoint returns the JSON Schema document for the referenced C# type (`../src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`, `../src/InsuranceIntegration.Api/Services/Schemas`).
 

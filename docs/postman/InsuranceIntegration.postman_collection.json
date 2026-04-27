@@ -626,6 +626,63 @@
               "path": [ "api", "v1", "policies", "endorsements" ]
             }
           }
+        },
+        {
+          "name": "POST /api/v1/policies/renewals - Excellent loss ratio (-5% discount)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"newQuoteReference\": \"QT-RENEWAL-7781-EXCELLENT\",\n  \"newInceptionDate\": \"2027-01-01\",\n  \"newExpiryDate\": \"2027-12-31\",\n  \"priorAnnualPremium\": 10000.00,\n  \"priorClaimsPaid\": 1500.00,\n  \"revenueDeltaPercent\": 0.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/renewals",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "renewals" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/policies/renewals - Distressed loss ratio (+40% load)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"newQuoteReference\": \"QT-RENEWAL-7781-DISTRESSED\",\n  \"newInceptionDate\": \"2027-01-01\",\n  \"newExpiryDate\": \"2027-12-31\",\n  \"priorAnnualPremium\": 10000.00,\n  \"priorClaimsPaid\": 12000.00,\n  \"revenueDeltaPercent\": 0.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/renewals",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "renewals" ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/v1/policies/renewals - Standard with +20% exposure and +5% override",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Correlation-Id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyReference\": \"POL-7781\",\n  \"newQuoteReference\": \"QT-RENEWAL-7781-EXPOSURE\",\n  \"newInceptionDate\": \"2027-01-01\",\n  \"newExpiryDate\": \"2027-12-31\",\n  \"priorAnnualPremium\": 10000.00,\n  \"priorClaimsPaid\": 4500.00,\n  \"revenueDeltaPercent\": 0.20,\n  \"overrideLoadPercent\": 0.05\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/policies/renewals",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "policies", "renewals" ]
+            }
+          }
         }
       ]
     },
@@ -786,6 +843,32 @@
               "path": [ "api", "v1", "quotes" ],
               "query": [ { "key": "skip", "value": "0" }, { "key": "take", "value": "20" } ]
             }
+          }
+        },
+        {
+          "name": "POST /api/v1/snapshots/policies/POL-DEMO-001/rebuild",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "X-Correlation-Id", "value": "{{correlationId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/snapshots/policies/POL-DEMO-001/rebuild",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "snapshots", "policies", "POL-DEMO-001", "rebuild" ]
+            },
+            "description": "Replay every DomainEvent for POL-DEMO-001 through the projector and return the rebuilt PolicySnapshot. Useful as a sanity check against GET /api/v1/policies/POL-DEMO-001 after a sequence of cancel / endorse / renew operations."
+          }
+        },
+        {
+          "name": "POST /api/v1/snapshots/quotes/QT-DEMO-001/rebuild",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "X-Correlation-Id", "value": "{{correlationId}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/snapshots/quotes/QT-DEMO-001/rebuild",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "snapshots", "quotes", "QT-DEMO-001", "rebuild" ]
+            },
+            "description": "Replay every DomainEvent for QT-DEMO-001 through the QuoteSnapshotProjector. After the 3-event pipeline demo this returns Version=2 (RiskSubmission + QuoteRequest both bumped Version), IsBound=true, and ValidUntilUtc populated."
           }
         }
       ]

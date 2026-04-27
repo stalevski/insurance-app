@@ -38,14 +38,25 @@ src/InsuranceIntegration.Api/
   SourceContracts/
   CanonicalContracts/
   Responses/
-  Snapshots/
+  Snapshots/        # PolicySnapshot, QuoteSnapshot read-models
+  Events/           # DomainEvent type / aggregate-kind constants, RiskEventPayload
   Mappers/
   Services/
     Catalog/
-    Matching/
-    Flows/
+    Clearance/
+    Events/         # IDomainEventLog + DomainEventLog
+    Flows/          # RiskFlowService, ClaimFlowService, BindPreconditionService
+    Ingest/         # dispatcher, idempotency, per-handler logic
+    Matching/       # Levenshtein calculator (used only by clearance)
+    Outbox/
+    Policies/       # PolicyAdjustmentService, PolicyLifecycleService, PolicyRenewalService
+    Pricing/
+    Products/
     Schemas/
-    Snapshots/
+    Snapshots/      # projectors, EF-backed snapshot services, RiskSnapshotRouter, SnapshotRebuildService
+  Persistence/      # IntegrationDbContext + entity types (incl. DomainEventEntity)
+  Migrations/
+  Middleware/       # CorrelationIdMiddleware
   ReferenceData/
 ```
 
@@ -68,16 +79,38 @@ src/InsuranceIntegration.Api/
 
 ## Current endpoints
 
+Ingest and discovery:
+
 - `GET /health`
 - `GET /api/v1/source-systems`
+- `GET /api/v1/products` and `GET /api/v1/products/{productCode}/rating`
 - `POST /api/v1/ingest` and `GET /api/v1/ingest/{source}/{envelopeId}` (per-envelope receipt + replay)
-- `GET /api/v1/policies/{policyReference}` and `GET /api/v1/policies` (consolidated `PolicySnapshot` per policy key, see [docs/USAGE.md §6.4](docs/USAGE.md))
-- `GET /api/v1/quotes/{quoteReference}` and `GET /api/v1/quotes` (consolidated `QuoteSnapshot` per quote key)
-- `POST /api/v1/ingest/risks`
-- `POST /api/v1/risks`
+- `POST /api/v1/ingest/risks` (source-shape risk ingest)
+- `POST /api/v1/risks` (canonical risk submission)
+
+Snapshot reads:
+
+- `GET /api/v1/policies` and `GET /api/v1/policies/{policyReference}` (consolidated `PolicySnapshot` per policy key)
+- `GET /api/v1/quotes` and `GET /api/v1/quotes/{quoteReference}` (consolidated `QuoteSnapshot` per quote key)
+
+Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
+
+- `POST /api/v1/policies/cancellations`
+- `POST /api/v1/policies/endorsements`
+- `POST /api/v1/policies/renewals`
+
+Replay / sanity:
+
+- `POST /api/v1/snapshots/policies/{policyReference}/rebuild` and `POST /api/v1/snapshots/quotes/{quoteReference}/rebuild` — replay the aggregate's `DomainEvents` through the projector
+
+Schemas:
+
+- `GET /api/v1/schemas/ingest/envelope`
 - `GET /api/v1/schemas/ingest/risk-request`
 - `GET /api/v1/schemas/canonical/risk-request`
 - `GET /api/v1/schemas/final/risk-response`
+
+For request / response shapes and examples per endpoint see [docs/USAGE.md §7](docs/USAGE.md). Swagger UI is exposed at `/swagger` in `Development`.
 
 ## JSON schema support
 
@@ -217,16 +250,33 @@ This example intentionally uses a neutral canonical contract, not a source-speci
 - **Flow-specific logic** is organized by lifecycle area and can be expanded into claims, billing, clearance, policy, and endorsement slices.
 - **Future pluginization** should be possible because boundaries already separate mapping, orchestration, matching, schema generation, and flow logic.
 
+## Architecture: three storage tiers
+
+Each business state change flows through three persistence tiers, each with a different read pattern and replay scope:
+
+| Tier | Table | Key read pattern | Replay scope |
+|---|---|---|---|
+| Inbox (raw envelopes) | `IngestEntries` | per-envelope receipt; idempotency keyed on `(Source, EnvelopeId)` | full pipeline rebuild from source |
+| Event log (canonical) | `DomainEvents` | per-aggregate timeline; cross-aggregate queries | rebuild any snapshot from its events |
+| Aggregate state | `PolicySnapshots`, `QuoteSnapshots` | one-row read of the latest state | n/a (this *is* the rebuilt state) |
+
+Domain events are written in the same EF transaction as the snapshot mutation, so the two layers can never disagree. `POST /api/v1/snapshots/policies/{ref}/rebuild` reads every event for an aggregate and runs them through the projector to verify (or recover) the live snapshot. See [docs/USAGE.md §6 "Domain events"](docs/USAGE.md) for the full schema and replay semantics.
+
 ## Current implemented vertical slice
 
-The current implementation delivers the first reusable risk ingest pattern:
+The current implementation delivers a coherent end-to-end policy lifecycle:
 
-- generic source ingest envelope
-- Contoso risk mapper for `CONTOSO_UW` + `RiskSubmission`
-- canonical risk processing flow
-- enrichment, premium, claim aggregation, matching, clearance, and section-action logic
-- final risk response contract
-- catalog and schema endpoints
+- generic source ingest envelope with idempotency cache
+- three risk mappers (`CONTOSO_UW`/`RiskSubmission`, `QUOTEFORGE`/`QuoteRequest`, `BINDPOINT`/`PolicyBindRequest`)
+- canonical risk processing flow (enrichments, premium, claim aggregation, matching, clearance, section-action logic)
+- per-business-key consolidated `PolicySnapshot` and `QuoteSnapshot` documents
+- domain event log with replay-capable payloads (`RiskEventPayload { canonicalRequest, finalResponse }`)
+- post-bind lifecycle: `cancel`, `endorse`, `renew` — each mutating the snapshot AND writing a `Policy*` event
+- quote versioning with `Version` / `IssuedAtUtc` / `ValidUntilUtc` / `ValidityDays`
+- bind preconditions (no missing quote, not expired, not already bound, status in `{Quoted, Indicative}`); rejection surfaces `BindRejectionReason` and finalStatus `BindRejected`
+- renewal flow with loss-ratio + exposure-delta + override-load pricing model and prior-policy lineage on the renewal `QuoteSnapshot`
+- snapshot rebuild endpoints to replay events through the projector
+- catalog, schema, and rating endpoints
 
 ## Build
 
