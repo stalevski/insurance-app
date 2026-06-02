@@ -1,6 +1,5 @@
 using InsuranceIntegration.Api.Mappers.Risks;
-using InsuranceIntegration.Api.Services.Flows;
-using InsuranceIntegration.Api.Services.Snapshots;
+using InsuranceIntegration.Api.Services.Orchestration;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 
 namespace InsuranceIntegration.Api.Services.Ingest;
@@ -15,19 +14,16 @@ public sealed class RiskIngestHandler : IIngestHandler
     };
 
     private readonly IRiskIngestMapper _riskIngestMapper;
-    private readonly IRiskFlowService _riskFlowService;
-    private readonly IRiskSnapshotRouter _snapshotRouter;
+    private readonly IRiskSubmissionOrchestrator _orchestrator;
     private readonly TimeProvider _timeProvider;
 
     public RiskIngestHandler(
         IRiskIngestMapper riskIngestMapper,
-        IRiskFlowService riskFlowService,
-        IRiskSnapshotRouter snapshotRouter,
+        IRiskSubmissionOrchestrator orchestrator,
         TimeProvider timeProvider)
     {
         _riskIngestMapper = riskIngestMapper;
-        _riskFlowService = riskFlowService;
-        _snapshotRouter = snapshotRouter;
+        _orchestrator = orchestrator;
         _timeProvider = timeProvider;
     }
 
@@ -38,7 +34,7 @@ public sealed class RiskIngestHandler : IIngestHandler
         return SupportedTypes.Contains(envelope.Type);
     }
 
-    public object Handle(SourceIngestEnvelope envelope)
+    public async Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
     {
         var request = new SourceIngestRequest
         {
@@ -48,7 +44,6 @@ public sealed class RiskIngestHandler : IIngestHandler
         };
 
         var canonicalRequest = _riskIngestMapper.Map(request);
-        var response = _riskFlowService.Process(canonicalRequest);
 
         var ingestContext = new IngestContext
         {
@@ -58,8 +53,8 @@ public sealed class RiskIngestHandler : IIngestHandler
             CorrelationId = envelope.CorrelationId,
             ReceivedAtUtc = _timeProvider.GetUtcNow().UtcDateTime
         };
-        _snapshotRouter.Route(canonicalRequest, response, ingestContext);
 
+        var response = await _orchestrator.HandleAsync(canonicalRequest, ingestContext, cancellationToken);
         return response;
     }
 }

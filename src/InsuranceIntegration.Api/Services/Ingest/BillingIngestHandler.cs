@@ -27,7 +27,7 @@ public sealed class BillingIngestHandler : IIngestHandler
         return SupportedTypes.Contains(envelope.Type);
     }
 
-    public object Handle(SourceIngestEnvelope envelope)
+    public Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
     {
         var payload = envelope.Data.Deserialize<InstallmentSchedulePayload>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException("Unable to deserialize installment schedule payload.");
@@ -59,6 +59,6 @@ public sealed class BillingIngestHandler : IIngestHandler
             Installments = installments
         };
 
-        return _billingFlowService.Process(request);
+        return Task.FromResult<object>(_billingFlowService.Process(request));
     }
 }

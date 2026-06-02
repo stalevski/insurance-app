@@ -9,9 +9,9 @@ public static class IngestEndpoints
 {
     public static IEndpointRouteBuilder MapIngestEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/v1/ingest", (SourceIngestEnvelope envelope, IIngestDispatcher dispatcher) =>
+        endpoints.MapPost("/api/v1/ingest", async (SourceIngestEnvelope envelope, IIngestDispatcher dispatcher, CancellationToken ct) =>
         {
-            var receipt = dispatcher.Dispatch(envelope);
+            var receipt = await dispatcher.DispatchAsync(envelope, ct);
             return Results.Ok(receipt);
         });
 
@@ -22,9 +22,9 @@ public static class IngestEndpoints
             return Results.Ok(response);
         });
 
-        endpoints.MapGet("/api/v1/ingest/{source}/{envelopeId}", (string source, string envelopeId, IIdempotencyStore store) =>
+        endpoints.MapGet("/api/v1/ingest/{source}/{envelopeId}", async (string source, string envelopeId, IIdempotencyStore store, CancellationToken ct) =>
         {
-            var receipt = store.Find(source, envelopeId);
+            var receipt = await store.FindAsync(source, envelopeId, ct);
             return receipt is null ? Results.NotFound() : Results.Ok(receipt);
         });
 

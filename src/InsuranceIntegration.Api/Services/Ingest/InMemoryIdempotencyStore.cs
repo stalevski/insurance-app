@@ -7,26 +7,16 @@ public sealed class InMemoryIdempotencyStore : IIdempotencyStore
 {
     private readonly ConcurrentDictionary<string, IngestReceipt> _entries = new();
 
-    public bool TryGet(string source, string envelopeId, out IngestReceipt? existingReceipt)
+    public Task<IngestReceipt?> FindAsync(string source, string envelopeId, CancellationToken cancellationToken = default)
     {
-        if (_entries.TryGetValue(BuildKey(source, envelopeId), out var found))
-        {
-            existingReceipt = found;
-            return true;
-        }
-
-        existingReceipt = null;
-        return false;
+        _entries.TryGetValue(BuildKey(source, envelopeId), out var found);
+        return Task.FromResult<IngestReceipt?>(found);
     }
 
-    public IngestReceipt? Find(string source, string envelopeId)
-    {
-        return _entries.TryGetValue(BuildKey(source, envelopeId), out var found) ? found : null;
-    }
-
-    public void Store(string source, string envelopeId, IngestReceipt receipt)
+    public Task StoreAsync(string source, string envelopeId, IngestReceipt receipt, CancellationToken cancellationToken = default)
     {
         _entries[BuildKey(source, envelopeId)] = receipt;
+        return Task.CompletedTask;
     }
 
     private static string BuildKey(string source, string envelopeId)

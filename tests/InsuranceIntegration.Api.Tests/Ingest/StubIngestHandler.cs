@@ -22,8 +22,8 @@ internal sealed class StubIngestHandler : IIngestHandler
         return _canHandle;
     }
 
-    public object Handle(SourceIngestEnvelope envelope)
+    public Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
     {
-        return _result ?? new object();
+        return Task.FromResult(_result ?? new object());
     }
 }

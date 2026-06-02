@@ -6,6 +6,9 @@ using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
+using InsuranceIntegration.Api.Services.Orchestration;
+using InsuranceIntegration.Api.Services.Outbox;
+using InsuranceIntegration.Api.Services.Correlation;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 using Microsoft.Data.Sqlite;
@@ -33,12 +36,12 @@ public sealed class SnapshotPipelineTests : IDisposable
     }
 
     [Test]
-    public void IngestingThreeRelatedEnvelopes_ProducesSinglePolicySnapshotWithMergedFields()
+    public async Task IngestingThreeRelatedEnvelopes_ProducesSinglePolicySnapshotWithMergedFields()
     {
         var (handler, dispatcher) = BuildPipeline();
 
         // 1) Polaris RiskSubmission - establishes the quote
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        await dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = "evt-polaris-001",
             Source = "POLARIS_UW",
@@ -56,7 +59,7 @@ public sealed class SnapshotPipelineTests : IDisposable
         });
 
         // 2) QuoteForge QuoteRequest - confirms the quote with broker info
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        await dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = "evt-qf-001",
             Source = "QUOTEFORGE",
@@ -84,7 +87,7 @@ public sealed class SnapshotPipelineTests : IDisposable
         });
 
         // 3) BindPoint PolicyBindRequest - converts the quote into a policy
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        await dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = "evt-bp-001",
             Source = "BINDPOINT",
@@ -146,11 +149,11 @@ public sealed class SnapshotPipelineTests : IDisposable
     }
 
     [Test]
-    public void IngestingThreeRelatedEnvelopes_WritesDomainEventsForEachAffectedAggregate()
+    public async Task IngestingThreeRelatedEnvelopes_WritesDomainEventsForEachAffectedAggregate()
     {
         var (_, dispatcher) = BuildPipeline();
 
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        await dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = "evt-polaris-evt-001",
             Source = "POLARIS_UW",
@@ -167,7 +170,7 @@ public sealed class SnapshotPipelineTests : IDisposable
             })
         });
 
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        await dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = "evt-qf-evt-001",
             Source = "QUOTEFORGE",
@@ -194,7 +197,7 @@ public sealed class SnapshotPipelineTests : IDisposable
             })
         });
 
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        await dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = "evt-bp-evt-001",
             Source = "BINDPOINT",
@@ -249,7 +252,7 @@ public sealed class SnapshotPipelineTests : IDisposable
     }
 
     [Test]
-    public void IdempotentReplay_DoesNotDoubleAppendHistory()
+    public async Task IdempotentReplay_DoesNotDoubleAppendHistory()
     {
         var (_, dispatcher) = BuildPipeline();
 
@@ -269,9 +272,9 @@ public sealed class SnapshotPipelineTests : IDisposable
             })
         };
 
-        dispatcher.Dispatch(envelope);
-        dispatcher.Dispatch(envelope);
-        dispatcher.Dispatch(envelope);
+        await dispatcher.DispatchAsync(envelope);
+        await dispatcher.DispatchAsync(envelope);
+        await dispatcher.DispatchAsync(envelope);
 
         using var verifyContext = new IntegrationDbContext(_options);
         var quoteService = new QuoteSnapshotService(verifyContext, new QuoteSnapshotProjector());
@@ -308,7 +311,10 @@ public sealed class SnapshotPipelineTests : IDisposable
         var eventLog = new DomainEventLog(context);
         var router = new RiskSnapshotRouter(policyService, quoteService, eventLog, TimeProvider.System);
 
-        var handler = new RiskIngestHandler(riskIngestMapper, riskFlowService, router, TimeProvider.System);
+        var correlationContext = new CorrelationContext();
+        var outboxWriter = new OutboxWriter(context, correlationContext, TimeProvider.System);
+        var orchestrator = new RiskSubmissionOrchestrator(riskFlowService, context, outboxWriter, router, TimeProvider.System);
+        var handler = new RiskIngestHandler(riskIngestMapper, orchestrator, TimeProvider.System);
         var idempotency = new EfCoreIdempotencyStore(context, TimeProvider.System);
         var dispatcher = new IngestDispatcher(new IIngestHandler[] { handler }, idempotency, TimeProvider.System);
         return (handler, dispatcher);

@@ -8,5 +8,5 @@ public interface IIngestHandler
 
     bool CanHandle(SourceIngestEnvelope envelope);
 
-    object Handle(SourceIngestEnvelope envelope);
+    Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default);
 }

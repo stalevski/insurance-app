@@ -7,7 +7,7 @@ namespace InsuranceIntegration.Api.Tests.Ingest;
 public sealed class IngestDispatcherTests
 {
     [Test]
-    public void Dispatch_SelectsFirstCompatibleHandlerAndReturnsEnvelopeMetadata()
+    public async Task DispatchAsync_SelectsFirstCompatibleHandlerAndReturnsEnvelopeMetadata()
     {
         var unsupportedHandler = new StubIngestHandler("UnsupportedHandler", canHandle: false, result: null);
         var supportedHandler = new StubIngestHandler("SupportedHandler", canHandle: true, result: new { status = "ok" });
@@ -15,7 +15,7 @@ public sealed class IngestDispatcherTests
 
         var envelope = CreateEnvelope();
 
-        var response = dispatcher.Dispatch(envelope);
+        var response = await dispatcher.DispatchAsync(envelope);
 
         Assert.That(response.EnvelopeId, Is.EqualTo("evt-1"));
         Assert.That(response.Source, Is.EqualTo("POLARIS_UW"));
@@ -27,15 +27,15 @@ public sealed class IngestDispatcherTests
     }
 
     [Test]
-    public void Dispatch_ThrowsWhenNoHandlerCanHandleEnvelope()
+    public async Task DispatchAsync_ThrowsWhenNoHandlerCanHandleEnvelope()
     {
         var dispatcher = new IngestDispatcher([new StubIngestHandler("None", canHandle: false, result: null)], new InMemoryIdempotencyStore());
 
         var envelope = CreateEnvelope();
 
-        var exception = Assert.Throws<InvalidOperationException>(() => dispatcher.Dispatch(envelope));
-        Assert.That(exception, Is.Not.Null);
-        Assert.That(exception!.Message, Does.Contain("No ingest handler registered"));
+        Assert.That(
+            async () => await dispatcher.DispatchAsync(envelope),
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("No ingest handler registered"));
     }
 
     private static SourceIngestEnvelope CreateEnvelope()

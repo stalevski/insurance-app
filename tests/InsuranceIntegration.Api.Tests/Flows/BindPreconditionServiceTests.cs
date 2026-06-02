@@ -4,8 +4,11 @@ using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Flows;
+using InsuranceIntegration.Api.Services.Correlation;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
+using InsuranceIntegration.Api.Services.Orchestration;
+using InsuranceIntegration.Api.Services.Outbox;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 using Microsoft.Data.Sqlite;
@@ -150,7 +153,7 @@ public sealed class BindPreconditionServiceTests : IDisposable
     private void SeedQuote(string quoteReference, DateTime issuedAtUtc)
     {
         var (handler, dispatcher) = BuildPipeline(issuedAtUtc);
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = $"evt-seed-quote-{quoteReference}",
             Source = "POLARIS_UW",
@@ -164,11 +167,11 @@ public sealed class BindPreconditionServiceTests : IDisposable
                 trade = "CommercialProperty",
                 estimatedPremium = 5000m
             })
-        });
+        }).GetAwaiter().GetResult();
 
         // Issue a Quoted-status quote so the precondition's status check passes for the
         // happy-path test case.
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = $"evt-seed-issue-{quoteReference}",
             Source = "QUOTEFORGE",
@@ -192,13 +195,13 @@ public sealed class BindPreconditionServiceTests : IDisposable
                 insuredEmployeeCount = 10,
                 insuredYearsInBusiness = 6
             })
-        });
+        }).GetAwaiter().GetResult();
     }
 
     private void SeedBind(string quoteReference, string policyReference, DateTime atUtc)
     {
         var (_, dispatcher) = BuildPipeline(atUtc);
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = $"evt-seed-bind-{policyReference}",
             Source = "BINDPOINT",
@@ -221,7 +224,7 @@ public sealed class BindPreconditionServiceTests : IDisposable
                 expiryDate = "2027-04-30",
                 boundDate = "2026-04-25"
             })
-        });
+        }).GetAwaiter().GetResult();
     }
 
     private (object handler, IIngestDispatcher dispatcher) BuildPipeline(DateTime nowUtc)
@@ -244,7 +247,10 @@ public sealed class BindPreconditionServiceTests : IDisposable
         var policyService = new PolicySnapshotService(context, new PolicySnapshotProjector());
         var eventLog = new DomainEventLog(context);
         var router = new RiskSnapshotRouter(policyService, quoteSnapshotService, eventLog, time);
-        var handler = new RiskIngestHandler(riskIngestMapper, riskFlowService, router, time);
+        var correlationContext = new CorrelationContext();
+        var outboxWriter = new OutboxWriter(context, correlationContext, time);
+        var orchestrator = new RiskSubmissionOrchestrator(riskFlowService, context, outboxWriter, router, time);
+        var handler = new RiskIngestHandler(riskIngestMapper, orchestrator, time);
         var idempotency = new EfCoreIdempotencyStore(context, time);
         var dispatcher = new IngestDispatcher(new IIngestHandler[] { handler }, idempotency, time);
         return (handler, dispatcher);

@@ -19,9 +19,10 @@ public sealed class IngestDispatcher : IIngestDispatcher
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public IngestReceipt Dispatch(SourceIngestEnvelope envelope)
+    public async Task<IngestReceipt> DispatchAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
     {
-        if (_idempotencyStore.TryGet(envelope.Source, envelope.Id, out var existing) && existing is not null)
+        var existing = await _idempotencyStore.FindAsync(envelope.Source, envelope.Id, cancellationToken);
+        if (existing is not null)
         {
             return existing;
         }
@@ -29,7 +30,7 @@ public sealed class IngestDispatcher : IIngestDispatcher
         var handler = _handlers.FirstOrDefault(candidate => candidate.CanHandle(envelope))
             ?? throw new InvalidOperationException($"No ingest handler registered for source '{envelope.Source}' and type '{envelope.Type}'.");
 
-        var outcome = handler.Handle(envelope);
+        var outcome = await handler.HandleAsync(envelope, cancellationToken);
 
         var receipt = new IngestReceipt
         {
@@ -43,7 +44,7 @@ public sealed class IngestDispatcher : IIngestDispatcher
             Outcome = outcome
         };
 
-        _idempotencyStore.Store(envelope.Source, envelope.Id, receipt);
+        await _idempotencyStore.StoreAsync(envelope.Source, envelope.Id, receipt, cancellationToken);
         return receipt;
     }
 

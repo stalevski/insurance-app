@@ -4,8 +4,11 @@ using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Flows;
+using InsuranceIntegration.Api.Services.Correlation;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
+using InsuranceIntegration.Api.Services.Orchestration;
+using InsuranceIntegration.Api.Services.Outbox;
 using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
@@ -37,8 +40,8 @@ public sealed class SnapshotRebuildServiceTests : IDisposable
         var (lifecycle, dispatcher) = BuildPipeline();
 
         // Submit + bind
-        dispatcher.Dispatch(BuildSubmission("evt-rb-001", "QT-RB-001"));
-        dispatcher.Dispatch(BuildBind("evt-rb-002", "POL-RB-001", "QT-RB-001"));
+        dispatcher.DispatchAsync(BuildSubmission("evt-rb-001", "QT-RB-001")).GetAwaiter().GetResult();
+        dispatcher.DispatchAsync(BuildBind("evt-rb-002", "POL-RB-001", "QT-RB-001")).GetAwaiter().GetResult();
 
         // Endorse mid-term, then cancel
         lifecycle.ApplyEndorsement(new EndorsementRequest
@@ -88,8 +91,8 @@ public sealed class SnapshotRebuildServiceTests : IDisposable
     public void RebuildQuote_ReproducesQuoteSnapshotFromEvents()
     {
         var (_, dispatcher) = BuildPipeline();
-        dispatcher.Dispatch(BuildSubmission("evt-rbq-001", "QT-RBQ-001"));
-        dispatcher.Dispatch(BuildBind("evt-rbq-002", "POL-RBQ-001", "QT-RBQ-001"));
+        dispatcher.DispatchAsync(BuildSubmission("evt-rbq-001", "QT-RBQ-001")).GetAwaiter().GetResult();
+        dispatcher.DispatchAsync(BuildBind("evt-rbq-002", "POL-RBQ-001", "QT-RBQ-001")).GetAwaiter().GetResult();
 
         using var verifyContext = new IntegrationDbContext(_options);
         var live = new QuoteSnapshotService(verifyContext, new QuoteSnapshotProjector()).Find("QT-RBQ-001");
@@ -197,7 +200,10 @@ public sealed class SnapshotRebuildServiceTests : IDisposable
         var router = new RiskSnapshotRouter(policyService, quoteService, eventLog, TimeProvider.System);
         var adjustment = new PolicyAdjustmentService();
         var lifecycle = new PolicyLifecycleService(adjustment, policyService, riskFlowService, router, context, TimeProvider.System);
-        var handler = new RiskIngestHandler(riskIngestMapper, riskFlowService, router, TimeProvider.System);
+        var correlationContext = new CorrelationContext();
+        var outboxWriter = new OutboxWriter(context, correlationContext, TimeProvider.System);
+        var orchestrator = new RiskSubmissionOrchestrator(riskFlowService, context, outboxWriter, router, TimeProvider.System);
+        var handler = new RiskIngestHandler(riskIngestMapper, orchestrator, TimeProvider.System);
         var idempotency = new EfCoreIdempotencyStore(context, TimeProvider.System);
         var dispatcher = new IngestDispatcher(new IIngestHandler[] { handler }, idempotency, TimeProvider.System);
         return (lifecycle, dispatcher);
