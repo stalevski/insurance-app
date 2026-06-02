@@ -28,7 +28,7 @@ public sealed class ComplianceIngestHandler : IIngestHandler
         return SupportedTypes.Contains(envelope.Type);
     }
 
-    public object Handle(SourceIngestEnvelope envelope)
+    public Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
     {
         var payload = envelope.Data.Deserialize<ComplianceResultPayload>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException("Unable to deserialize compliance payload.");
@@ -45,6 +45,6 @@ public sealed class ComplianceIngestHandler : IIngestHandler
             HasSanctionsHit = payload.HasSanctionsHit
         };
 
-        return _complianceFlowService.Process(request);
+        return Task.FromResult<object>(_complianceFlowService.Process(request));
     }
 }

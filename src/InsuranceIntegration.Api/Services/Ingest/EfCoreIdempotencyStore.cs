@@ -17,23 +17,17 @@ public sealed class EfCoreIdempotencyStore : IIdempotencyStore
         _timeProvider = timeProvider;
     }
 
-    public bool TryGet(string source, string envelopeId, out IngestReceipt? existingReceipt)
+    public async Task<IngestReceipt?> FindAsync(string source, string envelopeId, CancellationToken cancellationToken = default)
     {
-        existingReceipt = Find(source, envelopeId);
-        return existingReceipt is not null;
-    }
-
-    public IngestReceipt? Find(string source, string envelopeId)
-    {
-        var entry = _context.IngestEntries.Find(source, envelopeId);
+        var entry = await _context.IngestEntries.FindAsync([source, envelopeId], cancellationToken);
         return entry is null
             ? null
             : JsonSerializer.Deserialize<IngestReceipt>(entry.OutcomeJson, SerializerOptions);
     }
 
-    public void Store(string source, string envelopeId, IngestReceipt receipt)
+    public async Task StoreAsync(string source, string envelopeId, IngestReceipt receipt, CancellationToken cancellationToken = default)
     {
-        var existing = _context.IngestEntries.Find(source, envelopeId);
+        var existing = await _context.IngestEntries.FindAsync([source, envelopeId], cancellationToken);
         var json = JsonSerializer.Serialize(receipt, SerializerOptions);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
@@ -59,6 +53,6 @@ public sealed class EfCoreIdempotencyStore : IIdempotencyStore
             existing.ReceivedAtUtc = now;
         }
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }

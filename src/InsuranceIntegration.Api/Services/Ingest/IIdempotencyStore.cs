@@ -4,9 +4,7 @@ namespace InsuranceIntegration.Api.Services.Ingest;
 
 public interface IIdempotencyStore
 {
-    bool TryGet(string source, string envelopeId, out IngestReceipt? existingReceipt);
+    Task<IngestReceipt?> FindAsync(string source, string envelopeId, CancellationToken cancellationToken = default);
 
-    IngestReceipt? Find(string source, string envelopeId);
-
-    void Store(string source, string envelopeId, IngestReceipt receipt);
+    Task StoreAsync(string source, string envelopeId, IngestReceipt receipt, CancellationToken cancellationToken = default);
 }

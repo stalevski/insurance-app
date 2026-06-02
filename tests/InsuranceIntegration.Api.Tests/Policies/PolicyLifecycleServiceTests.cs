@@ -6,6 +6,9 @@ using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
+using InsuranceIntegration.Api.Services.Orchestration;
+using InsuranceIntegration.Api.Services.Outbox;
+using InsuranceIntegration.Api.Services.Correlation;
 using InsuranceIntegration.Api.Services.Matching;
 using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Snapshots;
@@ -158,7 +161,7 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
     {
         var (_, dispatcher) = BuildServices();
 
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = $"evt-seed-pol-{policyReference}",
             Source = "CONTOSO_UW",
@@ -172,9 +175,9 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
                 trade = "CommercialProperty",
                 estimatedPremium = 10000m
             })
-        });
+        }).GetAwaiter().GetResult();
 
-        dispatcher.Dispatch(new SourceIngestEnvelope
+        dispatcher.DispatchAsync(new SourceIngestEnvelope
         {
             Id = $"evt-seed-bp-{policyReference}",
             Source = "BINDPOINT",
@@ -197,7 +200,7 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
                 expiryDate = "2026-12-31",
                 boundDate = "2026-04-25"
             })
-        });
+        }).GetAwaiter().GetResult();
     }
 
     private (IPolicyLifecycleService Lifecycle, IIngestDispatcher Dispatcher) BuildServices()
@@ -222,7 +225,10 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
         var router = new RiskSnapshotRouter(policyService, quoteService, eventLog, TimeProvider.System);
         var adjustmentService = new PolicyAdjustmentService();
         var lifecycle = new PolicyLifecycleService(adjustmentService, policyService, riskFlowService, router, context, TimeProvider.System);
-        var handler = new RiskIngestHandler(riskIngestMapper, riskFlowService, router, TimeProvider.System);
+        var correlationContext = new CorrelationContext();
+        var outboxWriter = new OutboxWriter(context, correlationContext, TimeProvider.System);
+        var orchestrator = new RiskSubmissionOrchestrator(riskFlowService, context, outboxWriter, router, TimeProvider.System);
+        var handler = new RiskIngestHandler(riskIngestMapper, orchestrator, TimeProvider.System);
         var idempotency = new EfCoreIdempotencyStore(context, TimeProvider.System);
         var dispatcher = new IngestDispatcher(new IIngestHandler[] { handler }, idempotency, TimeProvider.System);
         return (lifecycle, dispatcher);

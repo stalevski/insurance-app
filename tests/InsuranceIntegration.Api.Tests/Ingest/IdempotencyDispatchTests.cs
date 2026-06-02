@@ -7,7 +7,7 @@ namespace InsuranceIntegration.Api.Tests.Ingest;
 public sealed class IdempotencyDispatchTests
 {
     [Test]
-    public void Dispatch_ReturnsStoredResultWhenEnvelopeIdAlreadyProcessed()
+    public async Task DispatchAsync_ReturnsStoredResultWhenEnvelopeIdAlreadyProcessed()
     {
         var firstResultPayload = new { status = "first" };
         var secondResultPayload = new { status = "second" };
@@ -26,10 +26,10 @@ public sealed class IdempotencyDispatchTests
             Data = JsonSerializer.SerializeToElement(new { hello = "world" })
         };
 
-        var first = dispatcher.Dispatch(envelope);
+        var first = await dispatcher.DispatchAsync(envelope);
 
         counter.SetResult(secondResultPayload);
-        var second = dispatcher.Dispatch(envelope);
+        var second = await dispatcher.DispatchAsync(envelope);
 
         Assert.That(counter.HandleCount, Is.EqualTo(1));
         Assert.That(second.Outcome, Is.SameAs(first.Outcome));
@@ -54,10 +54,10 @@ public sealed class IdempotencyDispatchTests
             return true;
         }
 
-        public object Handle(SourceIngestEnvelope envelope)
+        public Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
         {
             HandleCount++;
-            return _result;
+            return Task.FromResult(_result);
         }
 
         public void SetResult(object result)

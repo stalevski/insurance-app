@@ -21,6 +21,12 @@ public sealed class IntegrationDbContext : DbContext
 
     public DbSet<DomainEventEntity> DomainEvents => Set<DomainEventEntity>();
 
+    public DbSet<SubmissionEntity> Submissions => Set<SubmissionEntity>();
+
+    public DbSet<QuoteEntity> Quotes => Set<QuoteEntity>();
+
+    public DbSet<PolicyEntity> Policies => Set<PolicyEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<KnownSubmissionEntity>(entity =>
@@ -82,6 +88,56 @@ public sealed class IntegrationDbContext : DbContext
             entity.Property(record => record.LastError).HasMaxLength(1024);
             entity.HasIndex(record => new { record.DispatchedAtUtc, record.OccurredAtUtc });
             entity.HasIndex(record => new { record.AggregateType, record.AggregateId });
+        });
+
+        modelBuilder.Entity<SubmissionEntity>(entity =>
+        {
+            entity.HasKey(record => record.Id);
+            entity.Property(record => record.Id).ValueGeneratedNever();
+            entity.Property(record => record.ExternalReference).IsRequired().HasMaxLength(128);
+            entity.Property(record => record.ProductCode).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.SourceSystem).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.TransactionType).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.Status).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.ClearanceDecision).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.BrokerCode).HasMaxLength(64);
+            entity.Property(record => record.InsuredName).IsRequired().HasMaxLength(256);
+            entity.Property(record => record.CorrelationId).HasMaxLength(64);
+            entity.Property(record => record.RowVersion).IsConcurrencyToken();
+            entity.HasIndex(record => record.ExternalReference).IsUnique();
+            entity.HasIndex(record => new { record.ProductCode, record.UnderwritingYear });
+            entity.HasIndex(record => record.UpdatedAtUtc);
+        });
+
+        modelBuilder.Entity<QuoteEntity>(entity =>
+        {
+            entity.HasKey(record => record.Id);
+            entity.Property(record => record.Id).ValueGeneratedNever();
+            entity.Property(record => record.QuoteReference).IsRequired().HasMaxLength(128);
+            entity.Property(record => record.ProductCode).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.Status).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.TransactionType).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.RowVersion).IsConcurrencyToken();
+            entity.HasIndex(record => record.QuoteReference).IsUnique();
+            entity.HasIndex(record => record.SubmissionId);
+            entity.HasIndex(record => record.UpdatedAtUtc);
+        });
+
+        modelBuilder.Entity<PolicyEntity>(entity =>
+        {
+            entity.HasKey(record => record.Id);
+            entity.Property(record => record.Id).ValueGeneratedNever();
+            entity.Property(record => record.PolicyReference).IsRequired().HasMaxLength(128);
+            entity.Property(record => record.QuoteReference).HasMaxLength(128);
+            entity.Property(record => record.ProductCode).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.InsuredName).IsRequired().HasMaxLength(256);
+            entity.Property(record => record.Status).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.TransactionType).IsRequired().HasMaxLength(64);
+            entity.Property(record => record.RowVersion).IsConcurrencyToken();
+            entity.HasIndex(record => record.PolicyReference).IsUnique();
+            entity.HasIndex(record => record.SubmissionId);
+            entity.HasIndex(record => new { record.ProductCode, record.UnderwritingYear });
+            entity.HasIndex(record => record.UpdatedAtUtc);
         });
 
         modelBuilder.Entity<DomainEventEntity>(entity =>

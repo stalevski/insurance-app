@@ -12,6 +12,7 @@ using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Pricing;
 using InsuranceIntegration.Api.Services.Products;
 using InsuranceIntegration.Api.Services.Schemas;
+using InsuranceIntegration.Api.Services.Orchestration;
 using InsuranceIntegration.Api.Services.Snapshots;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,10 @@ public static class ServiceRegistration
         services.AddEndpointsApiExplorer();
 
         var connectionString = configuration?.GetConnectionString("Integration") ?? "Data Source=integration.db";
-        services.AddDbContext<IntegrationDbContext>(options => options.UseSqlite(connectionString));
+        services.AddSingleton<RowVersionInterceptor>();
+        services.AddDbContext<IntegrationDbContext>((sp, options) =>
+            options.UseSqlite(connectionString)
+                   .AddInterceptors(sp.GetRequiredService<RowVersionInterceptor>()));
 
         services.TryAddSingletonTimeProvider();
 
@@ -62,6 +66,8 @@ public static class ServiceRegistration
         services.AddScoped<IDomainEventLog, DomainEventLog>();
         services.AddScoped<ISnapshotRebuildService, SnapshotRebuildService>();
         services.AddScoped<IRiskSnapshotRouter, RiskSnapshotRouter>();
+
+        services.AddScoped<IRiskSubmissionOrchestrator, RiskSubmissionOrchestrator>();
 
         services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
         services.AddScoped<IIngestHandler, RiskIngestHandler>();

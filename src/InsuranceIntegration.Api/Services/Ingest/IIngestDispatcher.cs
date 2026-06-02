@@ -5,5 +5,5 @@ namespace InsuranceIntegration.Api.Services.Ingest;
 
 public interface IIngestDispatcher
 {
-    IngestReceipt Dispatch(SourceIngestEnvelope envelope);
+    Task<IngestReceipt> DispatchAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default);
 }

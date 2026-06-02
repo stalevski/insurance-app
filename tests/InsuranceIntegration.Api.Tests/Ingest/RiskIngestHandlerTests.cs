@@ -1,11 +1,11 @@
 using InsuranceIntegration.Api.CanonicalContracts.Risks;
-using InsuranceIntegration.Api.Responses.Risks;
 using InsuranceIntegration.Api.Mappers.Risks;
+using InsuranceIntegration.Api.Responses.Risks;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Flows;
 using InsuranceIntegration.Api.Services.Ingest;
 using InsuranceIntegration.Api.Services.Matching;
-using InsuranceIntegration.Api.Services.Snapshots;
+using InsuranceIntegration.Api.Services.Orchestration;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
 using System.Text.Json;
 
@@ -20,9 +20,7 @@ public sealed class RiskIngestHandlerTests
     {
         var handler = CreateHandler();
 
-        var envelope = CreateEnvelope(type);
-
-        Assert.That(handler.CanHandle(envelope), Is.True);
+        Assert.That(handler.CanHandle(CreateEnvelope(type)), Is.True);
     }
 
     [Test]
@@ -30,13 +28,11 @@ public sealed class RiskIngestHandlerTests
     {
         var handler = CreateHandler();
 
-        var envelope = CreateEnvelope("ClaimNotice");
-
-        Assert.That(handler.CanHandle(envelope), Is.False);
+        Assert.That(handler.CanHandle(CreateEnvelope("ClaimNotice")), Is.False);
     }
 
     [Test]
-    public void Handle_ProducesFinalRiskResponseForContosoRiskSubmission()
+    public async Task HandleAsync_ProducesFinalRiskResponseForContosoRiskSubmission()
     {
         var handler = CreateHandler();
 
@@ -56,7 +52,7 @@ public sealed class RiskIngestHandlerTests
             })
         };
 
-        var result = handler.Handle(envelope);
+        var result = await handler.HandleAsync(envelope);
 
         Assert.That(result, Is.TypeOf<FinalRiskResponse>());
         var finalResponse = (FinalRiskResponse)result;
@@ -71,13 +67,24 @@ public sealed class RiskIngestHandlerTests
         var clearanceService = new SubmissionClearanceService(registry, calculator);
         var riskFlowService = new RiskFlowService(clearanceService, registry);
         var riskIngestMapper = new RiskIngestMapper([new ContosoRiskMapper(), new QuoteForgeRiskMapper(), new BindPointRiskMapper()]);
-        return new RiskIngestHandler(riskIngestMapper, riskFlowService, new NoOpRiskSnapshotRouter(), TimeProvider.System);
+        return new RiskIngestHandler(riskIngestMapper, new StubOrchestrator(riskFlowService), TimeProvider.System);
     }
 
-    private sealed class NoOpRiskSnapshotRouter : IRiskSnapshotRouter
+    private sealed class StubOrchestrator : IRiskSubmissionOrchestrator
     {
-        public void Route(CanonicalRiskRequest request, FinalRiskResponse response, IngestContext context)
+        private readonly IRiskFlowService _riskFlowService;
+
+        public StubOrchestrator(IRiskFlowService riskFlowService)
         {
+            _riskFlowService = riskFlowService;
+        }
+
+        public Task<FinalRiskResponse> HandleAsync(
+            CanonicalRiskRequest request,
+            Services.Ingest.IngestContext context,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_riskFlowService.Process(request));
         }
     }
 

@@ -28,7 +28,7 @@ public sealed class ClaimIngestHandler : IIngestHandler
         return SupportedTypes.Contains(envelope.Type);
     }
 
-    public object Handle(SourceIngestEnvelope envelope)
+    public Task<object> HandleAsync(SourceIngestEnvelope envelope, CancellationToken cancellationToken = default)
     {
         var payload = envelope.Data.Deserialize<ClaimNoticePayload>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException("Unable to deserialize claim notice payload.");
@@ -55,6 +55,6 @@ public sealed class ClaimIngestHandler : IIngestHandler
             PerOccurrenceLimit = payload.PerOccurrenceLimit
         };
 
-        return _claimFlowService.Process(request);
+        return Task.FromResult<object>(_claimFlowService.Process(request));
     }
 }
