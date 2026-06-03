@@ -1,0 +1,42 @@
+{
+  "externalReference": "EXT-PROP-LOB-0001",
+  "productCode": "COMMERCIAL_PROPERTY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Quote",
+  "lineOfBusiness": "Property",
+  "transactionTimestampUtc": "2026-06-03T09:00:00Z",
+  "annualizedGrossPremium": 6200.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 6200.00,
+    "technicalPremium": 6000.00,
+    "revenue": 4200000.00,
+    "isRenewal": false
+  },
+  "broker": { "brokerCode": "BRK-220", "brokerName": "Harbor Lines", "isPreferredPartner": true },
+  "insured": {
+    "fullName": "Old Mill Textiles LLC",
+    "annualRevenue": 4200000.00,
+    "employeeCount": 40,
+    "yearsInBusiness": 60
+  },
+  "quote": { "quoteReference": "QT-PROP-1", "effectiveDate": "2026-07-01", "expiryDate": "2027-06-30" },
+  "policy": {},
+  "clearance": { "autoClearanceEnabled": true, "premiumThreshold": 7500.00, "fuzzyMatchTolerance": 3 },
+  "propertyDetails": {
+    "constructionType": "JoistedMasonry",
+    "yearBuilt": 1962,
+    "sprinklered": false,
+    "floodZone": "AE",
+    "buildingValue": 5000000.00
+  },
+  "enrichments": [],
+  "contractChecks": [ { "code": "CONTRACT_SIGNALS", "isComplete": true } ],
+  "complianceChecks": [ { "code": "KYC_BASELINE", "isComplete": true } ],
+  "parties": [ { "role": "Insured", "name": "Old Mill Textiles LLC" } ],
+  "claims": [],
+  "sections": [],
+  "sectionOperations": [],
+  "installments": []
+}

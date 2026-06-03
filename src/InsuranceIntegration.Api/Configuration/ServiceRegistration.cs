@@ -11,6 +11,8 @@ using InsuranceIntegration.Api.Services.Outbox;
 using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Pricing;
 using InsuranceIntegration.Api.Services.Products;
+using InsuranceIntegration.Api.Services.Risks;
+using InsuranceIntegration.Api.Services.Risks.Profiles;
 using InsuranceIntegration.Api.Services.Schemas;
 using InsuranceIntegration.Api.Services.Orchestration;
 using InsuranceIntegration.Api.Services.Snapshots;
@@ -41,6 +43,13 @@ public static class ServiceRegistration
         services.AddSingleton<IJsonSchemaService, JsonSchemaService>();
         services.AddScoped<ISubmissionRegistry, EfCoreSubmissionRegistry>();
         services.AddSingleton<IProductCatalog, ProductCatalog>();
+
+        services.AddSingleton<ILineOfBusinessResolver, LineOfBusinessResolver>();
+        services.AddSingleton<IRiskTypeProfile, PropertyRiskProfile>();
+        services.AddSingleton<IRiskTypeProfile, LiabilityRiskProfile>();
+        services.AddSingleton<IRiskTypeProfile, CyberRiskProfile>();
+        services.AddSingleton<IRiskTypeProfile, MotorRiskProfile>();
+        services.AddSingleton<IRiskProfileResolver, RiskProfileResolver>();
 
         services.AddScoped<IRatingService, RatingService>();
         services.AddScoped<IPolicyAdjustmentService, PolicyAdjustmentService>();

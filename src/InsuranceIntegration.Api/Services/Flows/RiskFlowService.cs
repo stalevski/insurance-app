@@ -1,6 +1,7 @@
 using InsuranceIntegration.Api.CanonicalContracts.Risks;
 using InsuranceIntegration.Api.Responses.Risks;
 using InsuranceIntegration.Api.Services.Clearance;
+using InsuranceIntegration.Api.Services.Risks.Profiles;
 
 namespace InsuranceIntegration.Api.Services.Flows;
 
@@ -9,15 +10,18 @@ public sealed class RiskFlowService : IRiskFlowService
     private readonly ISubmissionClearanceService _submissionClearanceService;
     private readonly ISubmissionRegistry _submissionRegistry;
     private readonly IBindPreconditionService? _bindPreconditionService;
+    private readonly IRiskProfileResolver _riskProfileResolver;
 
     public RiskFlowService(
         ISubmissionClearanceService submissionClearanceService,
         ISubmissionRegistry submissionRegistry,
-        IBindPreconditionService? bindPreconditionService = null)
+        IBindPreconditionService? bindPreconditionService = null,
+        IRiskProfileResolver? riskProfileResolver = null)
     {
         _submissionClearanceService = submissionClearanceService;
         _submissionRegistry = submissionRegistry;
         _bindPreconditionService = bindPreconditionService;
+        _riskProfileResolver = riskProfileResolver ?? RiskProfileResolver.CreateDefault();
     }
 
     public FinalRiskResponse Process(CanonicalRiskRequest request)
@@ -277,10 +281,9 @@ public sealed class RiskFlowService : IRiskFlowService
             ?? 0m;
     }
 
-    private static IReadOnlyCollection<EnrichmentItem> DeriveEnrichments(CanonicalRiskRequest request)
+    private IReadOnlyCollection<EnrichmentItem> DeriveEnrichments(CanonicalRiskRequest request)
     {
         var enrichments = new List<EnrichmentItem>();
-        var productCode = request.ProductCode.ToUpperInvariant();
 
         enrichments.Add(new EnrichmentItem
         {
@@ -292,29 +295,8 @@ public sealed class RiskFlowService : IRiskFlowService
             IsBlocking = false
         });
 
-        if (productCode.Contains("AUTO") || productCode.Contains("MOTOR") || productCode.Contains("FLEET"))
-        {
-            enrichments.Add(new EnrichmentItem { Family = "Auto", Code = "DRIVING_HISTORY", Description = "Driving history review", Multiplier = 1.03m, IsDerived = true, IsBlocking = false });
-            enrichments.Add(new EnrichmentItem { Family = "Auto", Code = "PAYMENT_HISTORY", Description = "Payment history check", Multiplier = 1.02m, IsDerived = true, IsBlocking = false });
-        }
-
-        if (productCode.Contains("PROPERTY") || productCode.Contains("HOME") || productCode.Contains("COMMERCIAL"))
-        {
-            enrichments.Add(new EnrichmentItem { Family = "Property", Code = "GEO_CAT", Description = "Geo-cat accumulation screening", Multiplier = 1.04m, IsDerived = true, IsBlocking = false });
-            enrichments.Add(new EnrichmentItem { Family = "Property", Code = "BUILDING_PROFILE", Description = "Building age and attribute review", Multiplier = 1.02m, IsDerived = true, IsBlocking = false });
-        }
-
-        if (productCode.Contains("CYBER"))
-        {
-            enrichments.Add(new EnrichmentItem { Family = "Cyber", Code = "ATTACK_SURFACE", Description = "External attack surface review", Multiplier = 1.08m, IsDerived = true, IsBlocking = false });
-            enrichments.Add(new EnrichmentItem { Family = "Cyber", Code = "RANSOMWARE_CONTROLS", Description = "Ransomware controls check", Multiplier = 1.05m, IsDerived = true, IsBlocking = false });
-        }
-
-        if (productCode.Contains("LIABILITY") || productCode.Contains("PROFESSIONAL") || productCode.Contains("MISC"))
-        {
-            enrichments.Add(new EnrichmentItem { Family = "Liability", Code = "SANCTIONS_SCREEN", Description = "Sanctions screening review", Multiplier = 1.01m, IsDerived = true, IsBlocking = false });
-            enrichments.Add(new EnrichmentItem { Family = "Liability", Code = "FINANCIAL_HEALTH", Description = "Financial health review", Multiplier = 1.03m, IsDerived = true, IsBlocking = request.Insured.AnnualRevenue is < 100000m });
-        }
+        // Line-of-business specific signals are produced by the matching risk profile.
+        enrichments.AddRange(_riskProfileResolver.DeriveEnrichments(request));
 
         if (request.Submission.UnderwritingYear < DateTime.UtcNow.Year)
         {

@@ -1,0 +1,41 @@
+{
+  "externalReference": "EXT-MOTOR-LOB-0001",
+  "productCode": "MOTOR",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Quote",
+  "lineOfBusiness": "Motor",
+  "transactionTimestampUtc": "2026-06-03T09:10:00Z",
+  "annualizedGrossPremium": 7400.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 7400.00,
+    "technicalPremium": 7200.00,
+    "revenue": 3000000.00,
+    "isRenewal": false
+  },
+  "broker": { "brokerCode": "BRK-440", "brokerName": "Fleet Cover Direct" },
+  "insured": {
+    "fullName": "Sundown Logistics LLC",
+    "annualRevenue": 3000000.00,
+    "employeeCount": 60,
+    "yearsInBusiness": 11
+  },
+  "quote": { "quoteReference": "QT-MOT-1", "effectiveDate": "2026-07-01", "expiryDate": "2027-06-30" },
+  "policy": {},
+  "clearance": { "autoClearanceEnabled": true, "premiumThreshold": 10000.00, "fuzzyMatchTolerance": 3 },
+  "motorDetails": {
+    "fleetSize": 42,
+    "primaryUse": "LongHaul",
+    "youngestDriverAge": 19,
+    "commercialUse": true
+  },
+  "enrichments": [],
+  "contractChecks": [ { "code": "CONTRACT_SIGNALS", "isComplete": true } ],
+  "complianceChecks": [ { "code": "KYC_BASELINE", "isComplete": true } ],
+  "parties": [ { "role": "Insured", "name": "Sundown Logistics LLC" } ],
+  "claims": [],
+  "sections": [],
+  "sectionOperations": [],
+  "installments": []
+}

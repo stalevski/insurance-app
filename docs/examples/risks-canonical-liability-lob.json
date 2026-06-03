@@ -1,0 +1,40 @@
+{
+  "externalReference": "EXT-LIAB-LOB-0001",
+  "productCode": "LIABILITY",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Quote",
+  "lineOfBusiness": "Liability",
+  "transactionTimestampUtc": "2026-06-03T09:15:00Z",
+  "annualizedGrossPremium": 3200.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 3200.00,
+    "technicalPremium": 3100.00,
+    "revenue": 80000.00,
+    "isRenewal": false
+  },
+  "broker": { "brokerCode": "BRK-550", "brokerName": "Main Street Liability" },
+  "insured": {
+    "fullName": "Corner Cafe Holdings",
+    "annualRevenue": 80000.00,
+    "employeeCount": 6,
+    "yearsInBusiness": 2
+  },
+  "quote": { "quoteReference": "QT-LIAB-1", "effectiveDate": "2026-07-01", "expiryDate": "2027-06-30" },
+  "policy": {},
+  "clearance": { "autoClearanceEnabled": true, "premiumThreshold": 5000.00, "fuzzyMatchTolerance": 3 },
+  "liabilityDetails": {
+    "profession": "FoodService",
+    "contractorCount": 3,
+    "hasPriorClaims": true
+  },
+  "enrichments": [],
+  "contractChecks": [ { "code": "CONTRACT_SIGNALS", "isComplete": true } ],
+  "complianceChecks": [ { "code": "KYC_BASELINE", "isComplete": true } ],
+  "parties": [ { "role": "Insured", "name": "Corner Cafe Holdings" } ],
+  "claims": [],
+  "sections": [],
+  "sectionOperations": [],
+  "installments": []
+}
