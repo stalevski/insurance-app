@@ -26,6 +26,20 @@ public sealed class CanonicalRiskRequest
 
     public string? LifecycleStatus { get; init; }
 
+    /// <summary>
+    /// Optional explicit line-of-business classification. When null, it is derived
+    /// from <see cref="ProductCode"/> via the product catalog / keyword resolver.
+    /// </summary>
+    public LineOfBusiness? LineOfBusiness { get; init; }
+
+    public PropertyRiskDetails? PropertyDetails { get; init; }
+
+    public CyberRiskDetails? CyberDetails { get; init; }
+
+    public MotorRiskDetails? MotorDetails { get; init; }
+
+    public LiabilityRiskDetails? LiabilityDetails { get; init; }
+
     public decimal? AnnualizedGrossPremium { get; init; }
 
     public string CurrencyCode { get; init; } = "USD";

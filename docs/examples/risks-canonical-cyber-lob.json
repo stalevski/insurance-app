@@ -1,0 +1,41 @@
+{
+  "externalReference": "EXT-CYBER-LOB-0001",
+  "productCode": "CYBER",
+  "sourceSystem": "BROKER_PORTAL",
+  "transactionType": "Quote",
+  "lineOfBusiness": "Cyber",
+  "transactionTimestampUtc": "2026-06-03T09:05:00Z",
+  "annualizedGrossPremium": 9800.00,
+  "currencyCode": "USD",
+  "submission": {
+    "underwritingYear": 2026,
+    "brokerPremium": 9800.00,
+    "technicalPremium": 9500.00,
+    "revenue": 12000000.00,
+    "isRenewal": false
+  },
+  "broker": { "brokerCode": "BRK-330", "brokerName": "Cyber Risk Brokers" },
+  "insured": {
+    "fullName": "Nimbus Health Analytics Inc",
+    "annualRevenue": 12000000.00,
+    "employeeCount": 130,
+    "yearsInBusiness": 8
+  },
+  "quote": { "quoteReference": "QT-CYB-1", "effectiveDate": "2026-07-01", "expiryDate": "2027-06-30" },
+  "policy": {},
+  "clearance": { "autoClearanceEnabled": true, "premiumThreshold": 15000.00, "fuzzyMatchTolerance": 3 },
+  "cyberDetails": {
+    "sensitiveRecordsHeld": 2500000,
+    "multiFactorAuthentication": false,
+    "ransomwareControlsInPlace": false,
+    "priorBreach": true
+  },
+  "enrichments": [],
+  "contractChecks": [ { "code": "CONTRACT_SIGNALS", "isComplete": true } ],
+  "complianceChecks": [ { "code": "KYC_BASELINE", "isComplete": true } ],
+  "parties": [ { "role": "Insured", "name": "Nimbus Health Analytics Inc" } ],
+  "claims": [],
+  "sections": [],
+  "sectionOperations": [],
+  "installments": []
+}
