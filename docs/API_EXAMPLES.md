@@ -4,7 +4,7 @@ This guide pairs every `docs/examples/*.json` file with the endpoint it targets,
 
 > Prefer Postman? See [§9 Testing with Postman](#9-testing-with-postman) for the curated collection and three import paths.
 
-> All `source` and `sourceSystem` codes used here (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`, `CLAIMFORGE`, `PAYMENTRAIL`, `SANCTIONSCAN`, `BROKER_PORTAL`, …) are **fictional** — they live only in this codebase's catalog (`@src/InsuranceIntegration.Api/Services/Catalog/SourceSystemCatalogService.cs`). Three of them have real risk mappers (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`); the rest are echoed through verbatim so any string works.
+> All `source` and `sourceSystem` codes used here (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`, `CLAIMFORGE`, `PAYMENTRAIL`, `SANCTIONSCAN`, `BROKER_PORTAL`, …) are **fictional** — they live only in this codebase's catalog (`src/InsuranceIntegration.Api/Services/Catalog/SourceSystemCatalogService.cs`). Three of them have real risk mappers (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`); the rest are echoed through verbatim so any string works.
 
 ## How to send an example
 
