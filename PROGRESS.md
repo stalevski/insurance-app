@@ -17,23 +17,24 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
 
 - [x] **Phase 0 — AI-agnostic context + continuity.** `AGENTS.md`, `.github/copilot-instructions.md`,
   `.windsurf/rules/{architecture,testing}.md`, and this `PROGRESS.md`.
-- [ ] **Phase 1 — Document bugs.** `docs/KNOWN_ISSUES.md` cataloguing the 14 issues found during
+- [x] **Phase 1 — Document bugs.** `docs/KNOWN_ISSUES.md` cataloguing the verified issues found during
   analysis (documentation only; no code changes).
-- [ ] **Phase 2 — Per-line-of-business risk models.** Lightweight: one `CanonicalRiskRequest` +
-  optional typed detail objects (Property/Cyber/Motor/Liability) + per-LOB strategy replacing the
-  `ProductCode.Contains(...)` string checks in `RiskFlowService`.
+- [x] **Phase 2 — Per-line-of-business risk models.** `LineOfBusiness` enum + optional typed detail
+  objects (Property/Cyber/Motor/Liability) on `CanonicalRiskRequest` + `IRiskTypeProfile` strategy
+  per LOB replacing the `ProductCode.Contains(...)` checks in `RiskFlowService`. 12 new tests, 4
+  example JSON files.
 - [ ] **Phase 3 — Blazor Server UI.** Create submissions/quotes/policies, list + detail views,
   status **flow diagram** (Mermaid from domain events), read-only **DB browser**.
 - [ ] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
 
 ## Current status
 
-- Baseline build is green (`dotnet build -c Release` succeeds; 38 pre-existing warnings, no errors).
-- Test framework confirmed: **NUnit 4** (+ `FakeTimeProvider`), ~32 test files.
-- Note: the codebase has evolved beyond the original README in places — there are real risk
-  entities and a `Persistence/Migrations/Phase10a_AddRiskEntities` migration. Verify current
-  persistence shape before Phase 2 model work.
-- **Working on now:** Phase 0 (this commit) → starting Phase 1.
+- Build green (`dotnet build -c Release`); **all 128 tests pass** (was 116; +12 from Phase 2).
+- `dotnet format --verify-no-changes` flags **one pre-existing** generated migration
+  (`Phase10a_AddRiskEntities.cs`: charset + IDE0161). Not introduced by recent work; left as-is
+  (generated migration). All new Phase 0-2 files are format-clean.
+- Test framework: **NUnit 4** (+ `FakeTimeProvider`).
+- **Working on now:** Phase 3 (Blazor Server UI).
 
 ## Decisions locked in
 
@@ -45,12 +46,22 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
   production exposure — recommend gating behind Development or a feature flag).
 - **Hosting target:** MaxHosting MK **VPS** (root access required for Docker; shared/cPanel hosting
   cannot run the app).
+- **No language/stack migration (hosting analysis).** Hosting cost is driven by the VPS, not the
+  language: a Linux VPS that runs Node/Python also runs .NET for the same price. A JS/TS or Blazor
+  WASM static frontend can be hosted free, but the backend (background outbox dispatcher, EF +
+  SQLite, persistent connections) still needs the same always-on VPS, so total cost is unchanged.
+  Avoiding the VPS entirely requires re-architecting to serverless + a hosted DB (works in .NET
+  too, usually costs *more*); the only genuinely-free no-VPS path is Cloudflare Workers + D1, which
+  is JS-native but would mean discarding the whole architecture/tests/UI. Conclusion: **keep .NET +
+  Blazor Server**; minimise cost via a small trimmed container (Phase 4), not a rewrite.
 
 ## Next steps
 
-1. Create `docs/KNOWN_ISSUES.md` (Phase 1).
-2. Confirm current risk persistence (entities/migrations) before Phase 2.
-3. Begin Phase 2 risk-model work.
+1. Phase 3 — scaffold Blazor Server UI (recommend a separate `InsuranceIntegration.Web` project or
+   add Blazor to the API host): create forms (submission/quote/policy) posting to existing
+   endpoints; list + detail views over snapshots; Mermaid status flow diagram from domain events;
+   read-only DB browser.
+2. Phase 4 — Dockerfile + short MaxHosting VPS deployment guide.
 
 ## Open questions / to confirm with hosting provider
 
