@@ -1,0 +1,77 @@
+@using InsuranceIntegration.Api.Services.Ui
+@inject IUiGateway Gateway
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="panel">
+    <h2>Lifecycle flow</h2>
+    @if (_events is null)
+    {
+        <p class="muted">Loading…</p>
+    }
+    else if (_events.Count == 0)
+    {
+        <p class="muted">No domain events recorded for this @AggregateKind.ToLowerInvariant().</p>
+    }
+    else
+    {
+        <div id="@_elementId" class="mermaid-diagram"></div>
+
+        <table style="margin-top:1rem;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Event</th>
+                    <th>When (UTC)</th>
+                    <th>Source</th>
+                    <th>Envelope</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ var index = 1; }
+                @foreach (var evt in _events)
+                {
+                    <tr>
+                        <td>@index</td>
+                        <td><span class="badge">@evt.EventType</span></td>
+                        <td>@evt.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>@evt.Source</td>
+                        <td>@evt.EnvelopeId</td>
+                    </tr>
+                    index++;
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string AggregateKind { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string AggregateKey { get; set; } = string.Empty;
+
+    private readonly string _elementId = $"flow-{Guid.NewGuid():N}";
+    private IReadOnlyList<DomainEventEntity>? _events;
+    private string _definition = string.Empty;
+    private bool _needsRender;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _events = await Gateway.GetAggregateEventsAsync(AggregateKind, AggregateKey);
+        _definition = EventFlowDiagram.Build(_events);
+        _needsRender = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsRender && !string.IsNullOrEmpty(_definition))
+        {
+            _needsRender = false;
+            await JS.InvokeVoidAsync("mermaidInterop.render", _elementId, _definition);
+        }
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}

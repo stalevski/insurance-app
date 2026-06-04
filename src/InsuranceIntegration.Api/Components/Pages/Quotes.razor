@@ -1,0 +1,86 @@
+@page "/quotes"
+@inject IUiGateway Gateway
+
+<PageTitle>Quotes</PageTitle>
+
+<h1>Quotes</h1>
+<p class="subtitle">Quote snapshots (read models) rebuilt from the domain-event log.</p>
+
+<div class="panel">
+    @if (_quotes is null)
+    {
+        <p class="muted">Loading…</p>
+    }
+    else if (_quotes.Count == 0)
+    {
+        <p class="muted">No quotes yet.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Quote</th>
+                    <th>Product</th>
+                    <th>UW year</th>
+                    <th>Phase</th>
+                    <th>Bound</th>
+                    <th>Last updated (UTC)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var quote in _quotes)
+                {
+                    <tr>
+                        <td><a href="@($"quotes/{quote.QuoteReference}")">@quote.QuoteReference</a></td>
+                        <td>@quote.ProductCode</td>
+                        <td>@quote.UnderwritingYear</td>
+                        <td><span class="badge">@quote.CurrentPhase</span></td>
+                        <td>
+                            @if (quote.IsBound)
+                            {
+                                <span class="badge good">Bound</span>
+                            }
+                            else
+                            {
+                                <span class="badge muted">No</span>
+                            }
+                        </td>
+                        <td>@quote.LastUpdatedUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="pager">
+            <button class="secondary" @onclick="PrevAsync" disabled="@(_skip == 0)">Previous</button>
+            <span class="muted">Showing @_skip–@(_skip + _quotes.Count)</span>
+            <button class="secondary" @onclick="NextAsync" disabled="@(_quotes.Count < _take)">Next</button>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<QuoteSnapshotSummary>? _quotes;
+    private int _skip;
+    private const int _take = 50;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _quotes = await Gateway.ListQuotesAsync(_skip, _take);
+    }
+
+    private async Task NextAsync()
+    {
+        _skip += _take;
+        await LoadAsync();
+    }
+
+    private async Task PrevAsync()
+    {
+        _skip = Math.Max(0, _skip - _take);
+        await LoadAsync();
+    }
+}

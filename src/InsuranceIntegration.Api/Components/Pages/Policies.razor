@@ -1,0 +1,86 @@
+@page "/policies"
+@inject IUiGateway Gateway
+
+<PageTitle>Policies</PageTitle>
+
+<h1>Policies</h1>
+<p class="subtitle">Policy snapshots (read models) rebuilt from the domain-event log.</p>
+
+<div class="panel">
+    @if (_policies is null)
+    {
+        <p class="muted">Loading…</p>
+    }
+    else if (_policies.Count == 0)
+    {
+        <p class="muted">No policies yet.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Policy</th>
+                    <th>Quote</th>
+                    <th>Product</th>
+                    <th>UW year</th>
+                    <th>Phase</th>
+                    <th>Last updated (UTC)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var policy in _policies)
+                {
+                    <tr>
+                        <td><a href="@($"policies/{policy.PolicyReference}")">@policy.PolicyReference</a></td>
+                        <td>
+                            @if (policy.QuoteReference is not null)
+                            {
+                                <a href="@($"quotes/{policy.QuoteReference}")">@policy.QuoteReference</a>
+                            }
+                            else
+                            {
+                                <span class="muted">—</span>
+                            }
+                        </td>
+                        <td>@policy.ProductCode</td>
+                        <td>@policy.UnderwritingYear</td>
+                        <td><span class="badge">@policy.CurrentPhase</span></td>
+                        <td>@policy.LastUpdatedUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="pager">
+            <button class="secondary" @onclick="PrevAsync" disabled="@(_skip == 0)">Previous</button>
+            <span class="muted">Showing @_skip–@(_skip + _policies.Count)</span>
+            <button class="secondary" @onclick="NextAsync" disabled="@(_policies.Count < _take)">Next</button>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<PolicySnapshotSummary>? _policies;
+    private int _skip;
+    private const int _take = 50;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _policies = await Gateway.ListPoliciesAsync(_skip, _take);
+    }
+
+    private async Task NextAsync()
+    {
+        _skip += _take;
+        await LoadAsync();
+    }
+
+    private async Task PrevAsync()
+    {
+        _skip = Math.Max(0, _skip - _take);
+        await LoadAsync();
+    }
+}

@@ -1,0 +1,77 @@
+@page "/quotes/{QuoteReference}"
+@inject IUiGateway Gateway
+
+<PageTitle>Quote @QuoteReference</PageTitle>
+
+<div class="breadcrumb"><a href="quotes">Quotes</a> / @QuoteReference</div>
+
+@if (_loaded && _quote is null)
+{
+    <div class="alert error">Quote <strong>@QuoteReference</strong> was not found.</div>
+}
+else if (_quote is null)
+{
+    <p class="muted">Loading…</p>
+}
+else
+{
+    <h1>Quote @_quote.QuoteReference</h1>
+    <p class="subtitle">@_quote.ProductCode · UW @_quote.UnderwritingYear · @_quote.CurrencyCode</p>
+
+    <div class="panel">
+        <h2>Lifecycle</h2>
+        <dl class="kv">
+            <dt>Current phase</dt><dd><span class="badge">@_quote.Lifecycle.CurrentPhase</span></dd>
+            <dt>Submission status</dt><dd>@_quote.Lifecycle.SubmissionStatus</dd>
+            <dt>Quote status</dt><dd>@_quote.Lifecycle.QuoteStatus</dd>
+            <dt>Final status</dt><dd>@_quote.Lifecycle.FinalStatus</dd>
+            <dt>Clearance decision</dt><dd>@_quote.Lifecycle.ClearanceDecision (auto-cleared: @_quote.Lifecycle.AutoCleared)</dd>
+            <dt>Bound</dt><dd>@_quote.Lifecycle.IsBound</dd>
+            <dt>Version</dt><dd>@_quote.Lifecycle.Version</dd>
+            <dt>Issued at (UTC)</dt><dd>@Show(_quote.Lifecycle.IssuedAtUtc)</dd>
+            <dt>Valid until (UTC)</dt><dd>@Show(_quote.Lifecycle.ValidUntilUtc)</dd>
+            @if (_quote.Lifecycle.BindRejectionReason is not null)
+            {
+                <dt>Bind rejection</dt><dd class="muted">@_quote.Lifecycle.BindRejectionReason</dd>
+            }
+        </dl>
+    </div>
+
+    <div class="panel">
+        <h2>Parties &amp; terms</h2>
+        <dl class="kv">
+            <dt>Insured</dt><dd>@(_quote.Insured.Name ?? "—") @(_quote.Insured.Code is null ? "" : $"({_quote.Insured.Code})")</dd>
+            <dt>Broker</dt><dd>@(_quote.Broker.Name ?? "—") @(_quote.Broker.Code is null ? "" : $"({_quote.Broker.Code})")</dd>
+            <dt>Premium (base / adjusted)</dt><dd>@Money(_quote.Premium.Base) / @Money(_quote.Premium.Adjusted)</dd>
+            <dt>Sections</dt><dd>@_quote.Coverage.SectionCount (sum insured @Money(_quote.Coverage.TotalSumInsured))</dd>
+            <dt>Effective / expiry</dt><dd>@Show(_quote.EffectiveDate) → @Show(_quote.ExpiryDate)</dd>
+            @if (_quote.PolicyReference is not null)
+            {
+                <dt>Policy</dt><dd><a href="@($"policies/{_quote.PolicyReference}")">@_quote.PolicyReference</a></dd>
+            }
+        </dl>
+    </div>
+
+    <EventFlow AggregateKind="Quote" AggregateKey="@_quote.QuoteReference" />
+}
+
+@code {
+    [Parameter]
+    public string QuoteReference { get; set; } = string.Empty;
+
+    private QuoteSnapshot? _quote;
+    private bool _loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+        _quote = await Gateway.FindQuoteAsync(QuoteReference);
+        _loaded = true;
+    }
+
+    private static string Show(DateTime? value) => value?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—";
+
+    private static string Show(DateOnly? value) => value?.ToString("yyyy-MM-dd") ?? "—";
+
+    private static string Money(decimal? value) => value is null ? "—" : value.Value.ToString("N2");
+}

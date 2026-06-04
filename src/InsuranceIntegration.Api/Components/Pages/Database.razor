@@ -1,0 +1,106 @@
+@page "/database"
+@inject IUiGateway Gateway
+
+<PageTitle>Database browser</PageTitle>
+
+<h1>Database browser</h1>
+<p class="subtitle">Read-only view of the SQLite tables. No data can be changed from here.</p>
+
+<div class="panel">
+    <div class="toolbar">
+        <div class="field" style="margin-bottom:0;">
+            <label for="table">Table</label>
+            <select id="table" @bind="_selectedTable" @bind:after="OnTableChangedAsync">
+                <option value="">— choose a table —</option>
+                @foreach (var table in _tables)
+                {
+                    <option value="@table">@table</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <p class="muted">Select a table to browse its rows.</p>
+    }
+    else if (_page.Columns.Count == 0)
+    {
+        <p class="muted">No data.</p>
+    }
+    else
+    {
+        <p class="muted">@_page.TotalRows row(s) total.</p>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        @foreach (var column in _page.Columns)
+                        {
+                            <th>@column</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _page.Rows)
+                    {
+                        <tr>
+                            @foreach (var cell in row)
+                            {
+                                <td title="@cell">@(cell ?? "NULL")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager">
+            <button class="secondary" @onclick="PrevAsync" disabled="@(_skip == 0)">Previous</button>
+            <span class="muted">Rows @_skip–@(_skip + _page.Rows.Count) of @_page.TotalRows</span>
+            <button class="secondary" @onclick="NextAsync" disabled="@(_skip + _page.Rows.Count >= _page.TotalRows)">Next</button>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<string> _tables = [];
+    private string _selectedTable = string.Empty;
+    private TablePage? _page;
+    private int _skip;
+    private const int _take = 50;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tables = await Gateway.ListTablesAsync();
+    }
+
+    private async Task OnTableChangedAsync()
+    {
+        _skip = 0;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedTable))
+        {
+            _page = null;
+            return;
+        }
+
+        _page = await Gateway.QueryTableAsync(_selectedTable, _skip, _take);
+    }
+
+    private async Task NextAsync()
+    {
+        _skip += _take;
+        await LoadAsync();
+    }
+
+    private async Task PrevAsync()
+    {
+        _skip = Math.Max(0, _skip - _take);
+        await LoadAsync();
+    }
+}

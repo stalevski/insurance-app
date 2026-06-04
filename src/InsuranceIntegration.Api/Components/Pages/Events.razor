@@ -1,0 +1,149 @@
+@page "/events"
+@using InsuranceIntegration.Api.Events
+@inject IUiGateway Gateway
+
+<PageTitle>Domain events</PageTitle>
+
+<h1>Domain events</h1>
+<p class="subtitle">Append-only event log. Snapshots are projected from these records.</p>
+
+<div class="panel">
+    <div class="toolbar">
+        <div class="field" style="margin-bottom:0;">
+            <label for="kind">Aggregate</label>
+            <select id="kind" @bind="_kind" @bind:after="ReloadAsync">
+                <option value="">All</option>
+                <option value="@DomainEventAggregateKind.Quote">Quote</option>
+                <option value="@DomainEventAggregateKind.Policy">Policy</option>
+                <option value="@DomainEventAggregateKind.Claim">Claim</option>
+            </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+            <label for="type">Event type</label>
+            <select id="type" @bind="_eventType" @bind:after="ReloadAsync">
+                <option value="">All</option>
+                @foreach (var type in EventTypes)
+                {
+                    <option value="@type">@type</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (_events is null)
+    {
+        <p class="muted">Loading…</p>
+    }
+    else if (_events.Count == 0)
+    {
+        <p class="muted">No events match the current filter.</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>When (UTC)</th>
+                        <th>Event</th>
+                        <th>Aggregate</th>
+                        <th>Key</th>
+                        <th>Source</th>
+                        <th>Envelope</th>
+                        <th>Correlation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var evt in _events)
+                    {
+                        <tr>
+                            <td>@evt.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td><span class="badge">@evt.EventType</span></td>
+                            <td>@evt.AggregateKind</td>
+                            <td>@RenderKey(evt)</td>
+                            <td>@evt.Source</td>
+                            <td>@evt.EnvelopeId</td>
+                            <td>@evt.CorrelationId</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager">
+            <button class="secondary" @onclick="PrevAsync" disabled="@(_skip == 0)">Previous</button>
+            <span class="muted">Showing @_skip–@(_skip + _events.Count)</span>
+            <button class="secondary" @onclick="NextAsync" disabled="@(_events.Count < _take)">Next</button>
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly string[] EventTypes =
+    [
+        DomainEventType.RiskSubmissionReceived,
+        DomainEventType.QuoteIssued,
+        DomainEventType.QuoteBound,
+        DomainEventType.PolicyBound,
+        DomainEventType.PolicyEndorsed,
+        DomainEventType.PolicyCancelled,
+        DomainEventType.PolicyRenewed,
+        DomainEventType.PolicyReinstated,
+        DomainEventType.ClaimNotified
+    ];
+
+    private IReadOnlyList<DomainEventEntity>? _events;
+    private string _kind = string.Empty;
+    private string _eventType = string.Empty;
+    private int _skip;
+    private const int _take = 100;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var kind = string.IsNullOrEmpty(_kind) ? null : _kind;
+        var type = string.IsNullOrEmpty(_eventType) ? null : _eventType;
+        _events = await Gateway.ListEventsAsync(kind, type, _skip, _take);
+    }
+
+    private async Task ReloadAsync()
+    {
+        _skip = 0;
+        await LoadAsync();
+    }
+
+    private async Task NextAsync()
+    {
+        _skip += _take;
+        await LoadAsync();
+    }
+
+    private async Task PrevAsync()
+    {
+        _skip = Math.Max(0, _skip - _take);
+        await LoadAsync();
+    }
+
+    private RenderFragment RenderKey(DomainEventEntity evt) => builder =>
+    {
+        var href = evt.AggregateKind switch
+        {
+            DomainEventAggregateKind.Quote => $"quotes/{evt.AggregateKey}",
+            DomainEventAggregateKind.Policy => $"policies/{evt.AggregateKey}",
+            _ => null
+        };
+
+        if (href is null)
+        {
+            builder.AddContent(0, evt.AggregateKey);
+        }
+        else
+        {
+            builder.OpenElement(1, "a");
+            builder.AddAttribute(2, "href", href);
+            builder.AddContent(3, evt.AggregateKey);
+            builder.CloseElement();
+        }
+    };
+}

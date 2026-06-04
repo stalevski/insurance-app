@@ -1,0 +1,98 @@
+@page "/"
+@inject IUiGateway Gateway
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+<p class="subtitle">Live view of the ingest and transformation platform.</p>
+
+@if (_summary is null)
+{
+    <p class="muted">Loading…</p>
+}
+else
+{
+    <div class="cards">
+        <div class="card">
+            <div class="metric">@_summary.QuoteCount</div>
+            <div class="label">Quotes</div>
+        </div>
+        <div class="card">
+            <div class="metric">@_summary.BoundQuoteCount</div>
+            <div class="label">Bound quotes</div>
+        </div>
+        <div class="card">
+            <div class="metric">@_summary.PolicyCount</div>
+            <div class="label">Policies</div>
+        </div>
+        <div class="card">
+            <div class="metric">@_summary.DomainEventCount</div>
+            <div class="label">Domain events</div>
+        </div>
+        <div class="card">
+            <div class="metric">@_summary.IngestEntryCount</div>
+            <div class="label">Ingest entries</div>
+        </div>
+        <div class="card">
+            <div class="metric">@_summary.PendingOutboxCount</div>
+            <div class="label">Pending outbox</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Recent domain events</h2>
+        @if (_summary.RecentEvents.Count == 0)
+        {
+            <p class="muted">No events recorded yet. Submit a message from the
+                <a href="ingest">Ingest</a> page to get started.</p>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>When (UTC)</th>
+                        <th>Event</th>
+                        <th>Aggregate</th>
+                        <th>Key</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var evt in _summary.RecentEvents)
+                    {
+                        <tr>
+                            <td>@evt.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td><span class="badge">@evt.EventType</span></td>
+                            <td>@evt.AggregateKind</td>
+                            <td>
+                                @if (evt.AggregateKind == "Quote")
+                                {
+                                    <a href="@($"quotes/{evt.AggregateKey}")">@evt.AggregateKey</a>
+                                }
+                                else if (evt.AggregateKind == "Policy")
+                                {
+                                    <a href="@($"policies/{evt.AggregateKey}")">@evt.AggregateKey</a>
+                                }
+                                else
+                                {
+                                    @evt.AggregateKey
+                                }
+                            </td>
+                            <td>@evt.Source</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@code {
+    private DashboardSummary? _summary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _summary = await Gateway.GetDashboardAsync();
+    }
+}

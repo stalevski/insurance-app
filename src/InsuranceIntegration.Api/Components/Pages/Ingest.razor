@@ -1,0 +1,156 @@
+@page "/ingest"
+@using System.Text.Json
+@inject IUiGateway Gateway
+
+<PageTitle>Ingest</PageTitle>
+
+<h1>Ingest a source message</h1>
+<p class="subtitle">Submit a source envelope to <code>/api/v1/ingest</code>. Pick a template to
+    pre-fill the editor, adjust it, then send.</p>
+
+<div class="panel">
+    <div class="toolbar">
+        <div class="field" style="margin-bottom:0;">
+            <label for="template">Template</label>
+            <select id="template" @bind="_selectedTemplate" @bind:after="ApplyTemplate">
+                <option value="">— choose a source system —</option>
+                @foreach (var item in _templates)
+                {
+                    <option value="@item.SystemCode">@item.DisplayName (@item.MessageType)</option>
+                }
+            </select>
+        </div>
+        <button type="button" class="secondary" @onclick="NewId">New envelope id</button>
+    </div>
+
+    <div class="field">
+        <label for="envelope">Envelope JSON</label>
+        <textarea id="envelope" @bind="_envelopeJson" spellcheck="false"></textarea>
+    </div>
+
+    <button type="button" @onclick="SubmitAsync" disabled="@_submitting">
+        @(_submitting ? "Submitting…" : "Submit envelope")
+    </button>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert error">@_error</div>
+}
+
+@if (_receipt is not null)
+{
+    <div class="alert success" style="margin-bottom:1rem;">
+        Accepted by <strong>@_receipt.ProcessedBy</strong> — envelope
+        <strong>@_receipt.EnvelopeId</strong> from <strong>@_receipt.Source</strong>.
+    </div>
+    <div class="panel">
+        <h2>Receipt</h2>
+        <pre class="code">@_receiptJson</pre>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<SourceSystemCatalogItem> _templates = [];
+    private string _selectedTemplate = string.Empty;
+    private string _envelopeJson = string.Empty;
+    private bool _submitting;
+    private string? _error;
+    private IngestReceipt? _receipt;
+    private string? _receiptJson;
+
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _templates = await Gateway.GetSourceSystemsAsync();
+    }
+
+    private void ApplyTemplate()
+    {
+        if (string.IsNullOrEmpty(_selectedTemplate))
+        {
+            return;
+        }
+
+        var template = _templates.FirstOrDefault(item => item.SystemCode == _selectedTemplate);
+        if (template is null)
+        {
+            return;
+        }
+
+        var envelope = new
+        {
+            id = $"ui-{Guid.NewGuid():N}".Substring(0, 16),
+            source = template.SystemCode,
+            type = template.MessageType,
+            schemaVersion = "1.0",
+            occurredAtUtc = DateTime.UtcNow,
+            correlationId = Guid.NewGuid().ToString(),
+            data = template.ExamplePayload
+        };
+
+        _envelopeJson = JsonSerializer.Serialize(envelope, WriteOptions);
+        _error = null;
+    }
+
+    private void NewId()
+    {
+        if (string.IsNullOrWhiteSpace(_envelopeJson))
+        {
+            return;
+        }
+
+        try
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(_envelopeJson)!;
+            node["id"] = $"ui-{Guid.NewGuid():N}".Substring(0, 16);
+            _envelopeJson = node.ToJsonString(WriteOptions);
+        }
+        catch (JsonException)
+        {
+            // Leave the editor untouched when the JSON is mid-edit / invalid.
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        _error = null;
+        _receipt = null;
+        _receiptJson = null;
+
+        SourceIngestEnvelope? envelope;
+        try
+        {
+            envelope = JsonSerializer.Deserialize<SourceIngestEnvelope>(
+                _envelopeJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException ex)
+        {
+            _error = $"Invalid JSON: {ex.Message}";
+            return;
+        }
+
+        if (envelope is null)
+        {
+            _error = "The envelope could not be parsed.";
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            _receipt = await Gateway.DispatchAsync(envelope);
+            _receiptJson = JsonSerializer.Serialize(_receipt, WriteOptions);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}
