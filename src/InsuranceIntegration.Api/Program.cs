@@ -3,6 +3,7 @@ using InsuranceIntegration.Api.Components;
 using InsuranceIntegration.Api.Endpoints;
 using InsuranceIntegration.Api.Middleware;
 using InsuranceIntegration.Api.Persistence;
+using InsuranceIntegration.Api.Services.Seeding;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,12 @@ using (var scope = app.Services.CreateScope())
     else if (!context.Database.GetAppliedMigrations().Any())
     {
         context.Database.EnsureCreated();
+    }
+
+    if (app.Environment.IsDevelopment())
+    {
+        var seeder = scope.ServiceProvider.GetRequiredService<IDevelopmentDataSeeder>();
+        await seeder.SeedAsync();
     }
 }
 
