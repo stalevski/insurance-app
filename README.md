@@ -125,10 +125,17 @@ toolchain). Browse to the application root (`/`) when it is running. Pages:
 - **Ingest** (`/ingest`) — submit a source envelope to `POST /api/v1/ingest`, with templates
   pre-filled from the source-system catalog.
 - **Quotes / Policies** (`/quotes`, `/policies`) — paged list + detail views over the
-  `QuoteSnapshot` / `PolicySnapshot` read-models.
+  `QuoteSnapshot` / `PolicySnapshot` read-models. Each detail page shows a **lifecycle stage**
+  diagram (canonical phases with the current stage highlighted) so you can see where the risk
+  sits, plus a **lifecycle flow** diagram built from its event stream.
 - **Domain events** (`/events`) — filterable event log; each aggregate detail page renders a
   **Mermaid lifecycle flow diagram** built from its event stream.
 - **Database browser** (`/database`) — read-only view of the SQLite tables.
+
+In `Development`, the database is populated on first run with sample quotes and policies across
+every product (risk) family (Property, Liability, Cyber, Motor) by
+`Services/Seeding/DevelopmentDataSeeder`. It is a no-op once any quote snapshot exists; delete
+`integration.db` to reseed.
 
 The UI talks to the existing services through an `IUiGateway` facade (`Services/Ui/`) that opens a
 fresh DI scope per call, so it never holds a long-lived circuit-scoped `DbContext`. The database
