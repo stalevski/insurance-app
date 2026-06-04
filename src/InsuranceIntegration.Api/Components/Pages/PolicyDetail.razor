@@ -31,6 +31,12 @@ else
     </div>
 
     <div class="panel">
+        <h2>Lifecycle stages</h2>
+        <p class="muted">Where this policy currently sits in the canonical lifecycle.</p>
+        <MermaidDiagram Definition="@LifecycleStageDiagram.BuildForPolicy(_policy.Lifecycle.CurrentPhase)" />
+    </div>
+
+    <div class="panel">
         <h2>Parties, premium &amp; coverage</h2>
         <dl class="kv">
             <dt>Insured</dt><dd>@(_policy.Insured.Name ?? "—") @(_policy.Insured.Code is null ? "" : $"({_policy.Insured.Code})")</dd>

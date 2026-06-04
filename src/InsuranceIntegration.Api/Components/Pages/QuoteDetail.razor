@@ -38,6 +38,12 @@ else
     </div>
 
     <div class="panel">
+        <h2>Lifecycle stages</h2>
+        <p class="muted">Where this quote currently sits in the canonical lifecycle.</p>
+        <MermaidDiagram Definition="@LifecycleStageDiagram.BuildForQuote(_quote.Lifecycle.CurrentPhase)" />
+    </div>
+
+    <div class="panel">
         <h2>Parties &amp; terms</h2>
         <dl class="kv">
             <dt>Insured</dt><dd>@(_quote.Insured.Name ?? "—") @(_quote.Insured.Code is null ? "" : $"({_quote.Insured.Code})")</dd>
