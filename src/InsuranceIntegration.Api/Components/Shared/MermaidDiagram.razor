@@ -1,0 +1,23 @@
+@inject IJSRuntime JS
+
+@if (!string.IsNullOrEmpty(Definition))
+{
+    <div id="@_elementId" class="mermaid-diagram"></div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Definition { get; set; } = string.Empty;
+
+    private readonly string _elementId = $"mmd-{Guid.NewGuid():N}";
+    private string _rendered = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(Definition) && !string.Equals(_rendered, Definition, StringComparison.Ordinal))
+        {
+            _rendered = Definition;
+            await JS.InvokeVoidAsync("mermaidInterop.render", _elementId, Definition);
+        }
+    }
+}
