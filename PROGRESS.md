@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-03_
+_Last updated: 2026-06-04_
 
 ## Vision
 
@@ -23,18 +23,40 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
   objects (Property/Cyber/Motor/Liability) on `CanonicalRiskRequest` + `IRiskTypeProfile` strategy
   per LOB replacing the `ProductCode.Contains(...)` checks in `RiskFlowService`. 12 new tests, 4
   example JSON files.
-- [ ] **Phase 3 — Blazor Server UI.** Create submissions/quotes/policies, list + detail views,
-  status **flow diagram** (Mermaid from domain events), read-only **DB browser**.
+- [x] **Phase 3 — Blazor Server UI.** Interactive Server UI hosted inside
+  `InsuranceIntegration.Api` (single host). Dashboard, Ingest form (envelope templates from the
+  source-system catalog), Quotes/Policies list + detail views over snapshots, Domain-events log
+  with filters, per-aggregate **Mermaid lifecycle flow diagram** from the event log, and a
+  read-only **DB browser**. UI calls services via an `IUiGateway` facade that opens a fresh DI
+  scope per operation (no long-lived circuit-scoped `DbContext`).
 - [ ] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 128 tests pass** (was 116; +12 from Phase 2).
-- `dotnet format --verify-no-changes` flags **one pre-existing** generated migration
-  (`Phase10a_AddRiskEntities.cs`: charset + IDE0161). Not introduced by recent work; left as-is
-  (generated migration). All new Phase 0-2 files are format-clean.
+- Build green (`dotnet build -c Release`); **all 128 tests pass**. UI added in Phase 3 introduces
+  no new warnings and no new tests (UI is a thin facade over already-tested services).
+- `dotnet format --verify-no-changes --severity warn` is clean (exit 0); all new UI files are
+  format-clean.
+- Smoke-tested: app boots in Development, `/`, `/ingest`, `/quotes`, `/policies`, `/events`,
+  `/database`, `/health`, and `/app.css` all return 200.
 - Test framework: **NUnit 4** (+ `FakeTimeProvider`).
-- **Working on now:** Phase 3 (Blazor Server UI).
+- **Working on now:** Phase 4 (self-contained packaging — Dockerfile + VPS guide).
+
+### Phase 3 UI map (where things live)
+
+- UI host wiring: `Program.cs` (`AddRazorComponents().AddInteractiveServerComponents()`,
+  `UseStaticFiles`/`UseAntiforgery`, `MapRazorComponents<App>().AddInteractiveServerRenderMode()`).
+- Facade: `Services/Ui/IUiGateway.cs` + `UiGateway.cs` (registered singleton; one DI scope per
+  call). DB browser uses `sqlite_master` + table-name validation against the live schema before
+  interpolating the (non-parameterizable) identifier; `LIMIT`/`OFFSET` are parameterized.
+- Mermaid: `Services/Ui/EventFlowDiagram.cs` builds the flowchart; `wwwroot/js/app.js`
+  (`mermaidInterop.render`) renders it via the `mermaid@11` CDN script in `Components/App.razor`.
+- Components: `Components/{App,Routes,_Imports}.razor`, `Components/Layout/*`,
+  `Components/Shared/EventFlow.razor`, `Components/Pages/{Home,Ingest,Quotes,QuoteDetail,Policies,
+  PolicyDetail,Events,Database}.razor`. Styles in `wwwroot/app.css`.
+- **DB browser has no auth** (per locked-in decision) — gate behind Development / a feature flag
+  before any real production exposure. Mermaid currently loads from a CDN; for the offline VPS
+  build (Phase 4) consider vendoring `mermaid.min.js` into `wwwroot`.
 
 ## Decisions locked in
 
@@ -57,11 +79,12 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
 
 ## Next steps
 
-1. Phase 3 — scaffold Blazor Server UI (recommend a separate `InsuranceIntegration.Web` project or
-   add Blazor to the API host): create forms (submission/quote/policy) posting to existing
-   endpoints; list + detail views over snapshots; Mermaid status flow diagram from domain events;
-   read-only DB browser.
-2. Phase 4 — Dockerfile + short MaxHosting VPS deployment guide.
+1. Phase 4 — Dockerfile + short MaxHosting VPS deployment guide. While packaging, consider
+   vendoring `mermaid.min.js` locally (currently CDN) and gating the read-only DB browser behind
+   Development or a feature flag before production exposure.
+2. UI polish (optional): add submission/quote/policy lifecycle action forms (cancel/endorse/renew)
+   that post to the existing `Endpoints/PolicyEndpoints.cs` routes; today those are reachable via
+   Swagger only.
 
 ## Open questions / to confirm with hosting provider
 

@@ -6,7 +6,7 @@ This repository contains a SaaS insurance ingest and transformation platform bui
 
 ## Architectural direction
 
-- **Platform**: ASP.NET Core Web API
+- **Platform**: ASP.NET Core Web API + **Blazor Server UI** (same host)
 - **Runtime**: .NET 10 LTS
 - **Design**: SOLID, OOP, composition over inheritance, thin endpoints, orchestration through application flow services
 - **Model separation**: source contracts, canonical contracts, and final outbound messages are explicitly separated
@@ -34,6 +34,8 @@ The platform is intended to grow into a multi-source SaaS insurance integration 
 src/InsuranceIntegration.Api/
   Program.cs
   Configuration/
+  Components/         # Blazor Server UI (App/Routes/_Imports, Layout, Pages, Shared/EventFlow)
+  wwwroot/           # UI static assets (app.css, js/app.js for Mermaid interop)
   Endpoints/
   SourceContracts/
   CanonicalContracts/
@@ -54,6 +56,7 @@ src/InsuranceIntegration.Api/
     Products/
     Schemas/
     Snapshots/      # projectors, EF-backed snapshot services, RiskSnapshotRouter, SnapshotRebuildService
+    Ui/             # IUiGateway facade + EventFlowDiagram (Mermaid) for the Blazor UI
   Persistence/      # IntegrationDbContext + entity types (incl. DomainEventEntity)
   Migrations/
   Middleware/       # CorrelationIdMiddleware
@@ -111,6 +114,26 @@ Schemas:
 - `GET /api/v1/schemas/final/risk-response`
 
 For request / response shapes and examples per endpoint see [docs/USAGE.md §7](docs/USAGE.md). Swagger UI is exposed at `/swagger` in `Development`.
+
+## Web UI (Blazor Server)
+
+An interactive Blazor Server UI is hosted inside the same API process (single host, no separate JS
+toolchain). Browse to the application root (`/`) when it is running. Pages:
+
+- **Dashboard** (`/`) — counts (quotes, bound quotes, policies, domain events, ingest entries,
+  pending outbox) and a recent-events feed.
+- **Ingest** (`/ingest`) — submit a source envelope to `POST /api/v1/ingest`, with templates
+  pre-filled from the source-system catalog.
+- **Quotes / Policies** (`/quotes`, `/policies`) — paged list + detail views over the
+  `QuoteSnapshot` / `PolicySnapshot` read-models.
+- **Domain events** (`/events`) — filterable event log; each aggregate detail page renders a
+  **Mermaid lifecycle flow diagram** built from its event stream.
+- **Database browser** (`/database`) — read-only view of the SQLite tables.
+
+The UI talks to the existing services through an `IUiGateway` facade (`Services/Ui/`) that opens a
+fresh DI scope per call, so it never holds a long-lived circuit-scoped `DbContext`. The database
+browser is **read-only and currently unauthenticated** — gate it behind `Development` or a feature
+flag before any production exposure.
 
 ## JSON schema support
 
