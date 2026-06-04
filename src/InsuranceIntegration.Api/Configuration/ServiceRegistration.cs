@@ -15,6 +15,7 @@ using InsuranceIntegration.Api.Services.Risks;
 using InsuranceIntegration.Api.Services.Risks.Profiles;
 using InsuranceIntegration.Api.Services.Schemas;
 using InsuranceIntegration.Api.Services.Orchestration;
+using InsuranceIntegration.Api.Services.Seeding;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.Services.Ui;
 using Microsoft.EntityFrameworkCore;
@@ -87,6 +88,7 @@ public static class ServiceRegistration
         services.AddScoped<IIngestDispatcher, IngestDispatcher>();
 
         services.AddSingleton<IUiGateway, UiGateway>();
+        services.AddScoped<IDevelopmentDataSeeder, DevelopmentDataSeeder>();
 
         return services;
     }
