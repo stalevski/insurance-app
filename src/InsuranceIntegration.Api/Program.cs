@@ -1,4 +1,5 @@
 using InsuranceIntegration.Api.Configuration;
+using InsuranceIntegration.Api.Components;
 using InsuranceIntegration.Api.Endpoints;
 using InsuranceIntegration.Api.Middleware;
 using InsuranceIntegration.Api.Persistence;
@@ -8,6 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApiServices(builder.Configuration);
 builder.Services.AddOpenApi();
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
 var app = builder.Build();
 
@@ -37,6 +41,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseStaticFiles();
+app.UseAntiforgery();
+
 app.MapHealthEndpoints();
 app.MapSourceSystemEndpoints();
 app.MapIngestEndpoints();
@@ -46,6 +53,9 @@ app.MapProductEndpoints();
 app.MapPolicyEndpoints();
 app.MapPolicyReadEndpoints();
 app.MapQuoteReadEndpoints();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.Run();
 

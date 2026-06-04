@@ -16,6 +16,7 @@ using InsuranceIntegration.Api.Services.Risks.Profiles;
 using InsuranceIntegration.Api.Services.Schemas;
 using InsuranceIntegration.Api.Services.Orchestration;
 using InsuranceIntegration.Api.Services.Snapshots;
+using InsuranceIntegration.Api.Services.Ui;
 using Microsoft.EntityFrameworkCore;
 
 namespace InsuranceIntegration.Api.Configuration;
@@ -84,6 +85,8 @@ public static class ServiceRegistration
         services.AddScoped<IIngestHandler, BillingIngestHandler>();
         services.AddScoped<IIngestHandler, ComplianceIngestHandler>();
         services.AddScoped<IIngestDispatcher, IngestDispatcher>();
+
+        services.AddSingleton<IUiGateway, UiGateway>();
 
         return services;
     }

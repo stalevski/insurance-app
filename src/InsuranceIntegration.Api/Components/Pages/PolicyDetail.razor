@@ -1,0 +1,74 @@
+@page "/policies/{PolicyReference}"
+@inject IUiGateway Gateway
+
+<PageTitle>Policy @PolicyReference</PageTitle>
+
+<div class="breadcrumb"><a href="policies">Policies</a> / @PolicyReference</div>
+
+@if (_loaded && _policy is null)
+{
+    <div class="alert error">Policy <strong>@PolicyReference</strong> was not found.</div>
+}
+else if (_policy is null)
+{
+    <p class="muted">Loading…</p>
+}
+else
+{
+    <h1>Policy @_policy.PolicyReference</h1>
+    <p class="subtitle">@_policy.ProductCode · UW @_policy.UnderwritingYear · @_policy.CurrencyCode</p>
+
+    <div class="panel">
+        <h2>Lifecycle</h2>
+        <dl class="kv">
+            <dt>Current phase</dt><dd><span class="badge">@_policy.Lifecycle.CurrentPhase</span></dd>
+            <dt>Policy status</dt><dd>@_policy.Lifecycle.PolicyStatus</dd>
+            <dt>Submission status</dt><dd>@_policy.Lifecycle.SubmissionStatus</dd>
+            <dt>Quote status</dt><dd>@_policy.Lifecycle.QuoteStatus</dd>
+            <dt>Final status</dt><dd>@_policy.Lifecycle.FinalStatus</dd>
+            <dt>Clearance decision</dt><dd>@_policy.Lifecycle.ClearanceDecision (auto-cleared: @_policy.Lifecycle.AutoCleared)</dd>
+        </dl>
+    </div>
+
+    <div class="panel">
+        <h2>Parties, premium &amp; coverage</h2>
+        <dl class="kv">
+            <dt>Insured</dt><dd>@(_policy.Insured.Name ?? "—") @(_policy.Insured.Code is null ? "" : $"({_policy.Insured.Code})")</dd>
+            <dt>Broker</dt><dd>@(_policy.Broker.Name ?? "—") @(_policy.Broker.Code is null ? "" : $"({_policy.Broker.Code})")</dd>
+            <dt>Premium (base / adjusted)</dt><dd>@Money(_policy.Premium.Base) / @Money(_policy.Premium.Adjusted)</dd>
+            <dt>Sections</dt><dd>@_policy.Coverage.SectionCount (sum insured @Money(_policy.Coverage.TotalSumInsured))</dd>
+            <dt>Section premium</dt><dd>@Money(_policy.Coverage.TotalSectionPremium) (balanced: @_policy.Coverage.PremiumAllocationBalanced)</dd>
+            <dt>Inception / expiry</dt><dd>@Show(_policy.Dates.InceptionDate) → @Show(_policy.Dates.ExpiryDate)</dd>
+            <dt>Bound date</dt><dd>@Show(_policy.Dates.BoundDate)</dd>
+            @if (_policy.QuoteReference is not null)
+            {
+                <dt>Quote</dt><dd><a href="@($"quotes/{_policy.QuoteReference}")">@_policy.QuoteReference</a></dd>
+            }
+        </dl>
+        @if (_policy.Coverage.Warnings.Count > 0)
+        {
+            <p class="muted" style="margin-top:0.75rem;">Warnings: @string.Join("; ", _policy.Coverage.Warnings)</p>
+        }
+    </div>
+
+    <EventFlow AggregateKind="Policy" AggregateKey="@_policy.PolicyReference" />
+}
+
+@code {
+    [Parameter]
+    public string PolicyReference { get; set; } = string.Empty;
+
+    private PolicySnapshot? _policy;
+    private bool _loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+        _policy = await Gateway.FindPolicyAsync(PolicyReference);
+        _loaded = true;
+    }
+
+    private static string Show(DateOnly? value) => value?.ToString("yyyy-MM-dd") ?? "—";
+
+    private static string Money(decimal? value) => value is null ? "—" : value.Value.ToString("N2");
+}
