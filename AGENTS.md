@@ -104,6 +104,7 @@ dotnet run --project src/InsuranceIntegration.Api
 | Source DTOs + mappers | `src/InsuranceIntegration.Api/SourceContracts/`, `Mappers/` |
 | DB context + entities | `src/InsuranceIntegration.Api/Persistence/` |
 | Read models | `src/InsuranceIntegration.Api/Snapshots/`, `Services/Snapshots/` |
+| Blazor Server UI | `src/InsuranceIntegration.Api/Components/`, `wwwroot/`, `Services/Ui/` |
 | Tests | `tests/InsuranceIntegration.Api.Tests/` |
 | Known bugs (documented, unfixed) | `docs/KNOWN_ISSUES.md` |
 | Project progress / continuity | `PROGRESS.md` |
