@@ -1,9 +1,34 @@
+// Theme interop: persists the light/dark preference in localStorage and
+// applies it to the document element so CSS variables switch themes.
+window.themeInterop = {
+    storageKey: "ii-theme",
+
+    get: function () {
+        return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    },
+
+    set: function (theme) {
+        const next = theme === "dark" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", next);
+        try {
+            localStorage.setItem(this.storageKey, next);
+        } catch (e) {
+            // Ignore storage failures (e.g. private mode); theme still applies for this session.
+        }
+        return next;
+    },
+
+    toggle: function () {
+        return this.set(this.get() === "dark" ? "light" : "dark");
+    }
+};
+
 // Mermaid interop for the domain-event flow diagram.
 window.mermaidInterop = {
     initialized: false,
 
-    // Resolve once the Mermaid CDN script has finished loading. The component's
-    // OnAfterRenderAsync can fire before the CDN script is ready, so we poll
+    // Resolve once the Mermaid script has finished loading. The component's
+    // OnAfterRenderAsync can fire before the script is ready, so we poll
     // briefly instead of failing (and leaving a stale error graphic on) the first render.
     waitForMermaid: function (timeoutMs) {
         return new Promise((resolve) => {

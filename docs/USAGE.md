@@ -61,7 +61,7 @@ $env:ConnectionStrings__Integration = "Data Source=C:\data\integration.db"
 dotnet run --project .\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj -- --ConnectionStrings:Integration="Data Source=C:\data\integration.db"
 ```
 
-The context (`IntegrationDbContext`) owns six tables:
+The context (`IntegrationDbContext`) owns nine tables:
 
 | Table | Purpose |
 |---|---|
@@ -71,8 +71,11 @@ The context (`IntegrationDbContext`) owns six tables:
 | `PolicySnapshots` | One row per policy with the JSON snapshot blob and a few denormalized columns for filterable list queries |
 | `QuoteSnapshots` | Same shape as `PolicySnapshots`, keyed by quote reference |
 | `DomainEvents` | Append-only log of canonical-shaped business events, queryable per aggregate (`Policy`/`Quote`) and per event type. Replay-source for `POST /api/v1/snapshots/.../rebuild`. |
+| `Submissions` | Normalized relational write-model row per submission (`ExternalReference` unique), maintained by `RiskSubmissionOrchestrator` |
+| `Quotes` | Normalized relational quote row keyed by `QuoteReference`, linked back to its submission |
+| `Policies` | Normalized relational policy row keyed by `PolicyReference`, linked to its submission/quote |
 
-Generated migrations live in `../src/InsuranceIntegration.Api/Migrations`.
+The last three form a normalized relational write-model that runs alongside the JSON snapshots; they carry a `RowVersion` optimistic-concurrency token stamped by `RowVersionInterceptor` on every insert/update (`../src/InsuranceIntegration.Api/Persistence/RowVersionInterceptor.cs`). Generated migrations live in `../src/InsuranceIntegration.Api/Migrations`.
 
 ## 5. Discover the API
 
@@ -127,20 +130,22 @@ Each `POST /api/v1/ingest` produces an `IngestReceipt` for that one envelope (pe
 | `QuoteSnapshot` | `quoteReference` (or `externalReference` when no quote ref) | every Risk-domain ingest (Contoso RiskSubmission, QuoteForge QuoteRequest, BindPoint PolicyBindRequest) | `GET /api/v1/quotes/{quoteReference}` |
 | `PolicySnapshot` | `policyReference` | any Risk-domain ingest that includes a `policyReference`, plus internal lifecycle ops (cancel / endorse / renew) | `GET /api/v1/policies/{policyReference}` |
 
-The pipeline runs inside `RiskIngestHandler` after the flow service computes the `FinalRiskResponse`:
+`RiskIngestHandler` maps the source DTO, then delegates to `RiskSubmissionOrchestrator`, which computes the `FinalRiskResponse`, upserts the normalized relational rows, enqueues outbox events, routes the snapshot/event writes, and commits everything in one `SaveChangesAsync`:
 
 ```
 SourceIngestEnvelope
   → IRiskIngestMapper (source DTO → CanonicalRiskRequest)
-  → IRiskFlowService.Process (decisions → FinalRiskResponse)
-  → IRiskSnapshotRouter.Route
-        ├── IDomainEventLog.Append (one event per affected aggregate)
-        ├── IQuoteSnapshotService.Apply (when a quote ref is present and txn is not policy-lifecycle)
-        └── IPolicySnapshotService.Apply (when policyReference is present)
-  → IngestReceipt (returned to caller)
+  → IRiskSubmissionOrchestrator.HandleAsync
+        ├── IRiskFlowService.Process (decisions → FinalRiskResponse)
+        ├── upsert Submissions / Quotes / Policies (+ IOutboxWriter.Enqueue per aggregate)
+        └── IRiskSnapshotRouter.Route
+              ├── IDomainEventLog.Append (one event per affected aggregate)
+              ├── IQuoteSnapshotService.Apply (when a quote ref is present and txn is not policy-lifecycle)
+              └── IPolicySnapshotService.Apply (when policyReference is present)
+  → SaveChangesAsync (single EF transaction) → IngestReceipt (returned to caller)
 ```
 
-Sources `../src/InsuranceIntegration.Api/Services/Snapshots/RiskSnapshotRouter.cs`, `PolicySnapshotProjector.cs`, `QuoteSnapshotProjector.cs`.
+Sources `../src/InsuranceIntegration.Api/Services/Orchestration/RiskSubmissionOrchestrator.cs`, `../src/InsuranceIntegration.Api/Services/Snapshots/RiskSnapshotRouter.cs`, `PolicySnapshotProjector.cs`, `QuoteSnapshotProjector.cs`.
 
 **Merge rules** (`SnapshotMerge.cs`):
 

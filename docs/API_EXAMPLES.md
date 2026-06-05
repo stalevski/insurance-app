@@ -379,7 +379,7 @@ Three options, in increasing order of setup effort and expressiveness.
 
 Two files live under `./postman/`:
 
-- `./postman/InsuranceIntegration.postman_collection.json` — every endpoint plus the key business scenarios from §1–§5, organized in folders (`Health & catalog`, `Schemas`, `Ingest - Risk`, `Ingest - Claims`, `Ingest - Billing`, `Ingest - Compliance`, `Risk - Canonical`, `Policies`).
+- `./postman/InsuranceIntegration.postman_collection.json` — every endpoint plus the key business scenarios from §1–§5, organized in folders (`Health & catalog`, `Schemas`, `Ingest - Risk`, `Ingest - Lookup`, `Ingest - Claims`, `Ingest - Billing`, `Ingest - Compliance`, `Risk - Canonical`, `Policies`, `Snapshots`).
 - `./postman/InsuranceIntegration.postman_environment.json` — sets `baseUrl` to `http://localhost:5000`.
 
 Steps:
