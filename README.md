@@ -50,6 +50,7 @@ src/InsuranceIntegration.Api/
     Flows/          # RiskFlowService, ClaimFlowService, BindPreconditionService
     Ingest/         # dispatcher, idempotency, per-handler logic
     Matching/       # Levenshtein calculator (used only by clearance)
+    Orchestration/  # RiskSubmissionOrchestrator (flow + relational upserts + outbox + snapshot routing)
     Outbox/
     Policies/       # PolicyAdjustmentService, PolicyLifecycleService, PolicyRenewalService
     Pricing/
@@ -57,7 +58,7 @@ src/InsuranceIntegration.Api/
     Schemas/
     Snapshots/      # projectors, EF-backed snapshot services, RiskSnapshotRouter, SnapshotRebuildService
     Ui/             # IUiGateway facade + EventFlowDiagram (Mermaid) for the Blazor UI
-  Persistence/      # IntegrationDbContext + entity types (incl. DomainEventEntity)
+  Persistence/      # IntegrationDbContext + entity types (snapshots, DomainEventEntity, Submission/Quote/Policy relational write model, RowVersionInterceptor)
   Migrations/
   Middleware/       # CorrelationIdMiddleware
   ReferenceData/

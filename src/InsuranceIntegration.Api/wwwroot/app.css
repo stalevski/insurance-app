@@ -14,6 +14,21 @@
     --radius: 10px;
 }
 
+html[data-theme="dark"] {
+    --bg: #020617;
+    --bg-soft: #1e293b;
+    --panel: #1e293b;
+    --panel-muted: #0f172a;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent-soft: #1e3a8a;
+    --good: #22c55e;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -125,6 +140,26 @@ h2 {
     font-size: 0.85rem;
 }
 
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    background: transparent;
+    border: 1px solid var(--bg-soft);
+    color: #cbd5e1;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-soft);
+    filter: none;
+}
+
 .content {
     flex: 1;
     padding: 2rem 2.5rem;
@@ -219,6 +254,11 @@ tbody tr:hover {
 .badge.bad { background: #fee2e2; color: var(--bad); }
 .badge.muted { background: #f1f5f9; color: var(--text-muted); }
 
+html[data-theme="dark"] .badge.good { background: #14532d; color: #4ade80; }
+html[data-theme="dark"] .badge.warn { background: #713f12; color: #fbbf24; }
+html[data-theme="dark"] .badge.bad { background: #7f1d1d; color: #f87171; }
+html[data-theme="dark"] .badge.muted { background: #334155; color: var(--text-muted); }
+
 button, .btn {
     font: inherit;
     border: 1px solid var(--accent);
@@ -235,7 +275,7 @@ button:hover, .btn:hover {
 }
 
 button.secondary, .btn.secondary {
-    background: #fff;
+    background: var(--panel);
     color: var(--accent);
 }
 
@@ -257,7 +297,7 @@ select, input, textarea {
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 0.45rem 0.6rem;
-    background: #fff;
+    background: var(--panel);
     color: var(--text);
 }
 
@@ -298,6 +338,18 @@ textarea {
     color: var(--good);
 }
 
+html[data-theme="dark"] .alert.error {
+    border-color: #7f1d1d;
+    background: #450a0a;
+    color: #fca5a5;
+}
+
+html[data-theme="dark"] .alert.success {
+    border-color: #14532d;
+    background: #052e16;
+    color: #86efac;
+}
+
 .muted {
     color: var(--text-muted);
 }
@@ -332,6 +384,10 @@ pre.code {
     border-radius: var(--radius);
     padding: 1rem;
     overflow-x: auto;
+}
+
+html[data-theme="dark"] .mermaid-diagram {
+    background: #f8fafc;
 }
 
 .pager {

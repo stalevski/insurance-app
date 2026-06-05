@@ -5,13 +5,13 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-04_
+_Last updated: 2026-06-05_
 
 ## Vision
 
 A .NET 10 insurance ingest/transformation modular monolith that doubles as a **QA testing ground**
 and is being grown into a **deployable product** with a Blazor UI, intended for deployment on a
-Docker-capable VPS (e.g. MaxHosting MK VPS tier).
+Docker-capable VPS.
 
 ## Roadmap (phased)
 
@@ -50,13 +50,15 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
   call). DB browser uses `sqlite_master` + table-name validation against the live schema before
   interpolating the (non-parameterizable) identifier; `LIMIT`/`OFFSET` are parameterized.
 - Mermaid: `Services/Ui/EventFlowDiagram.cs` builds the flowchart; `wwwroot/js/app.js`
-  (`mermaidInterop.render`) renders it via the `mermaid@11` CDN script in `Components/App.razor`.
+  (`mermaidInterop.render`) renders it via the locally-vendored `wwwroot/js/mermaid.min.js`
+  (pinned `mermaid@11.6.0`, UMD build exposing `globalThis.mermaid`), referenced from
+  `Components/App.razor`. No CDN/network dependency at runtime.
 - Components: `Components/{App,Routes,_Imports}.razor`, `Components/Layout/*`,
   `Components/Shared/EventFlow.razor`, `Components/Pages/{Home,Ingest,Quotes,QuoteDetail,Policies,
   PolicyDetail,Events,Database}.razor`. Styles in `wwwroot/app.css`.
 - **DB browser has no auth** (per locked-in decision) — gate behind Development / a feature flag
-  before any real production exposure. Mermaid currently loads from a CDN; for the offline VPS
-  build (Phase 4) consider vendoring `mermaid.min.js` into `wwwroot`.
+  before any real production exposure. Mermaid is vendored locally (`wwwroot/js/mermaid.min.js`),
+  so the UI renders diagrams fully offline.
 
 ## Decisions locked in
 
@@ -66,8 +68,8 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
 - **Risk models:** lightweight (additive typed detail objects + strategy), not a subclass hierarchy.
 - **DB browser:** read-only, available in all environments, no auth yet (revisit before real
   production exposure — recommend gating behind Development or a feature flag).
-- **Hosting target:** MaxHosting MK **VPS** (root access required for Docker; shared/cPanel hosting
-  cannot run the app).
+- **Hosting target:** a Docker-capable Linux **VPS** (root access required for Docker; shared/cPanel
+  hosting cannot run the app).
 - **No language/stack migration (hosting analysis).** Hosting cost is driven by the VPS, not the
   language: a Linux VPS that runs Node/Python also runs .NET for the same price. A JS/TS or Blazor
   WASM static frontend can be hosted free, but the backend (background outbox dispatcher, EF +
@@ -79,14 +81,14 @@ Docker-capable VPS (e.g. MaxHosting MK VPS tier).
 
 ## Next steps
 
-1. Phase 4 — Dockerfile + short MaxHosting VPS deployment guide. While packaging, consider
-   vendoring `mermaid.min.js` locally (currently CDN) and gating the read-only DB browser behind
-   Development or a feature flag before production exposure.
+1. Phase 4 — Dockerfile + short VPS deployment guide. Mermaid is already vendored locally
+   (`wwwroot/js/mermaid.min.js`); still gate the read-only DB browser behind Development or a
+   feature flag before production exposure.
 2. UI polish (optional): add submission/quote/policy lifecycle action forms (cancel/endorse/renew)
    that post to the existing `Endpoints/PolicyEndpoints.cs` routes; today those are reachable via
    Swagger only.
 
 ## Open questions / to confirm with hosting provider
 
-- MaxHosting VPS: which Linux OS options, and is Docker installable out of the box? (Open a support
-  ticket; root access is advertised, so almost certainly yes.)
+- VPS provider: which Linux OS options, and is Docker installable out of the box? (Confirm with the
+  chosen provider; root access is typically required.)

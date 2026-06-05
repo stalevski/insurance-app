@@ -48,7 +48,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseStaticFiles();
+app.MapStaticAssets();
 app.UseAntiforgery();
 
 app.MapHealthEndpoints();

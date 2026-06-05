@@ -10,7 +10,7 @@ How to run, extend, and manually exercise the test suite for **InsuranceIntegrat
 - **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory (`DataSource=:memory:`) — no external DB required
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in `../tests/InsuranceIntegration.Api.Tests/GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
-- **Total tests**: 114 (and counting). Run `dotnet test` to see the current tally.
+- **Total tests**: 128 (and counting). Run `dotnet test` to see the current tally.
 
 ## 2. Run the tests
 
@@ -66,8 +66,10 @@ tests/InsuranceIntegration.Api.Tests/
   Correlation/                              # CorrelationContext scoping
   Flows/
     BillingFlowServiceTests.cs
+    BillingFlowInstallmentScheduleTests.cs
     BindPreconditionServiceTests.cs         # FakeTimeProvider quote-expiry tests
     ClaimFlowServiceTests.cs
+    ClaimFlowIndemnityTests.cs              # deductible / limit indemnity math
     ComplianceFlowServiceTests.cs
     RiskFlowServiceTests.cs
     RiskFlowTransactionTypeTests.cs
@@ -86,6 +88,8 @@ tests/InsuranceIntegration.Api.Tests/
     RiskIngestMapperTests.cs
     StubSourceRiskMapper.cs                 # test double
   Matching/                                 # Levenshtein calculator
+  Orchestration/
+    RiskSubmissionOrchestratorTests.cs      # flow + relational upserts + outbox enqueue
   Outbox/
     OutboxDispatcherTests.cs                # in-memory SQLite + EF Core
     OutboxWriterTests.cs
@@ -93,8 +97,11 @@ tests/InsuranceIntegration.Api.Tests/
     PolicyAdjustmentServiceTests.cs         # pure cancellation/endorsement math
     PolicyLifecycleServiceTests.cs          # cancel/endorse end-to-end through router + events
     PolicyRenewalServiceTests.cs            # loss-ratio bands + lineage assertions
+    EndorsementSectionOperationsTests.cs    # section/subcover add-remove operations
   Pricing/
     RatingServiceTests.cs
+  Risks/
+    RiskProfileTests.cs                     # risk-profile derivation rules
   Snapshots/
     PolicySnapshotProjectorTests.cs         # pure projector merge rules
     SnapshotPipelineTests.cs                # 3-event end-to-end + DomainEvents assertions
@@ -225,6 +232,7 @@ Use this table when debugging a failure or extending a feature:
 | Bind preconditions (expired / wrong-status / already-bound quote) | `../tests/InsuranceIntegration.Api.Tests/Flows/BindPreconditionServiceTests.cs` |
 | Source mappers | `../tests/InsuranceIntegration.Api.Tests/Mappers/Risks/*` |
 | Ingest dispatch + idempotency | `../tests/InsuranceIntegration.Api.Tests/Ingest/*` |
+| Risk orchestration (relational write model + outbox enqueue) | `../tests/InsuranceIntegration.Api.Tests/Orchestration/RiskSubmissionOrchestratorTests.cs` |
 | Clearance / fuzzy matching | `../tests/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
 | Outbox background dispatch | `../tests/InsuranceIntegration.Api.Tests/Outbox/*` |
 | Cancellation / endorsement math (pure) | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
