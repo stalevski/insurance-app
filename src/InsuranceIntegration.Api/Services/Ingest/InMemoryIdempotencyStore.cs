@@ -13,10 +13,10 @@ public sealed class InMemoryIdempotencyStore : IIdempotencyStore
         return Task.FromResult<IngestReceipt?>(found);
     }
 
-    public Task StoreAsync(string source, string envelopeId, IngestReceipt receipt, CancellationToken cancellationToken = default)
+    public Task<IngestReceipt> StoreAsync(string source, string envelopeId, IngestReceipt receipt, CancellationToken cancellationToken = default)
     {
-        _entries[BuildKey(source, envelopeId)] = receipt;
-        return Task.CompletedTask;
+        var stored = _entries.GetOrAdd(BuildKey(source, envelopeId), receipt);
+        return Task.FromResult(stored);
     }
 
     private static string BuildKey(string source, string envelopeId)

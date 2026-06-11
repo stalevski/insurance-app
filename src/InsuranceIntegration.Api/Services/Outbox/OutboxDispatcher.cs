@@ -8,6 +8,9 @@ public sealed class OutboxDispatcher : BackgroundService
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private const int BatchSize = 50;
 
+    /// <summary>Messages that fail this many times are left pending for manual inspection (poison).</summary>
+    public const int MaxDispatchAttempts = 5;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OutboxDispatcher> _logger;
     private readonly TimeProvider _timeProvider;
@@ -56,9 +59,10 @@ public sealed class OutboxDispatcher : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
+        var publisher = scope.ServiceProvider.GetRequiredService<IOutboxPublisher>();
 
         var pending = await context.OutboxMessages
-            .Where(message => message.DispatchedAtUtc == null)
+            .Where(message => message.DispatchedAtUtc == null && message.DispatchAttempts < MaxDispatchAttempts)
             .OrderBy(message => message.OccurredAtUtc)
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
@@ -68,23 +72,48 @@ public sealed class OutboxDispatcher : BackgroundService
             return 0;
         }
 
-        var dispatchedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        var dispatched = 0;
         foreach (var message in pending)
         {
-            _logger.LogInformation(
-                "Dispatching outbox event {EventType} for {AggregateType} {AggregateId} (EventId={EventId}, CorrelationId={CorrelationId}).",
-                message.EventType,
-                message.AggregateType,
-                message.AggregateId,
-                message.EventId,
-                message.CorrelationId);
-
-            message.DispatchedAtUtc = dispatchedAt;
             message.DispatchAttempts += 1;
-            message.LastError = null;
+            try
+            {
+                await publisher.PublishAsync(message, cancellationToken);
+                message.DispatchedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
+                message.LastError = null;
+                dispatched += 1;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                message.LastError = ex.Message;
+                if (message.DispatchAttempts >= MaxDispatchAttempts)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Outbox event {EventId} ({EventType}) failed attempt {Attempt}/{MaxAttempts} and is now poisoned; it will not be retried automatically.",
+                        message.EventId,
+                        message.EventType,
+                        message.DispatchAttempts,
+                        MaxDispatchAttempts);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Outbox event {EventId} ({EventType}) failed attempt {Attempt}/{MaxAttempts}; will retry on a later poll.",
+                        message.EventId,
+                        message.EventType,
+                        message.DispatchAttempts,
+                        MaxDispatchAttempts);
+                }
+            }
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return pending.Count;
+        return dispatched;
     }
 }

@@ -26,12 +26,21 @@ public sealed class BindPointRiskMapper : ISourceRiskMapper
             ? Math.Round(payload.BoundPremium / payload.InstallmentCount, 2, MidpointRounding.AwayFromZero)
             : 0m;
 
+        // Rounded equal installments may not sum exactly to the bound premium
+        // (e.g. 1000 / 3 = 333.33 × 3 = 999.99). Put the residual on the last
+        // installment so the schedule always reconciles to the premium.
+        var roundingResidual = payload.InstallmentCount > 0
+            ? payload.BoundPremium - (installmentAmount * payload.InstallmentCount)
+            : 0m;
+
         var installments = Enumerable.Range(1, Math.Max(payload.InstallmentCount, 0))
             .Select(index => new InstallmentData
             {
                 SequenceNumber = index,
                 DueDate = payload.InceptionDate.AddMonths(index - 1),
-                Amount = installmentAmount,
+                Amount = index == payload.InstallmentCount
+                    ? installmentAmount + roundingResidual
+                    : installmentAmount,
                 IsPaid = false
             })
             .ToList();

@@ -54,7 +54,10 @@ public sealed class PolicyRenewalService : IPolicyRenewalService
         var renewalPremium = Math.Round(request.PriorAnnualPremium * (1m + totalLoad), 2, MidpointRounding.AwayFromZero);
         if (renewalPremium < 0m)
         {
-            renewalPremium = 0m;
+            throw new ArgumentException(
+                $"Computed renewal premium is negative ({renewalPremium:0.##}) for policy '{request.PolicyReference}': " +
+                $"total load {totalLoad:+0.##%;-0.##%;0.##%} applied to prior premium {request.PriorAnnualPremium:0.##}. " +
+                "Review the loss-ratio, exposure, and override loads — a negative premium indicates bad input data and requires manual review.");
         }
 
         var reasons = new List<string>

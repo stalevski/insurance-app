@@ -1,0 +1,26 @@
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+
+# Local databases (the container uses /data via a volume)
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Tests and docs are not needed in the image
+tests/
+docs/
+
+# IDE / tooling
+.git/
+.github/
+.windsurf/
+.vs/
+.vscode/
+*.user
+
+# Continuity files
+AGENTS.md
+PROGRESS.md
+README.md

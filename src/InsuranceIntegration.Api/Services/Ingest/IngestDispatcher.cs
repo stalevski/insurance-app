@@ -44,8 +44,9 @@ public sealed class IngestDispatcher : IIngestDispatcher
             Outcome = outcome
         };
 
-        await _idempotencyStore.StoreAsync(envelope.Source, envelope.Id, receipt, cancellationToken);
-        return receipt;
+        // StoreAsync is atomic: if a concurrent identical envelope won the race, the first
+        // writer's receipt is returned and used as the canonical outcome.
+        return await _idempotencyStore.StoreAsync(envelope.Source, envelope.Id, receipt, cancellationToken);
     }
 
     private static string BuildSelfLink(string source, string envelopeId)
