@@ -319,5 +319,6 @@ dotnet build .\InsuranceIntegration.sln
 
 - [docs/USAGE.md](docs/USAGE.md) — build, run, configuration, and per-endpoint request/response examples.
 - [docs/TESTING.md](docs/TESTING.md) — running the test suite, conventions, and manual end-to-end recipes.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — Docker image build and VPS deployment guide.
 - [docs/API_EXAMPLES.md](docs/API_EXAMPLES.md) — manual-testing pack: mandatory fields, business rules, and per-scenario JSON payloads under `docs/examples/`.
 - [docs/postman/](docs/postman) — curated Postman collection + environment ready to import (see `docs/API_EXAMPLES.md` §9).

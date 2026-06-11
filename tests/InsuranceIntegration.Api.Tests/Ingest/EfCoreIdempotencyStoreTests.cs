@@ -87,12 +87,12 @@ public sealed class EfCoreIdempotencyStoreTests : IDisposable
     }
 
     [Test]
-    public async Task StoreAsync_OverwritesExistingEntryForSameKey()
+    public async Task StoreAsync_FirstWriterWins_OnConcurrentInsertForSameKey()
     {
         using var context1 = new IntegrationDbContext(_options);
         var store1 = new EfCoreIdempotencyStore(context1, TimeProvider.System);
 
-        await store1.StoreAsync("CONTOSO_UW", "env-2", new IngestReceipt
+        var first = await store1.StoreAsync("CONTOSO_UW", "env-2", new IngestReceipt
         {
             EnvelopeId = "env-2",
             Source = "CONTOSO_UW",
@@ -103,7 +103,7 @@ public sealed class EfCoreIdempotencyStoreTests : IDisposable
         using var context2 = new IntegrationDbContext(_options);
         var store2 = new EfCoreIdempotencyStore(context2, TimeProvider.System);
 
-        await store2.StoreAsync("CONTOSO_UW", "env-2", new IngestReceipt
+        var second = await store2.StoreAsync("CONTOSO_UW", "env-2", new IngestReceipt
         {
             EnvelopeId = "env-2",
             Source = "CONTOSO_UW",
@@ -111,13 +111,17 @@ public sealed class EfCoreIdempotencyStoreTests : IDisposable
             ProcessedBy = "Second"
         });
 
+        // The losing writer receives the canonical (first) receipt instead of overwriting it.
+        Assert.That(first.ProcessedBy, Is.EqualTo("First"));
+        Assert.That(second.ProcessedBy, Is.EqualTo("First"));
+
         using var readContext = new IntegrationDbContext(_options);
         var readStore = new EfCoreIdempotencyStore(readContext, TimeProvider.System);
 
         var retrieved = await readStore.FindAsync("CONTOSO_UW", "env-2");
 
         Assert.That(retrieved, Is.Not.Null);
-        Assert.That(retrieved!.ProcessedBy, Is.EqualTo("Second"));
+        Assert.That(retrieved!.ProcessedBy, Is.EqualTo("First"));
     }
 
     public void Dispose()

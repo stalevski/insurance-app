@@ -38,6 +38,7 @@ public static class ServiceRegistration
 
         services.AddScoped<ICorrelationContext, CorrelationContext>();
         services.AddScoped<IOutboxWriter, OutboxWriter>();
+        services.AddScoped<IOutboxPublisher, LoggingOutboxPublisher>();
         services.AddHostedService<OutboxDispatcher>();
 
         services.AddSingleton<ISourceSystemCatalogService, SourceSystemCatalogService>();

@@ -8,43 +8,13 @@ Each item lists: location, what the code does, why it's a problem, severity, and
 Line numbers were verified against the codebase on 2026-06-03 but may drift as the code changes —
 treat them as a starting point and confirm before fixing.
 
-Legend: 🔴 High · 🟠 Medium · 🟡 Low · 🔵 Debatable / possibly by-design
+Legend: 🔴 High · 🟠 Medium · 🟡 Low · 🔵 Debatable / possibly by-design · ✅ Fixed
 
 ---
 
 ## 🔴 High
 
-### H1 — Outbox messages are marked dispatched but never actually sent
-- **Where:** `src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs` — `DispatchBatchAsync`
-  (around lines 70–87).
-- **What:** For each pending message it logs, then sets `DispatchedAtUtc`, increments
-  `DispatchAttempts`, and `SaveChangesAsync`. **No message is ever sent to any destination.**
-- **Why it matters:** The transactional-outbox pattern is the platform's mechanism for emitting
-  events to downstream consumers. Messages are silently consumed (marked done) without delivery, so
-  no external system ever receives policy-bound/claim/etc. events. There is also no retry/poison
-  handling since success is assumed.
-- **Suggested fix:** Introduce an `IOutboxPublisher` abstraction; only set `DispatchedAtUtc` after a
-  successful publish; on failure set `LastError`, leave `DispatchedAtUtc` null, and cap attempts.
-
-### H2 — Idempotency check is not atomic (TOCTOU race)
-- **Where:** `Services/Ingest/IngestDispatcher.cs` (check-then-process) and
-  `Services/Ingest/EfCoreIdempotencyStore.cs` (`StoreAsync` re-query then insert/update).
-- **What:** Existence is checked, then processing/insertion happens as a separate step. Two
-  concurrent identical envelopes can both pass the check and both process/insert.
-- **Why it matters:** Duplicate ingest can create duplicate downstream effects (policies, claims,
-  billing). The intended idempotency guarantee is not enforced atomically.
-- **Suggested fix:** Rely on the DB unique key (composite `(Source, EnvelopeId)`): attempt the
-  insert first and catch the unique-constraint violation as "already processed", or wrap
-  check+write in a transaction with appropriate isolation.
-
-### H3 — Renewal premium silently clamped to zero
-- **Where:** `Services/Policies/PolicyRenewalService.cs`, lines ~55–58.
-- **What:** `renewalPremium = Round(PriorAnnualPremium * (1 + totalLoad))`; if the result is `< 0`
-  it is silently set to `0`.
-- **Why it matters:** A very negative `totalLoad` (bad data or a calculation error) produces a $0
-  renewal premium with no signal. That's revenue loss masking an underlying problem.
-- **Suggested fix:** Treat a computed negative premium as an error/needs-review outcome (reason +
-  status), or floor at a configured minimum premium rather than silently at zero.
+_None open. H1–H3 were fixed on 2026-06-11 — see the Fixed section below._
 
 ---
 
@@ -59,16 +29,6 @@ Legend: 🔴 High · 🟠 Medium · 🟡 Low · 🔵 Debatable / possibly by-des
   arbitrary due dates (e.g. 5 missed → first due + 5 months). The scheduled path (using the next
   open installment's `DueDate`) is correct; only the fallback is wrong.
 - **Suggested fix:** Derive next due date from the billing frequency/cycle, not the missed count.
-
-### M2 — Installment rounding gap (totals don't reconcile)
-- **Where:** `Mappers/Risks/BindPointRiskMapper.cs`, lines ~24–38.
-- **What:** `installmentAmount = Round(BoundPremium / InstallmentCount, 2)` is applied to *every*
-  installment. The sum of equal rounded installments can differ from `BoundPremium`
-  (e.g. 1000 / 3 = 333.33 × 3 = 999.99).
-- **Why it matters:** Billing totals won't reconcile to the bound premium; small but real disputes
-  and reconciliation noise.
-- **Suggested fix:** Distribute the rounding remainder (e.g. add the residual cent(s) to the
-  first or last installment) so installments sum exactly to the premium.
 
 ### M3 — Hard-coded, inconsistent underwriting thresholds
 - **Where:** `Services/Flows/RiskFlowService.cs` — auto-clearance requires `totalIncurred <= 5000m`
@@ -141,3 +101,34 @@ Legend: 🔴 High · 🟠 Medium · 🟡 Low · 🔵 Debatable / possibly by-des
 ---
 
 _When an item here is fixed, remove it (or move it to a "Fixed" section) and add a regression test._
+
+---
+
+## ✅ Fixed
+
+### H1 — Outbox messages were marked dispatched but never actually sent _(fixed 2026-06-11)_
+- Introduced `IOutboxPublisher` (default `LoggingOutboxPublisher`; swap the DI registration for a
+  real transport). `OutboxDispatcher` now only sets `DispatchedAtUtc` after a successful publish;
+  on failure it records `LastError`, leaves the message pending, and retries on later polls up to
+  `MaxDispatchAttempts` (5), after which the message is poisoned and skipped.
+- Regression tests: `tests/.../Outbox/OutboxDispatcherTests.cs` (publish success, failure leaves
+  pending, attempt cap/poison, recovery after transient failure).
+
+### H2 — Idempotency check was not atomic (TOCTOU race) _(fixed 2026-06-11)_
+- `EfCoreIdempotencyStore.StoreAsync` now inserts first and treats the composite-key
+  `(Source, EnvelopeId)` unique-constraint violation as "already processed" — first writer wins
+  and its receipt is returned as the canonical outcome. `IIdempotencyStore.StoreAsync` returns the
+  winning receipt; `IngestDispatcher` returns it to the caller.
+- Regression test: `EfCoreIdempotencyStoreTests.StoreAsync_FirstWriterWins_OnConcurrentInsertForSameKey`.
+
+### H3 — Renewal premium silently clamped to zero _(fixed 2026-06-11)_
+- `PolicyRenewalService` now throws `ArgumentException` (→ 400 with the load breakdown in the
+  message) when the computed renewal premium is negative, instead of silently producing a $0
+  premium.
+- Regression test: `PolicyRenewalServiceTests.ApplyRenewal_ThrowsWhenComputedRenewalPremiumIsNegative`.
+
+### M2 — Installment rounding gap (totals didn't reconcile) _(fixed 2026-06-11)_
+- `BindPointRiskMapper` now adds the rounding residual to the **last** installment so the schedule
+  always sums exactly to `BoundPremium` (e.g. 1000 / 3 → 333.33 + 333.33 + 333.34).
+- Regression tests: `BindPointRiskMapperTests.Map_InstallmentsSumExactlyToBoundPremium_WhenDivisionDoesNotRoundEvenly`
+  and `Map_InstallmentsRemainEqual_WhenDivisionRoundsEvenly`.

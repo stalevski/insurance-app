@@ -75,6 +75,30 @@ public sealed class PolicyRenewalServiceTests : IDisposable
     }
 
     [Test]
+    public void ApplyRenewal_ThrowsWhenComputedRenewalPremiumIsNegative()
+    {
+        SeedBoundPolicy("POL-NEG-001", "QT-NEG-001");
+
+        var (renewal, _, _) = BuildServices();
+
+        // Standard band (0% loss-ratio load) with a -300% revenue delta -> -150% exposure load,
+        // so 10000 * (1 - 1.50) = -5000. Must fail loudly instead of silently clamping to 0.
+        var exception = Assert.Throws<ArgumentException>(() => renewal.ApplyRenewal(new RenewalRequest
+        {
+            PolicyReference = "POL-NEG-001",
+            NewQuoteReference = "QT-RENEWAL-NEG-001",
+            NewInceptionDate = new DateOnly(2027, 1, 1),
+            NewExpiryDate = new DateOnly(2027, 12, 31),
+            PriorAnnualPremium = 10000m,
+            PriorClaimsPaid = 4500m,
+            RevenueDeltaPercent = -3.00m
+        }));
+
+        Assert.That(exception!.Message, Does.Contain("negative"));
+        Assert.That(exception.Message, Does.Contain("POL-NEG-001"));
+    }
+
+    [Test]
     public void ApplyRenewal_AppliesExposureAndOverrideLoadsOnTopOfLossRatio()
     {
         SeedBoundPolicy("POL-EXP-001", "QT-EXP-001");

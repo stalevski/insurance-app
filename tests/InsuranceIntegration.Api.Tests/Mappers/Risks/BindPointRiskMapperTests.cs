@@ -33,7 +33,38 @@ public sealed class BindPointRiskMapperTests
         Assert.That(result.Broker.IsPreferredPartner, Is.True);
     }
 
-    private static SourceIngestRequest CreateRequest()
+    [Test]
+    public void Map_InstallmentsSumExactlyToBoundPremium_WhenDivisionDoesNotRoundEvenly()
+    {
+        var mapper = new BindPointRiskMapper();
+
+        // 1000 / 3 = 333.33 rounded; naive equal installments would sum to 999.99.
+        var result = mapper.Map(CreateRequest(boundPremium: 1000m, installmentCount: 3));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Installments.Sum(installment => installment.Amount), Is.EqualTo(1000m));
+            Assert.That(result.Installments[0].Amount, Is.EqualTo(333.33m));
+            Assert.That(result.Installments[1].Amount, Is.EqualTo(333.33m));
+            Assert.That(result.Installments[2].Amount, Is.EqualTo(333.34m), "last installment absorbs the rounding residual");
+        });
+    }
+
+    [Test]
+    public void Map_InstallmentsRemainEqual_WhenDivisionRoundsEvenly()
+    {
+        var mapper = new BindPointRiskMapper();
+
+        var result = mapper.Map(CreateRequest(boundPremium: 8500m, installmentCount: 4));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Installments.Sum(installment => installment.Amount), Is.EqualTo(8500m));
+            Assert.That(result.Installments.Select(installment => installment.Amount), Is.All.EqualTo(2125m));
+        });
+    }
+
+    private static SourceIngestRequest CreateRequest(decimal boundPremium = 8500m, int installmentCount = 4)
     {
         return new SourceIngestRequest
         {
@@ -49,13 +80,13 @@ public sealed class BindPointRiskMapperTests
                 brokerName = "Summit Risk Partners",
                 brokerHasDelegatedAuthority = false,
                 brokerIsPreferredPartner = true,
-                boundPremium = 8500m,
+                boundPremium,
                 currencyCode = "USD",
                 inceptionDate = "2026-05-01",
                 expiryDate = "2027-04-30",
                 boundDate = "2026-04-28",
                 paymentMethod = "Invoice",
-                installmentCount = 4
+                installmentCount
             })
         };
     }
