@@ -1,5 +1,6 @@
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.Persistence;
+using InsuranceIntegration.Api.Security;
 using InsuranceIntegration.Api.Services.Catalog;
 using InsuranceIntegration.Api.Services.Claims;
 using InsuranceIntegration.Api.Services.Clearance;
@@ -37,6 +38,11 @@ public static class ServiceRegistration
                    .AddInterceptors(sp.GetRequiredService<RowVersionInterceptor>()));
 
         services.TryAddSingletonTimeProvider();
+
+        var apiKeyOptions = new ApiKeyOptions();
+        configuration?.GetSection(ApiKeyOptions.SectionName).Bind(apiKeyOptions);
+        services.AddSingleton(apiKeyOptions);
+        services.AddSingleton(new ApiKeyValidator(apiKeyOptions));
 
         services.AddScoped<ICorrelationContext, CorrelationContext>();
         services.AddScoped<IOutboxWriter, OutboxWriter>();

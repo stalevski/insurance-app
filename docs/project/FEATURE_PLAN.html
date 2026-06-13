@@ -78,8 +78,8 @@
   </div>
 
   <div class="summary">
-    <div class="stat"><div class="n" style="color:#86efac">9</div><div class="l">Implemented this pass</div></div>
-    <div class="stat"><div class="n" style="color:#93c5fd">5</div><div class="l">Recommended next</div></div>
+    <div class="stat"><div class="n" style="color:#86efac">10</div><div class="l">Implemented this pass</div></div>
+    <div class="stat"><div class="n" style="color:#93c5fd">4</div><div class="l">Recommended next</div></div>
     <div class="stat"><div class="n" style="color:#fde68a">18</div><div class="l">Deferred</div></div>
     <div class="stat"><div class="n" style="color:#cbd5e1">9</div><div class="l">Skipped</div></div>
   </div>
@@ -186,7 +186,7 @@
   <table>
     <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
     <tbody>
-      <tr><td class="feat">Authentication &amp; API keys</td><td class="desc">Gate write endpoints and the DB browser (currently unauthenticated — see PROGRESS).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Authentication &amp; API keys</td><td class="desc">Gate write endpoints (POST/PUT/PATCH/DELETE) and the DB browser with an <code>X-Api-Key</code> header. Disabled by default; enforced when keys are configured under the <code>ApiKey</code> section.</td><td class="effort">M</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">Multi-tenancy</td><td class="desc">Tenant column + query filter so multiple insurers/MGAs share the host safely.</td><td class="effort">L</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">OpenTelemetry tracing</td><td class="desc">Distributed traces correlated by the existing <code>X-Correlation-Id</code>.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">Rate limiting</td><td class="desc">ASP.NET rate-limiter on ingest to protect the single SQLite writer.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>

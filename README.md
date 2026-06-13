@@ -153,8 +153,30 @@ every product (risk) family (Property, Liability, Cyber, Motor) by
 
 The UI talks to the existing services through an `IUiGateway` facade (`Services/Ui/`) that opens a
 fresh DI scope per call, so it never holds a long-lived circuit-scoped `DbContext`. The database
-browser is **read-only and currently unauthenticated** — gate it behind `Development` or a feature
-flag before any production exposure.
+browser is **read-only**. When API-key enforcement is enabled (see below), the browser and all
+write endpoints require an `X-Api-Key` header.
+
+### API-key protection
+
+Mutating endpoints (`POST`/`PUT`/`PATCH`/`DELETE`) and the `/database` browser can be gated behind
+an API key. Enforcement is **disabled by default** so local development and tests run without
+credentials; it turns on automatically once one or more keys are configured under the `ApiKey`
+section:
+
+```powershell
+$env:ApiKey__Keys__0 = "my-secret-key"
+dotnet run --project .\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj
+```
+
+Clients then send the key on protected requests:
+
+```
+X-Api-Key: my-secret-key
+```
+
+GET reads, `/health`, `/swagger`, the OpenAPI document, and static assets are never gated. The
+header name (`X-Api-Key` by default) and whether the DB browser is protected are configurable via
+`ApiKey:HeaderName` and `ApiKey:ProtectDatabaseBrowser`.
 
 ## JSON schema support
 

@@ -77,6 +77,29 @@ The context (`IntegrationDbContext`) owns nine tables:
 
 The last three form a normalized relational write-model that runs alongside the JSON snapshots; they carry a `RowVersion` optimistic-concurrency token stamped by `RowVersionInterceptor` on every insert/update (`src/InsuranceIntegration.Api/Persistence/RowVersionInterceptor.cs`). Generated migrations live in `src/InsuranceIntegration.Api/Migrations`.
 
+### API-key authentication
+
+Mutating requests (`POST`/`PUT`/`PATCH`/`DELETE`) and the `/database` browser page can be gated behind an API key. The `ApiKeyAuthenticationMiddleware` runs immediately after correlation-id handling and short-circuits unauthorized requests with `401 Unauthorized`.
+
+- **Keys**: `ApiKey:Keys` (an array). When empty, enforcement is **disabled** — GET and write requests are all allowed. This keeps local development and the unit-test suite credential-free.
+- **Header name**: `ApiKey:HeaderName` (default `X-Api-Key`).
+- **Database browser**: `ApiKey:ProtectDatabaseBrowser` (default `true`) — when keys are configured, the `/database` page requires the key too.
+
+```powershell
+# enable enforcement with one key
+$env:ApiKey__Keys__0 = "my-secret-key"
+dotnet run --project .\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj
+```
+
+```powershell
+# call a protected endpoint
+curl -X POST http://localhost:5000/api/v1/billing/payments `
+  -H "X-Api-Key: my-secret-key" -H "Content-Type: application/json" `
+  -d '{ ... }'
+```
+
+GET reads, `/health`, `/swagger`, the OpenAPI document, and static assets are never gated. Keys are compared with a fixed-time comparison (`CryptographicOperations.FixedTimeEquals`) to avoid timing side channels. The decision logic lives in the unit-testable `ApiKeyValidator` (`src/InsuranceIntegration.Api/Security/`).
+
 ## 5. Discover the API
 
 ### Swagger UI (Development only)

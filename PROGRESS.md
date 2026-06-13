@@ -79,6 +79,13 @@ Docker-capable VPS.
   down, floored at zero), and `RecordExpensePayment` (adds to paid expense, reserve untouched).
   Recomputes `incurred = paid indemnity + paid expense + outstanding reserve`. Pure service
   (`IClaimFinancialService` / `ClaimFinancialService`, no new entities). 10 new tests (2026-06-13).
+- [x] **API-key authentication on writes + DB browser.** `ApiKeyAuthenticationMiddleware` (runs
+  right after correlation-id handling) gates mutating requests (`POST`/`PUT`/`PATCH`/`DELETE`) and
+  the `/database` browser behind an `X-Api-Key` header. Enforcement is **disabled by default** and
+  turns on once keys are configured under the `ApiKey` section, so dev/test stay credential-free.
+  Decision logic is isolated in a pure, unit-testable `ApiKeyValidator` (fixed-time key comparison);
+  GET reads, `/health`, `/swagger`, OpenAPI, and static assets are never gated. 20 new test cases
+  (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -87,7 +94,8 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 199 tests pass** (claim reserves/payments added +10
+- Build green (`dotnet build -c Release`); **all 219 tests pass** (API-key auth added +20 on
+  2026-06-13; claim reserves/payments added +10
   on 2026-06-13; claim status workflow added +19; billing delinquency/dunning added +8; billing
   payment recording added +8; lifecycle lapse/non-renewal added +10; earlier passes added
   reinstatement and the M1/M3/M4 fixes). UI added in
