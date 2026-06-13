@@ -142,7 +142,13 @@ Always pass `X-Correlation-Id` from upstream systems to make tracing possible.
 
 ### Outbox
 
-Canonical flows (risk, claim, billing, compliance) can enqueue events via `IOutboxWriter` into the `OutboxMessages` table. The `OutboxDispatcher` background service polls every 2 seconds, batches up to 50 pending rows, logs a dispatch line per event, and marks them dispatched (`src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`). Real transport integration is not implemented yet — logs are the current sink.
+Canonical flows (risk, claim, billing, compliance) can enqueue events via `IOutboxWriter` into the `OutboxMessages` table. The `OutboxDispatcher` background service polls every 2 seconds, batches up to 50 pending rows, publishes each via the configured `IOutboxPublisher`, and marks them dispatched (`src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`). The transport is selected by the `Outbox` configuration section:
+
+- `Logging` (default) — writes a dispatch line per event; requires no external infrastructure.
+- `File` — appends each event as a JSON line to `Outbox:FilePath` (`outbox-events.jsonl` by default).
+- `Webhook` — POSTs each event as JSON to `Outbox:WebhookUrl`.
+
+Unknown or blank transport values fall back to `Logging`. A failed delivery (non-success webhook response or a file-write error) leaves the message pending so the dispatcher retries on a later poll, up to the attempt cap. Message-broker adapters (e.g. RabbitMQ / Azure Service Bus) would plug in as additional `IOutboxPublisher` implementations.
 
 ### Domain snapshots (consolidated views per business key)
 

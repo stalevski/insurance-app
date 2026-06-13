@@ -78,8 +78,8 @@
   </div>
 
   <div class="summary">
-    <div class="stat"><div class="n" style="color:#86efac">12</div><div class="l">Implemented this pass</div></div>
-    <div class="stat"><div class="n" style="color:#93c5fd">2</div><div class="l">Recommended next</div></div>
+    <div class="stat"><div class="n" style="color:#86efac">13</div><div class="l">Implemented this pass</div></div>
+    <div class="stat"><div class="n" style="color:#93c5fd">1</div><div class="l">Recommended next</div></div>
     <div class="stat"><div class="n" style="color:#fde68a">18</div><div class="l">Deferred</div></div>
     <div class="stat"><div class="n" style="color:#cbd5e1">9</div><div class="l">Skipped</div></div>
   </div>
@@ -165,7 +165,7 @@
   <table>
     <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
     <tbody>
-      <tr><td class="feat">Real outbox transport</td><td class="desc">Swap <code>LoggingOutboxPublisher</code> for RabbitMQ / Azure Service Bus (interface already exists).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Real outbox transport</td><td class="desc">Configurable transport via <code>Outbox:Transport</code> — <code>Logging</code> (default), <code>File</code> (JSON-lines append) or <code>Webhook</code> (HTTP POST). Broker adapters (RabbitMQ / Azure Service Bus) plug in as further <code>IOutboxPublisher</code> implementations.</td><td class="effort">M</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">Outbound webhooks</td><td class="desc">Per-tenant HTTP subscriptions fed by the outbox with retry &amp; signing.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">Inbound schema-validation middleware</td><td class="desc">Validate ingest payloads against the published JSON schemas before mapping.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">New source adapter</td><td class="desc">Add a 4th source system mapper to prove the anti-corruption layer extends cleanly.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>

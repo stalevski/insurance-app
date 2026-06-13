@@ -102,8 +102,9 @@ _When an item here is fixed, remove it (or move it to a "Fixed" section) and add
   `TransactionTimestampUtc` (`tests/.../Mappers/Risks/*RiskMapperTests.cs`).
 
 ### H1 — Outbox messages were marked dispatched but never actually sent _(fixed 2026-06-11)_
-- Introduced `IOutboxPublisher` (default `LoggingOutboxPublisher`; swap the DI registration for a
-  real transport). `OutboxDispatcher` now only sets `DispatchedAtUtc` after a successful publish;
+- Introduced `IOutboxPublisher` (default `LoggingOutboxPublisher`; the transport is now selectable
+  via `Outbox:Transport` = `Logging` / `File` / `Webhook`). `OutboxDispatcher` now only sets
+  `DispatchedAtUtc` after a successful publish;
   on failure it records `LastError`, leaves the message pending, and retries on later polls up to
   `MaxDispatchAttempts` (5), after which the message is poisoned and skipped.
 - Regression tests: `tests/.../Outbox/OutboxDispatcherTests.cs` (publish success, failure leaves

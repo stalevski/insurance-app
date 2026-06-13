@@ -182,6 +182,25 @@ GET reads, `/health`, `/swagger`, the OpenAPI document, and static assets are ne
 header name (`X-Api-Key` by default) and whether the DB browser is protected are configurable via
 `ApiKey:HeaderName` and `ApiKey:ProtectDatabaseBrowser`.
 
+### Outbox transport
+
+Domain events captured in the transactional outbox are delivered by the `OutboxDispatcher`
+background worker, whose transport is configurable via the `Outbox` section:
+
+- `Logging` (default) — writes a dispatch line per event; no external infrastructure required.
+- `File` — appends each event as a JSON line to `Outbox:FilePath` (`outbox-events.jsonl` by default).
+- `Webhook` — POSTs each event as JSON to `Outbox:WebhookUrl`.
+
+```powershell
+$env:Outbox__Transport = "File"
+$env:Outbox__FilePath = "events.jsonl"
+```
+
+A failed delivery (non-success webhook response or file-write error) leaves the message pending so
+the dispatcher retries it on a later poll; unknown or blank transport values fall back to `Logging`.
+Message-broker adapters (RabbitMQ / Azure Service Bus) can be added as further `IOutboxPublisher`
+implementations.
+
 ## JSON schema support
 
 The API exposes machine-readable JSON schema documents for the main vertical slice contracts:

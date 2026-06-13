@@ -47,7 +47,30 @@ public static class ServiceRegistration
 
         services.AddScoped<ICorrelationContext, CorrelationContext>();
         services.AddScoped<IOutboxWriter, OutboxWriter>();
-        services.AddScoped<IOutboxPublisher, LoggingOutboxPublisher>();
+
+        var outboxOptions = new OutboxOptions();
+        configuration?.GetSection(OutboxOptions.SectionName).Bind(outboxOptions);
+        outboxOptions.Transport = OutboxTransport.Normalize(outboxOptions.Transport);
+        services.AddSingleton(outboxOptions);
+        switch (outboxOptions.Transport)
+        {
+            case OutboxTransport.File:
+                services.AddScoped<IOutboxPublisher, FileOutboxPublisher>();
+                break;
+            case OutboxTransport.Webhook:
+                if (string.IsNullOrWhiteSpace(outboxOptions.WebhookUrl))
+                {
+                    throw new InvalidOperationException(
+                        "Outbox transport 'Webhook' requires 'Outbox:WebhookUrl' to be configured.");
+                }
+
+                services.AddHttpClient<IOutboxPublisher, WebhookOutboxPublisher>();
+                break;
+            default:
+                services.AddScoped<IOutboxPublisher, LoggingOutboxPublisher>();
+                break;
+        }
+
         services.AddHostedService<OutboxDispatcher>();
 
         services.AddSingleton<ISourceSystemCatalogService, SourceSystemCatalogService>();

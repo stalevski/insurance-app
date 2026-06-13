@@ -98,6 +98,15 @@ Docker-capable VPS.
   existing `IPolicyLifecycleService` / `IPolicyRenewalService`), and a successful action reloads the
   snapshot in place. UI remains a thin facade over already-tested services, so no new unit tests
   (2026-06-13).
+- [x] **Configurable outbox transport.** The `OutboxDispatcher` now publishes through a transport
+  chosen by the `Outbox:Transport` setting: `Logging` (default, no infrastructure), `File`
+  (`FileOutboxPublisher` appends each event as a JSON line to `Outbox:FilePath`), or `Webhook`
+  (`WebhookOutboxPublisher` POSTs each event as JSON to `Outbox:WebhookUrl` using the built-in
+  `HttpClient`). Selection is bound in `ServiceRegistration`; unknown/blank values fall back to
+  `Logging` via `OutboxTransport.Normalize`. Failed deliveries throw so the dispatcher's existing
+  retry/poison handling applies. Broker adapters (RabbitMQ / Azure Service Bus) still need their own
+  packages and are out of scope here. 19 new tests (transport selection, envelope projection, file
+  and webhook publishers) — 241 total (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -106,7 +115,8 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 222 tests pass** (policy schedule PDF added +3 and
+- Build green (`dotnet build -c Release`); **all 241 tests pass** (configurable outbox transport
+  added +19 and policy schedule PDF added +3 and
   API-key auth added +20 on
   2026-06-13; claim reserves/payments added +10
   on 2026-06-13; claim status workflow added +19; billing delinquency/dunning added +8; billing
