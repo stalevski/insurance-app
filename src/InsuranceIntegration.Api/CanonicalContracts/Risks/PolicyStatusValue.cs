@@ -15,4 +15,8 @@ public static class PolicyStatusValue
     public const string Cancelled = "Cancelled";
 
     public const string Reinstated = "Reinstated";
+
+    public const string Lapsed = "Lapsed";
+
+    public const string NonRenewed = "NonRenewed";
 }

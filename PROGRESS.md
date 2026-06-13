@@ -41,6 +41,16 @@ Docker-capable VPS.
   non-cancelled policies), the `Reinstated` policy phase in `SnapshotMerge`, and the `Reinstated`
   stage in the UI lifecycle diagram. 6 new tests, 1 example JSON (2026-06-13). This was the last
   unimplemented item in the README "Target product direction" lifecycle list.
+- [x] **Policy lapse + non-renewal (lifecycle).** `POST /api/v1/policies/lapses` lapses an in-force
+  policy for non-payment (status/phase `Lapsed`, `PolicyLapsed` event) with pro-rata earned-premium
+  and outstanding-shortfall math; `POST /api/v1/policies/non-renewals` marks an in-force policy
+  not-renewed at expiry (status/phase `NonRenewed`, `PolicyNonRenewed` event). Added `Lapse`/
+  `NonRenewal` transaction types, `Lapsed`/`NonRenewed` statuses + phases, `PolicyLapsed`/
+  `PolicyNonRenewed` event types, `Lapse{Request,Result}`/`NonRenewal{Request,Result}`,
+  `PolicyAdjustmentService.CalculateLapse`/`CalculateNonRenewal`, `IPolicyLifecycleService`
+  `ApplyLapse`/`ApplyNonRenewal` (both reject non-in-force policies), the new phases in
+  `SnapshotMerge` and the UI lifecycle diagram, and the event-type filter on the Events page.
+  10 new tests (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -49,9 +59,9 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 140 tests pass** (134 + 6 reinstatement tests from
-  the 2026-06-13 lifecycle pass). UI added in Phase 3 introduces
-  no new warnings and no new tests (UI is a thin facade over already-tested services).
+- Build green (`dotnet build -c Release`); **all 154 tests pass** (lifecycle lapse/non-renewal
+  added +10 on 2026-06-13; earlier passes added reinstatement and the M1/M3/M4 fixes). UI added in
+  Phase 3 introduces no new warnings and no new tests (UI is a thin facade over already-tested services).
 - NuGet packages bumped to latest (2026-06-11): EF Core / AspNetCore.OpenApi 10.0.9,
   Swashbuckle.SwaggerUI 10.2.1, NUnit 4.6.1, NUnit3TestAdapter 6.2.0, Test.Sdk 18.6.0,
   TimeProvider.Testing 10.7.0, coverlet 10.0.1. Build + tests verified after the bump.

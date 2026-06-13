@@ -138,6 +138,16 @@ public sealed class RiskSnapshotRouter : IRiskSnapshotRouter
             return DomainEventType.PolicyReinstated;
         }
 
+        if (string.Equals(transactionType, PolicyTransactionType.Lapse, StringComparison.OrdinalIgnoreCase))
+        {
+            return DomainEventType.PolicyLapsed;
+        }
+
+        if (string.Equals(transactionType, PolicyTransactionType.NonRenewal, StringComparison.OrdinalIgnoreCase))
+        {
+            return DomainEventType.PolicyNonRenewed;
+        }
+
         return DomainEventType.PolicyBound;
     }
 

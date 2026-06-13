@@ -74,6 +74,40 @@ public static class PolicyEndpoints
             }
         });
 
+        endpoints.MapPost("/api/v1/policies/lapses", (LapseRequest request, IPolicyLifecycleService lifecycle) =>
+        {
+            try
+            {
+                var result = lifecycle.ApplyLapse(request);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Policy not found");
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid lapse request");
+            }
+        });
+
+        endpoints.MapPost("/api/v1/policies/non-renewals", (NonRenewalRequest request, IPolicyLifecycleService lifecycle) =>
+        {
+            try
+            {
+                var result = lifecycle.ApplyNonRenewal(request);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Policy not found");
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid non-renewal request");
+            }
+        });
+
         return endpoints;
     }
 }

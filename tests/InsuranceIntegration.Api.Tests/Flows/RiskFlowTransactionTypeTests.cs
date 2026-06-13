@@ -20,6 +20,8 @@ public sealed class RiskFlowTransactionTypeTests
     [TestCase(PolicyTransactionType.MidTermAdjustment, PolicyStatusValue.Endorsed)]
     [TestCase(PolicyTransactionType.Cancellation, PolicyStatusValue.Cancelled)]
     [TestCase(PolicyTransactionType.Reinstatement, PolicyStatusValue.Reinstated)]
+    [TestCase(PolicyTransactionType.Lapse, PolicyStatusValue.Lapsed)]
+    [TestCase(PolicyTransactionType.NonRenewal, PolicyStatusValue.NonRenewed)]
     public void Process_ReturnsExpectedPolicyStatusForPolicyTransactionType(string transactionType, string expectedPolicyStatus)
     {
         var service = CreateService();

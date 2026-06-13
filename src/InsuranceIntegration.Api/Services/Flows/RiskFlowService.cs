@@ -421,6 +421,16 @@ public sealed class RiskFlowService : IRiskFlowService
             return PolicyStatusValue.Reinstated;
         }
 
+        if (string.Equals(transactionType, PolicyTransactionType.Lapse, StringComparison.OrdinalIgnoreCase))
+        {
+            return PolicyStatusValue.Lapsed;
+        }
+
+        if (string.Equals(transactionType, PolicyTransactionType.NonRenewal, StringComparison.OrdinalIgnoreCase))
+        {
+            return PolicyStatusValue.NonRenewed;
+        }
+
         if (string.Equals(transactionType, PolicyTransactionType.Renewal, StringComparison.OrdinalIgnoreCase))
         {
             // Renewals derive from an already-underwritten prior policy; eligibility is

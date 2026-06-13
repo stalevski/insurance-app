@@ -163,6 +163,107 @@ public sealed class PolicyLifecycleService : IPolicyLifecycleService
         };
     }
 
+    public PolicyLifecycleResult ApplyLapse(LapseRequest request)
+    {
+        var snapshot = LoadSnapshotOrThrow(request.PolicyReference);
+
+        if (!IsInForce(snapshot.Lifecycle.PolicyStatus))
+        {
+            throw new ArgumentException(
+                $"Policy '{request.PolicyReference}' is '{snapshot.Lifecycle.PolicyStatus}'. Only an in-force policy can lapse.");
+        }
+
+        var math = _adjustmentService.CalculateLapse(request);
+        var nowUtc = _time.GetUtcNow().UtcDateTime;
+
+        var canonical = SynthesizeCanonical(
+            snapshot,
+            transactionType: PolicyTransactionType.Lapse,
+            transactionTimestampUtc: nowUtc,
+            // Lapse keeps the annual premium on the snapshot; the earned/outstanding math
+            // lives on the result, not the snapshot premium figures.
+            brokerPremium: request.AnnualPremium,
+            inceptionDate: request.InceptionDate,
+            expiryDate: request.ExpiryDate,
+            sectionOperations: []);
+
+        var context = BuildInternalContext(
+            request.PolicyReference,
+            messageType: "PolicyLapse",
+            occurredAtUtc: nowUtc);
+
+        var (response, eventId) = RouteAndCaptureEventId(canonical, context);
+
+        var refreshed = _policySnapshotService.Find(request.PolicyReference) ?? snapshot;
+
+        return new PolicyLifecycleResult
+        {
+            PolicyReference = request.PolicyReference,
+            TransactionType = PolicyTransactionType.Lapse,
+            PolicyStatus = response.PolicyStatus,
+            CurrentPhase = refreshed.Lifecycle.CurrentPhase,
+            DomainEventId = eventId,
+            DomainEventType = DomainEventType.PolicyLapsed,
+            Lapse = math
+        };
+    }
+
+    public PolicyLifecycleResult ApplyNonRenewal(NonRenewalRequest request)
+    {
+        var snapshot = LoadSnapshotOrThrow(request.PolicyReference);
+
+        if (!IsInForce(snapshot.Lifecycle.PolicyStatus))
+        {
+            throw new ArgumentException(
+                $"Policy '{request.PolicyReference}' is '{snapshot.Lifecycle.PolicyStatus}'. Only an in-force policy can be non-renewed.");
+        }
+
+        var math = _adjustmentService.CalculateNonRenewal(request);
+        var nowUtc = _time.GetUtcNow().UtcDateTime;
+
+        var canonical = SynthesizeCanonical(
+            snapshot,
+            transactionType: PolicyTransactionType.NonRenewal,
+            transactionTimestampUtc: nowUtc,
+            brokerPremium: request.AnnualPremium,
+            inceptionDate: request.InceptionDate,
+            expiryDate: request.ExpiryDate,
+            sectionOperations: []);
+
+        var context = BuildInternalContext(
+            request.PolicyReference,
+            messageType: "PolicyNonRenewal",
+            occurredAtUtc: nowUtc);
+
+        var (response, eventId) = RouteAndCaptureEventId(canonical, context);
+
+        var refreshed = _policySnapshotService.Find(request.PolicyReference) ?? snapshot;
+
+        return new PolicyLifecycleResult
+        {
+            PolicyReference = request.PolicyReference,
+            TransactionType = PolicyTransactionType.NonRenewal,
+            PolicyStatus = response.PolicyStatus,
+            CurrentPhase = refreshed.Lifecycle.CurrentPhase,
+            DomainEventId = eventId,
+            DomainEventType = DomainEventType.PolicyNonRenewed,
+            NonRenewal = math
+        };
+    }
+
+    private static readonly string[] InForceStatuses =
+    [
+        PolicyStatusValue.Bound,
+        PolicyStatusValue.Endorsed,
+        PolicyStatusValue.Renewed,
+        PolicyStatusValue.Reinstated
+    ];
+
+    private static bool IsInForce(string policyStatus)
+    {
+        return InForceStatuses.Any(status => string.Equals(status, policyStatus, StringComparison.OrdinalIgnoreCase));
+    }
+
     private PolicySnapshot LoadSnapshotOrThrow(string policyReference)
     {
         var snapshot = _policySnapshotService.Find(policyReference);

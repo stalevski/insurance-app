@@ -7,4 +7,8 @@ public interface IPolicyAdjustmentService
     EndorsementResult CalculateEndorsement(EndorsementRequest request);
 
     ReinstatementResult CalculateReinstatement(ReinstatementRequest request);
+
+    LapseResult CalculateLapse(LapseRequest request);
+
+    NonRenewalResult CalculateNonRenewal(NonRenewalRequest request);
 }

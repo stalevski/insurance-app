@@ -103,6 +103,8 @@ Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
 - `POST /api/v1/policies/endorsements`
 - `POST /api/v1/policies/renewals`
 - `POST /api/v1/policies/reinstatements` (restore a cancelled policy; `PolicyReinstated` event)
+- `POST /api/v1/policies/lapses` (lapse an in-force policy for non-payment; `PolicyLapsed` event)
+- `POST /api/v1/policies/non-renewals` (mark an in-force policy not-renewed at expiry; `PolicyNonRenewed` event)
 
 Replay / sanity:
 

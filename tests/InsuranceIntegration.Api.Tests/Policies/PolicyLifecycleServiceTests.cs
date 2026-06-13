@@ -247,6 +247,139 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
         }));
     }
 
+    [Test]
+    public void ApplyLapse_OnInForcePolicy_LapsesPolicyAndWritesPolicyLapsedEvent()
+    {
+        SeedBoundPolicy("POL-LIFE-005", "QT-LIFE-005");
+
+        var (lifecycle, _) = BuildServices();
+        var result = lifecycle.ApplyLapse(new LapseRequest
+        {
+            PolicyReference = "POL-LIFE-005",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            LapseDate = new DateOnly(2026, 7, 1),
+            PaidToDate = 2500m,
+            Reason = "Premium installment unpaid past grace period"
+        });
+
+        using var verifyContext = new IntegrationDbContext(_options);
+        var policyService = new PolicySnapshotService(verifyContext, new PolicySnapshotProjector());
+        var snapshot = policyService.Find("POL-LIFE-005");
+        var eventLog = new DomainEventLog(verifyContext);
+        var policyEvents = eventLog.GetByAggregate(DomainEventAggregateKind.Policy, "POL-LIFE-005");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.PolicyStatus, Is.EqualTo(PolicyStatusValue.Lapsed));
+            Assert.That(result.CurrentPhase, Is.EqualTo("Lapsed"));
+            Assert.That(result.DomainEventType, Is.EqualTo(DomainEventType.PolicyLapsed));
+            Assert.That(result.DomainEventId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(result.Lapse, Is.Not.Null);
+            Assert.That(result.Lapse!.CoveredDays, Is.EqualTo(181));
+            Assert.That(result.Lapse.EarnedPremium, Is.GreaterThan(0m));
+            Assert.That(result.Lapse.OutstandingPremium, Is.EqualTo(result.Lapse.EarnedPremium - 2500m));
+
+            Assert.That(snapshot, Is.Not.Null);
+            Assert.That(snapshot!.Lifecycle.PolicyStatus, Is.EqualTo(PolicyStatusValue.Lapsed));
+            Assert.That(snapshot.Lifecycle.CurrentPhase, Is.EqualTo("Lapsed"));
+            Assert.That(snapshot.History.Select(h => h.TransactionType), Does.Contain(PolicyTransactionType.Lapse));
+
+            Assert.That(policyEvents.Select(e => e.EventType), Is.EqualTo(new[]
+            {
+                DomainEventType.PolicyBound,
+                DomainEventType.PolicyLapsed
+            }));
+        });
+    }
+
+    [Test]
+    public void ApplyLapse_OnUnknownPolicy_ThrowsKeyNotFound()
+    {
+        var (lifecycle, _) = BuildServices();
+        Assert.Throws<KeyNotFoundException>(() => lifecycle.ApplyLapse(new LapseRequest
+        {
+            PolicyReference = "POL-DOES-NOT-EXIST",
+            AnnualPremium = 1000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            LapseDate = new DateOnly(2026, 7, 1)
+        }));
+    }
+
+    [Test]
+    public void ApplyNonRenewal_OnInForcePolicy_MarksNonRenewedAndWritesPolicyNonRenewedEvent()
+    {
+        SeedBoundPolicy("POL-LIFE-006", "QT-LIFE-006");
+
+        var (lifecycle, _) = BuildServices();
+        var result = lifecycle.ApplyNonRenewal(new NonRenewalRequest
+        {
+            PolicyReference = "POL-LIFE-006",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            InitiatedBy = NonRenewalInitiator.Insurer,
+            NoticeDays = 30,
+            Reason = "Risk appetite change"
+        });
+
+        using var verifyContext = new IntegrationDbContext(_options);
+        var policyService = new PolicySnapshotService(verifyContext, new PolicySnapshotProjector());
+        var snapshot = policyService.Find("POL-LIFE-006");
+        var eventLog = new DomainEventLog(verifyContext);
+        var policyEvents = eventLog.GetByAggregate(DomainEventAggregateKind.Policy, "POL-LIFE-006");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.PolicyStatus, Is.EqualTo(PolicyStatusValue.NonRenewed));
+            Assert.That(result.CurrentPhase, Is.EqualTo("NonRenewed"));
+            Assert.That(result.DomainEventType, Is.EqualTo(DomainEventType.PolicyNonRenewed));
+            Assert.That(result.DomainEventId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(result.NonRenewal, Is.Not.Null);
+            Assert.That(result.NonRenewal!.EffectiveDate, Is.EqualTo(new DateOnly(2026, 12, 31)));
+            Assert.That(result.NonRenewal.InitiatedBy, Is.EqualTo(NonRenewalInitiator.Insurer));
+            Assert.That(result.NonRenewal.NoticeDays, Is.EqualTo(30));
+
+            Assert.That(snapshot, Is.Not.Null);
+            Assert.That(snapshot!.Lifecycle.PolicyStatus, Is.EqualTo(PolicyStatusValue.NonRenewed));
+            Assert.That(snapshot.Lifecycle.CurrentPhase, Is.EqualTo("NonRenewed"));
+            Assert.That(snapshot.History.Select(h => h.TransactionType), Does.Contain(PolicyTransactionType.NonRenewal));
+
+            Assert.That(policyEvents.Select(e => e.EventType), Is.EqualTo(new[]
+            {
+                DomainEventType.PolicyBound,
+                DomainEventType.PolicyNonRenewed
+            }));
+        });
+    }
+
+    [Test]
+    public void ApplyNonRenewal_OnCancelledPolicy_ThrowsArgumentException()
+    {
+        SeedBoundPolicy("POL-LIFE-007", "QT-LIFE-007");
+
+        var (lifecycle, _) = BuildServices();
+        lifecycle.ApplyCancellation(new CancellationRequest
+        {
+            PolicyReference = "POL-LIFE-007",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            Basis = CancellationBasis.ProRata
+        });
+
+        Assert.Throws<ArgumentException>(() => lifecycle.ApplyNonRenewal(new NonRenewalRequest
+        {
+            PolicyReference = "POL-LIFE-007",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31)
+        }));
+    }
+
     private void SeedBoundPolicy(string policyReference, string quoteReference)
     {
         var (_, dispatcher) = BuildServices();

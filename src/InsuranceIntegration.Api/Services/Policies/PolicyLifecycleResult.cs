@@ -24,4 +24,8 @@ public sealed class PolicyLifecycleResult
     public EndorsementResult? Endorsement { get; init; }
 
     public ReinstatementResult? Reinstatement { get; init; }
+
+    public LapseResult? Lapse { get; init; }
+
+    public NonRenewalResult? NonRenewal { get; init; }
 }

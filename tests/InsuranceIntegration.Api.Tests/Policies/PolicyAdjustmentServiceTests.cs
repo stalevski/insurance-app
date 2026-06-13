@@ -150,4 +150,83 @@ public sealed class PolicyAdjustmentServiceTests
 
         Assert.Throws<ArgumentException>(() => service.CalculateReinstatement(request));
     }
+
+    [Test]
+    public void CalculateLapse_EarnsProRataPremiumAndComputesOutstandingShortfall()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new LapseRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            LapseDate = new DateOnly(2026, 7, 1),
+            PaidToDate = 300m
+        };
+
+        var result = service.CalculateLapse(request);
+
+        Assert.That(result.CoveredDays, Is.EqualTo(181));
+        Assert.That(result.EarnedPremium, Is.InRange(590m, 600m));
+        Assert.That(result.UnearnedPremium, Is.EqualTo(1200m - result.EarnedPremium));
+        Assert.That(result.OutstandingPremium, Is.EqualTo(result.EarnedPremium - 300m));
+    }
+
+    [Test]
+    public void CalculateLapse_PaidBeyondEarned_OutstandingIsZero()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new LapseRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            LapseDate = new DateOnly(2026, 7, 1),
+            PaidToDate = 1200m
+        };
+
+        var result = service.CalculateLapse(request);
+
+        Assert.That(result.OutstandingPremium, Is.EqualTo(0m));
+    }
+
+    [Test]
+    public void CalculateNonRenewal_EffectiveAtExpiryWithNoMidTermAdjustment()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new NonRenewalRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            InitiatedBy = NonRenewalInitiator.Insured,
+            NoticeDays = 45,
+            Reason = "Broker moved book"
+        };
+
+        var result = service.CalculateNonRenewal(request);
+
+        Assert.That(result.EffectiveDate, Is.EqualTo(new DateOnly(2027, 1, 1)));
+        Assert.That(result.InitiatedBy, Is.EqualTo(NonRenewalInitiator.Insured));
+        Assert.That(result.NoticeDays, Is.EqualTo(45));
+    }
+
+    [Test]
+    public void CalculateNonRenewal_UnknownInitiator_Throws()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new NonRenewalRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            InitiatedBy = "Regulator"
+        };
+
+        Assert.Throws<ArgumentException>(() => service.CalculateNonRenewal(request));
+    }
 }

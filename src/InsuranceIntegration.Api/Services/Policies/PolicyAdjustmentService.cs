@@ -174,6 +174,87 @@ public sealed class PolicyAdjustmentService : IPolicyAdjustmentService
         };
     }
 
+    public LapseResult CalculateLapse(LapseRequest request)
+    {
+        ValidatePolicyPeriod(request.InceptionDate, request.ExpiryDate);
+
+        if (request.PaidToDate < 0m)
+        {
+            throw new ArgumentException("Paid-to-date amount cannot be negative.");
+        }
+
+        var totalDays = Math.Max(1, (request.ExpiryDate.ToDateTime(TimeOnly.MinValue) - request.InceptionDate.ToDateTime(TimeOnly.MinValue)).Days);
+        var lapseDate = ClampToPolicyPeriod(request.LapseDate, request.InceptionDate, request.ExpiryDate);
+        var coveredDays = Math.Max(0, (lapseDate.ToDateTime(TimeOnly.MinValue) - request.InceptionDate.ToDateTime(TimeOnly.MinValue)).Days);
+
+        var earnedFraction = (decimal)coveredDays / totalDays;
+        var earnedPremium = Math.Round(request.AnnualPremium * earnedFraction, 2, MidpointRounding.AwayFromZero);
+        var unearnedPremium = Math.Round(request.AnnualPremium - earnedPremium, 2, MidpointRounding.AwayFromZero);
+        var outstandingPremium = Math.Max(0m, Math.Round(earnedPremium - request.PaidToDate, 2, MidpointRounding.AwayFromZero));
+
+        var reasons = new List<string>
+        {
+            $"Covered days: {coveredDays} of {totalDays}",
+            $"Earned fraction: {earnedFraction:0.####}",
+            $"Earned premium: {earnedPremium:0.##}",
+            $"Unearned (forfeited) premium: {unearnedPremium:0.##}",
+            $"Paid to date: {request.PaidToDate:0.##}",
+            $"Outstanding premium at lapse: {outstandingPremium:0.##}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.Reason))
+        {
+            reasons.Add($"Reason: {request.Reason}");
+        }
+
+        return new LapseResult
+        {
+            PolicyReference = request.PolicyReference,
+            CoveredDays = coveredDays,
+            EarnedPremium = earnedPremium,
+            UnearnedPremium = unearnedPremium,
+            OutstandingPremium = outstandingPremium,
+            Reasons = reasons
+        };
+    }
+
+    public NonRenewalResult CalculateNonRenewal(NonRenewalRequest request)
+    {
+        ValidatePolicyPeriod(request.InceptionDate, request.ExpiryDate);
+
+        if (!NonRenewalInitiator.IsValid(request.InitiatedBy))
+        {
+            throw new ArgumentException($"Unknown non-renewal initiator '{request.InitiatedBy}'.");
+        }
+
+        if (request.NoticeDays < 0)
+        {
+            throw new ArgumentException("Notice days cannot be negative.");
+        }
+
+        var reasons = new List<string>
+        {
+            $"Non-renewal effective at expiry: {request.ExpiryDate:yyyy-MM-dd}",
+            $"Initiated by: {request.InitiatedBy}",
+            $"Notice days: {request.NoticeDays}",
+            "Policy runs to natural expiry; no mid-term premium adjustment"
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.Reason))
+        {
+            reasons.Add($"Reason: {request.Reason}");
+        }
+
+        return new NonRenewalResult
+        {
+            PolicyReference = request.PolicyReference,
+            EffectiveDate = request.ExpiryDate,
+            InitiatedBy = request.InitiatedBy,
+            NoticeDays = request.NoticeDays,
+            Reasons = reasons
+        };
+    }
+
     private static string DescribeOperation(SectionEndorsementOperation operation)
     {
         var target = string.IsNullOrWhiteSpace(operation.SubcoverCode)

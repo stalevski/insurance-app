@@ -12,13 +12,19 @@ public static class PolicyTransactionType
 
     public const string Reinstatement = "Reinstatement";
 
+    public const string Lapse = "Lapse";
+
+    public const string NonRenewal = "NonRenewal";
+
     public static IReadOnlyCollection<string> All { get; } =
     [
         NewBusiness,
         Renewal,
         MidTermAdjustment,
         Cancellation,
-        Reinstatement
+        Reinstatement,
+        Lapse,
+        NonRenewal
     ];
 
     public static bool IsPolicyTransaction(string transactionType)
@@ -35,6 +41,8 @@ public static class PolicyTransactionType
         return string.Equals(transactionType, Cancellation, StringComparison.OrdinalIgnoreCase)
             || string.Equals(transactionType, MidTermAdjustment, StringComparison.OrdinalIgnoreCase)
             || string.Equals(transactionType, Renewal, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(transactionType, Reinstatement, StringComparison.OrdinalIgnoreCase);
+            || string.Equals(transactionType, Reinstatement, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(transactionType, Lapse, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(transactionType, NonRenewal, StringComparison.OrdinalIgnoreCase);
     }
 }

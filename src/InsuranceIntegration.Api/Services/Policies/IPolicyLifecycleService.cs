@@ -14,4 +14,8 @@ public interface IPolicyLifecycleService
     PolicyLifecycleResult ApplyEndorsement(EndorsementRequest request);
 
     PolicyLifecycleResult ApplyReinstatement(ReinstatementRequest request);
+
+    PolicyLifecycleResult ApplyLapse(LapseRequest request);
+
+    PolicyLifecycleResult ApplyNonRenewal(NonRenewalRequest request);
 }

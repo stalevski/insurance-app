@@ -18,5 +18,9 @@ public static class DomainEventType
 
     public const string PolicyReinstated = "PolicyReinstated";
 
+    public const string PolicyLapsed = "PolicyLapsed";
+
+    public const string PolicyNonRenewed = "PolicyNonRenewed";
+
     public const string ClaimNotified = "ClaimNotified";
 }

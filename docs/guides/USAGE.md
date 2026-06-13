@@ -165,7 +165,7 @@ Alongside the snapshot writes, every business state change also appends a row to
 | Column | Notes |
 |---|---|
 | `Id` | Primary key (Guid) |
-| `EventType` | `RiskSubmissionReceived`, `QuoteIssued`, `QuoteBound`, `PolicyBound`, `PolicyEndorsed`, `PolicyCancelled`, `PolicyRenewed`, `PolicyReinstated` |
+| `EventType` | `RiskSubmissionReceived`, `QuoteIssued`, `QuoteBound`, `PolicyBound`, `PolicyEndorsed`, `PolicyCancelled`, `PolicyRenewed`, `PolicyReinstated`, `PolicyLapsed`, `PolicyNonRenewed` |
 | `AggregateKind` | `Policy` or `Quote` |
 | `AggregateKey` | the policy or quote reference |
 | `Source` | `CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`, ..., or `internal` for cancel / endorse / renew |
@@ -226,6 +226,8 @@ Summary:
 | `POST` | `/api/v1/policies/endorsements` | Apply a mid-term endorsement (math + snapshot + `PolicyEndorsed` event) |
 | `POST` | `/api/v1/policies/renewals` | Generate a renewal quote with loss-ratio and exposure-driven re-pricing |
 | `POST` | `/api/v1/policies/reinstatements` | Restore a cancelled policy (lapse math + snapshot + `PolicyReinstated` event) |
+| `POST` | `/api/v1/policies/lapses` | Lapse an in-force policy for non-payment (pro-rata earned premium + outstanding shortfall + snapshot + `PolicyLapsed` event) |
+| `POST` | `/api/v1/policies/non-renewals` | Mark an in-force policy not-renewed at expiry (snapshot + `PolicyNonRenewed` event) |
 | `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
 | `POST` | `/api/v1/snapshots/policies/{policyReference}/rebuild` | Replay the policy's `DomainEvents` through the projector and return the rebuilt snapshot |
