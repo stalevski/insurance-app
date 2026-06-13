@@ -237,11 +237,14 @@ dependency order:
    `DispatchAttempts`, `LastError`, and the poison cap), plus a guarded admin action to invoke a
    targeted `OutboxDispatcher` retry cycle for an individual message. Builds directly on the
    configurable transport just shipped (`Logging` / `File` / `Webhook`).
-5. **System branding/rename (decision required, do NOT action yet).** The brief proposes renaming
-   the source-system placeholders: Contoso → **Nexus**, QuoteForge → **SlipStream**, BindPoint →
-   **Bedrock**. This touches `SourceContracts`, `Mappers`, the source-system catalog, sample
-   payloads, Postman collection, docs, and many tests — treat as a dedicated mechanical rename pass
-   only after confirming the new names are final. Until then, keep the existing terms.
+5. **System branding/rename (decision required, do NOT action the rest yet).** The enterprise brief
+   proposed renaming the source-system placeholders. Only **Contoso** has been actioned so far — it
+   was renamed to **Contoso** (a deliberately-synthetic placeholder) on 2026-06-13 because it was
+   uncertain whether "Contoso" echoed a real system; this touched `SourceContracts`, `Mappers`, the
+   source-system catalog (`CONTOSO_UW`), sample payloads, the Postman collection, docs, and the
+   tests. The other two (`QuoteForge`, `BindPoint`) are **left as-is**; the brief's proposed names
+   (`SlipStream`, `Bedrock`) are not adopted. Treat any further rename as a dedicated mechanical
+   pass only after the new names are confirmed final and original.
 
 > Architectural guards to preserve across all of the above: thin endpoints; strict
 > `SourceContracts → Mappers → CanonicalContracts → Responses` separation; one public type per file
