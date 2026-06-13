@@ -231,6 +231,7 @@ Summary:
 | `POST` | `/api/v1/billing/payments` | Apply a payment to an installment schedule — settles installments `Issued → Paid` in due order and recomputes outstanding balance / delinquency |
 | `POST` | `/api/v1/billing/delinquency` | Flag open installments past due (with optional grace period) as `Overdue` and recompute dunning / non-payment-cancellation recommendation |
 | `POST` | `/api/v1/claims/transitions` | Validate a claim status transition (`Notified → Open → Reserved → Settled/Declined → Closed`); returns the resulting status and matching `Claim*` domain-event type |
+| `POST` | `/api/v1/claims/financials` | Set/adjust the case reserve or record an indemnity / expense payment; recomputes `incurred = paid + outstanding reserve` |
 | `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
 | `POST` | `/api/v1/snapshots/policies/{policyReference}/rebuild` | Replay the policy's `DomainEvents` through the projector and return the rebuilt snapshot |

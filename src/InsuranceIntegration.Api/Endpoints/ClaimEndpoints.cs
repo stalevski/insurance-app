@@ -19,6 +19,19 @@ public static class ClaimEndpoints
             }
         });
 
+        endpoints.MapPost("/api/v1/claims/financials", (ClaimFinancialRequest request, IClaimFinancialService financials) =>
+        {
+            try
+            {
+                var result = financials.Apply(request);
+                return Results.Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid claim financial request");
+            }
+        });
+
         return endpoints;
     }
 }

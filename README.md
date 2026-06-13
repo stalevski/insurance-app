@@ -114,6 +114,7 @@ Billing:
 Claims:
 
 - `POST /api/v1/claims/transitions` (validate a claim status move `Notified → Open → Reserved → Settled/Declined → Closed`; returns the resulting status and matching `Claim*` event type)
+- `POST /api/v1/claims/financials` (set/adjust the case reserve or record an indemnity / expense payment; recomputes `incurred = paid + outstanding reserve`)
 
 Replay / sanity:
 

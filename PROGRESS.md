@@ -73,6 +73,12 @@ Docker-capable VPS.
   Declined,Closed}` domain-event types, and a pure `IClaimLifecycleService` /
   `ClaimLifecycleService` (claims remain computation-only — persisting the event log awaits the
   deferred claim snapshot). 19 new test cases (2026-06-13).
+- [x] **Claim reserves & payments.** `POST /api/v1/claims/financials` applies a reserve or payment
+  operation to a claim's financial position: `SetReserve` (absolute), `AdjustReserve` (signed
+  delta, never below zero), `RecordIndemnityPayment` (adds to paid indemnity and draws the reserve
+  down, floored at zero), and `RecordExpensePayment` (adds to paid expense, reserve untouched).
+  Recomputes `incurred = paid indemnity + paid expense + outstanding reserve`. Pure service
+  (`IClaimFinancialService` / `ClaimFinancialService`, no new entities). 10 new tests (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -81,10 +87,10 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 189 tests pass** (claim status workflow added +19
-  on 2026-06-13; billing delinquency/dunning added +8; billing payment recording added +8;
-  lifecycle lapse/non-renewal added +10; earlier passes added reinstatement and the M1/M3/M4
-  fixes). UI added in
+- Build green (`dotnet build -c Release`); **all 199 tests pass** (claim reserves/payments added +10
+  on 2026-06-13; claim status workflow added +19; billing delinquency/dunning added +8; billing
+  payment recording added +8; lifecycle lapse/non-renewal added +10; earlier passes added
+  reinstatement and the M1/M3/M4 fixes). UI added in
   Phase 3 introduces no new warnings and no new tests (UI is a thin facade over already-tested services).
 - NuGet packages bumped to latest (2026-06-11): EF Core / AspNetCore.OpenApi 10.0.9,
   Swashbuckle.SwaggerUI 10.2.1, NUnit 4.6.1, NUnit3TestAdapter 6.2.0, Test.Sdk 18.6.0,

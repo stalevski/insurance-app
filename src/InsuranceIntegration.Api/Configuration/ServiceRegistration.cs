@@ -75,6 +75,7 @@ public static class ServiceRegistration
         services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
         services.AddScoped<IDelinquencyAssessmentService, DelinquencyAssessmentService>();
         services.AddScoped<IClaimLifecycleService, ClaimLifecycleService>();
+        services.AddScoped<IClaimFinancialService, ClaimFinancialService>();
 
         services.AddSingleton<IPolicySnapshotProjector, PolicySnapshotProjector>();
         services.AddSingleton<IQuoteSnapshotProjector, QuoteSnapshotProjector>();

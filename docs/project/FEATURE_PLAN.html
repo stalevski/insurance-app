@@ -78,8 +78,8 @@
   </div>
 
   <div class="summary">
-    <div class="stat"><div class="n" style="color:#86efac">8</div><div class="l">Implemented this pass</div></div>
-    <div class="stat"><div class="n" style="color:#93c5fd">6</div><div class="l">Recommended next</div></div>
+    <div class="stat"><div class="n" style="color:#86efac">9</div><div class="l">Implemented this pass</div></div>
+    <div class="stat"><div class="n" style="color:#93c5fd">5</div><div class="l">Recommended next</div></div>
     <div class="stat"><div class="n" style="color:#fde68a">18</div><div class="l">Deferred</div></div>
     <div class="stat"><div class="n" style="color:#cbd5e1">9</div><div class="l">Skipped</div></div>
   </div>
@@ -121,7 +121,7 @@
   <table>
     <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
     <tbody>
-      <tr><td class="feat">Claim reserves &amp; payments</td><td class="desc">Set/adjust reserves, record indemnity &amp; expense payments, track incurred = paid + outstanding.</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Claim reserves &amp; payments</td><td class="desc">Set/adjust reserves, record indemnity &amp; expense payments, track incurred = paid + outstanding.</td><td class="effort">M</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">Claim status workflow</td><td class="desc">FNOL (Notified) → Open → Reserved → Settled/Declined → Closed state machine with validated transitions and the matching <code>Claim*</code> domain-event types. Persisting the event log awaits the (deferred) claim snapshot.</td><td class="effort">M</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">Claim snapshot read-model</td><td class="desc">A <code>ClaimSnapshot</code> consolidated view per claim key, mirroring policy/quote snapshots.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">Subrogation / recovery</td><td class="desc">Track recoveries that offset incurred amounts.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
