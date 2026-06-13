@@ -81,4 +81,72 @@ public sealed class RiskFlowServiceTests
         Assert.That(result.AppliedEnrichments, Does.Contain("Universal:CLAIM_HISTORY_WEIGHT"));
         Assert.That(result.AppliedEnrichments, Does.Contain("Universal:SECTION_COMPLEXITY"));
     }
+
+    [Test]
+    public void Process_DeclineIncurredThreshold_IsConfigurable()
+    {
+        var service = CreateService();
+
+        // A single moderate claim sits below the default decline threshold (25,000)...
+        var withinDefault = service.Process(TestRiskRequestFactory.Create(
+            claimCount: 1,
+            incurredPerClaim: 2000m,
+            reservedPerClaim: 0m));
+
+        // ...but a tightened threshold declines the same incurred amount.
+        var tightened = service.Process(TestRiskRequestFactory.Create(
+            claimCount: 1,
+            incurredPerClaim: 2000m,
+            reservedPerClaim: 0m,
+            declineIncurredThreshold: 1000m));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withinDefault.InsuredDecision, Is.EqualTo("AcceptableInsured"));
+            Assert.That(tightened.InsuredDecision, Is.EqualTo("Decline"));
+        });
+    }
+
+    [Test]
+    public void Process_AutoClearIncurredThreshold_IsConfigurable()
+    {
+        var service = CreateService();
+
+        // Default ceiling (5,000) admits the 500 incurred claim -> auto-clear.
+        var clearedByDefault = service.Process(TestRiskRequestFactory.Create(
+            brokerPremium: 1000m,
+            productCode: "COMMERCIAL_PROPERTY",
+            underwritingYear: DateTime.UtcNow.Year,
+            preferredBroker: true,
+            autoClearanceEnabled: true,
+            premiumThreshold: 5000m,
+            fuzzyMatchTolerance: 3,
+            claimCount: 1,
+            incurredPerClaim: 500m,
+            reservedPerClaim: 100m,
+            checksComplete: true,
+            subcoverCount: 1));
+
+        // Tightening the ceiling below the incurred amount forces manual clearance.
+        var blockedByTightenedThreshold = service.Process(TestRiskRequestFactory.Create(
+            brokerPremium: 1000m,
+            productCode: "COMMERCIAL_PROPERTY",
+            underwritingYear: DateTime.UtcNow.Year,
+            preferredBroker: true,
+            autoClearanceEnabled: true,
+            premiumThreshold: 5000m,
+            fuzzyMatchTolerance: 3,
+            claimCount: 1,
+            incurredPerClaim: 500m,
+            reservedPerClaim: 100m,
+            checksComplete: true,
+            subcoverCount: 1,
+            autoClearIncurredThreshold: 100m));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clearedByDefault.ClearanceDecision, Is.EqualTo("AutoCleared"));
+            Assert.That(blockedByTightenedThreshold.ClearanceDecision, Is.EqualTo("ManualClearance"));
+        });
+    }
 }

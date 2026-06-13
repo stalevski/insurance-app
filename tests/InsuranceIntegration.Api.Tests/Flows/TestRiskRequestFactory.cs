@@ -17,6 +17,8 @@ internal static class TestRiskRequestFactory
         bool autoClearanceEnabled = true,
         decimal premiumThreshold = 5000m,
         int fuzzyMatchTolerance = 3,
+        decimal autoClearIncurredThreshold = 5000m,
+        decimal declineIncurredThreshold = 25000m,
         int claimCount = 1,
         decimal incurredPerClaim = 500m,
         decimal reservedPerClaim = 100m,
@@ -101,7 +103,9 @@ internal static class TestRiskRequestFactory
             {
                 AutoClearanceEnabled = autoClearanceEnabled,
                 PremiumThreshold = premiumThreshold,
-                FuzzyMatchTolerance = fuzzyMatchTolerance
+                FuzzyMatchTolerance = fuzzyMatchTolerance,
+                AutoClearIncurredThreshold = autoClearIncurredThreshold,
+                DeclineIncurredThreshold = declineIncurredThreshold
             },
             Enrichments =
             [

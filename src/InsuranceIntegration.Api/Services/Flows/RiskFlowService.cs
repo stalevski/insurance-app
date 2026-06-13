@@ -11,17 +11,20 @@ public sealed class RiskFlowService : IRiskFlowService
     private readonly ISubmissionRegistry _submissionRegistry;
     private readonly IBindPreconditionService? _bindPreconditionService;
     private readonly IRiskProfileResolver _riskProfileResolver;
+    private readonly TimeProvider _timeProvider;
 
     public RiskFlowService(
         ISubmissionClearanceService submissionClearanceService,
         ISubmissionRegistry submissionRegistry,
         IBindPreconditionService? bindPreconditionService = null,
-        IRiskProfileResolver? riskProfileResolver = null)
+        IRiskProfileResolver? riskProfileResolver = null,
+        TimeProvider? timeProvider = null)
     {
         _submissionClearanceService = submissionClearanceService;
         _submissionRegistry = submissionRegistry;
         _bindPreconditionService = bindPreconditionService;
         _riskProfileResolver = riskProfileResolver ?? RiskProfileResolver.CreateDefault();
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public FinalRiskResponse Process(CanonicalRiskRequest request)
@@ -298,7 +301,7 @@ public sealed class RiskFlowService : IRiskFlowService
         // Line-of-business specific signals are produced by the matching risk profile.
         enrichments.AddRange(_riskProfileResolver.DeriveEnrichments(request));
 
-        if (request.Submission.UnderwritingYear < DateTime.UtcNow.Year)
+        if (request.Submission.UnderwritingYear < _timeProvider.GetUtcNow().Year)
         {
             enrichments.Add(new EnrichmentItem { Family = "Universal", Code = "PRIOR_YEAR_CONTEXT", Description = "Prior underwriting year context", Multiplier = 1.01m, IsDerived = true, IsBlocking = false });
         }
@@ -344,7 +347,7 @@ public sealed class RiskFlowService : IRiskFlowService
 
     private static string ResolveInsuredDecision(CanonicalRiskRequest request, decimal totalIncurred, int bestDistance, int blockingEnrichmentCount)
     {
-        if (blockingEnrichmentCount > 0 || totalIncurred > 25000m)
+        if (blockingEnrichmentCount > 0 || totalIncurred > request.Clearance.DeclineIncurredThreshold)
         {
             return "Decline";
         }
@@ -534,7 +537,7 @@ public sealed class RiskFlowService : IRiskFlowService
         var insuredEligible = insuredDecision == "AcceptableInsured";
         var autoCleared = request.Clearance.AutoClearanceEnabled
             && adjustedPremium <= request.Clearance.PremiumThreshold
-            && totalIncurred <= 5000m
+            && totalIncurred <= request.Clearance.AutoClearIncurredThreshold
             && checksComplete
             && bestDistance <= request.Clearance.FuzzyMatchTolerance
             && blockingEnrichmentCount == 0
