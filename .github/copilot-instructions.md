@@ -15,5 +15,5 @@ Quick summary (see `AGENTS.md` for full detail):
 - **Tests:** **NUnit 4** (not xUnit), AAA style, `FakeTimeProvider` for time.
 - **Before done:** `dotnet format --verify-no-changes`, `dotnet build` (no new warnings),
   `dotnet test` green.
-- Known, intentionally-unfixed issues are catalogued in `docs/KNOWN_ISSUES.md`.
+- Known, intentionally-unfixed issues are catalogued in `docs/project/KNOWN_ISSUES.md`.
 - Multi-device work: read and update `PROGRESS.md`.

@@ -4,12 +4,12 @@ How to run, extend, and manually exercise the test suite for **InsuranceIntegrat
 
 ## 1. Test stack
 
-- **Framework**: [NUnit 4.4](https://docs.nunit.org/) (see `../tests/InsuranceIntegration.Api.Tests/InsuranceIntegration.Api.Tests.csproj`)
+- **Framework**: [NUnit 4.4](https://docs.nunit.org/) (see `tests/InsuranceIntegration.Api.Tests/InsuranceIntegration.Api.Tests.csproj`)
 - **Test runner**: `dotnet test` via `Microsoft.NET.Test.Sdk` + `NUnit3TestAdapter`
 - **Coverage**: `coverlet.collector` is available for producing Cobertura reports
 - **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory (`DataSource=:memory:`) — no external DB required
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
-- **Global usings**: `global using NUnit.Framework;` lives in `../tests/InsuranceIntegration.Api.Tests/GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
+- **Global usings**: `global using NUnit.Framework;` lives in `tests/InsuranceIntegration.Api.Tests/GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
 - **Total tests**: 128 (and counting). Run `dotnet test` to see the current tally.
 
 ## 2. Run the tests
@@ -110,15 +110,15 @@ tests/InsuranceIntegration.Api.Tests/
   InsuranceIntegration.Api.Tests.csproj
 ```
 
-Folders mirror the production layout under `../src/InsuranceIntegration.Api/Services` and `../src/InsuranceIntegration.Api/Mappers`. Keep them aligned when adding new tests.
+Folders mirror the production layout under `src/InsuranceIntegration.Api/Services` and `src/InsuranceIntegration.Api/Mappers`. Keep them aligned when adding new tests.
 
 ## 4. Conventions
 
 - One test class per system-under-test, marked `public sealed class`.
-- Test method names describe behavior: `Method_ExpectedBehavior_WhenCondition`, e.g. `Process_AutoClearsWhenEligibilityRulesAreSatisfied` (`../tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:30`).
-- Use `[Test]` attributes; no fixture-level setup attributes are used — prefer constructor initialization + `IDisposable.Dispose` for teardown, e.g. `../tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs:10-27`.
+- Test method names describe behavior: `Method_ExpectedBehavior_WhenCondition`, e.g. `Process_AutoClearsWhenEligibilityRulesAreSatisfied` (`tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:30`).
+- Use `[Test]` attributes; no fixture-level setup attributes are used — prefer constructor initialization + `IDisposable.Dispose` for teardown, e.g. `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs:10-27`.
 - Use `Assert.That(actual, Is.EqualTo(expected))` NUnit constraint-model assertions (not classic `Assert.AreEqual`).
-- Shared request builders live alongside the tests that use them (e.g. `TestRiskRequestFactory` in `../tests/InsuranceIntegration.Api.Tests/Flows/TestRiskRequestFactory.cs`). Favor named optional parameters so each test tweaks only what it cares about.
+- Shared request builders live alongside the tests that use them (e.g. `TestRiskRequestFactory` in `tests/InsuranceIntegration.Api.Tests/Flows/TestRiskRequestFactory.cs`). Favor named optional parameters so each test tweaks only what it cares about.
 - Stubs and fakes sit next to the tests (e.g. `StubIngestHandler.cs`, `StubSourceRiskMapper.cs`). No mocking framework is in use.
 
 ## 5. Adding tests
@@ -127,7 +127,7 @@ Pick the pattern that matches what you are testing.
 
 ### 5.1 Pure service with simple dependencies
 
-Model after `../tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs`. Instantiate the service directly with its real collaborators when they are trivial:
+Model after `tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs`. Instantiate the service directly with its real collaborators when they are trivial:
 
 ```csharp
 var service = new RatingService(new ProductCatalog());
@@ -138,7 +138,7 @@ Assert.That(result.TechnicalPremium, Is.EqualTo(750m));
 
 ### 5.2 Canonical flow test using the shared factory
 
-Use `TestRiskRequestFactory.Create(...)` to build a `CanonicalRiskRequest` with deterministic defaults, then override only the fields your scenario needs — see `../tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:17-27`.
+Use `TestRiskRequestFactory.Create(...)` to build a `CanonicalRiskRequest` with deterministic defaults, then override only the fields your scenario needs — see `tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:17-27`.
 
 ```csharp
 var service = CreateService();
@@ -155,7 +155,7 @@ Assert.That(result.AdjustedPremium, Is.GreaterThan(result.BasePremium));
 
 ### 5.3 Source mapper test
 
-Model after `../tests/InsuranceIntegration.Api.Tests/Mappers/Risks/QuoteForgeRiskMapperTests.cs`:
+Model after `tests/InsuranceIntegration.Api.Tests/Mappers/Risks/QuoteForgeRiskMapperTests.cs`:
 
 ```csharp
 var mapper = new QuoteForgeRiskMapper();
@@ -170,11 +170,11 @@ var canonical = mapper.Map(request);
 ```
 
 - Always build `Payload` with `JsonSerializer.SerializeToElement(...)` so you exercise the same deserialization path the production code uses.
-- Pair every new mapper with a `CanMap` test and a `Map` test, and remember to register it in `../src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`.
+- Pair every new mapper with a `CanMap` test and a `Map` test, and remember to register it in `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`.
 
 ### 5.4 Persistence test with in-memory SQLite
 
-Use this pattern for any test that needs the real `IntegrationDbContext`. Based on `../tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs` and `../tests/InsuranceIntegration.Api.Tests/Clearance/EfCoreSubmissionRegistryTests.cs`:
+Use this pattern for any test that needs the real `IntegrationDbContext`. Based on `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs` and `tests/InsuranceIntegration.Api.Tests/Clearance/EfCoreSubmissionRegistryTests.cs`:
 
 ```csharp
 public sealed class MyPersistenceTests : IDisposable
@@ -214,11 +214,11 @@ Key details:
 
 ### 5.5 Ingest dispatcher / idempotency test
 
-Follow `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. Create a custom `IIngestHandler` implementation to assert on invocation counts, and pair the dispatcher with `InMemoryIdempotencyStore` to avoid EF Core setup when you only care about dispatch semantics.
+Follow `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. Create a custom `IIngestHandler` implementation to assert on invocation counts, and pair the dispatcher with `InMemoryIdempotencyStore` to avoid EF Core setup when you only care about dispatch semantics.
 
 ### 5.6 Adding a test double
 
-Stubs live in the same folder as the tests that need them. Keep the file `internal`-scoped to the test project, e.g. `../tests/InsuranceIntegration.Api.Tests/Ingest/StubIngestHandler.cs`. Prefer simple, readable stubs over reflection-heavy mock frameworks.
+Stubs live in the same folder as the tests that need them. Keep the file `internal`-scoped to the test project, e.g. `tests/InsuranceIntegration.Api.Tests/Ingest/StubIngestHandler.cs`. Prefer simple, readable stubs over reflection-heavy mock frameworks.
 
 ## 6. Matching tests to production code
 
@@ -226,29 +226,29 @@ Use this table when debugging a failure or extending a feature:
 
 | Failing / changed area | Start here |
 |---|---|
-| Endpoint routing or wiring | `../src/InsuranceIntegration.Api/Endpoints`, `../src/InsuranceIntegration.Api/Program.cs` |
-| Dependency registration | `../src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs` |
-| Risk flow behavior | `../tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs`, `.../RiskFlowTransactionTypeTests.cs`, `.../RiskFlowCoverageTests.cs` |
-| Bind preconditions (expired / wrong-status / already-bound quote) | `../tests/InsuranceIntegration.Api.Tests/Flows/BindPreconditionServiceTests.cs` |
-| Source mappers | `../tests/InsuranceIntegration.Api.Tests/Mappers/Risks/*` |
-| Ingest dispatch + idempotency | `../tests/InsuranceIntegration.Api.Tests/Ingest/*` |
-| Risk orchestration (relational write model + outbox enqueue) | `../tests/InsuranceIntegration.Api.Tests/Orchestration/RiskSubmissionOrchestratorTests.cs` |
-| Clearance / fuzzy matching | `../tests/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
-| Outbox background dispatch | `../tests/InsuranceIntegration.Api.Tests/Outbox/*` |
-| Cancellation / endorsement math (pure) | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
-| Cancellation / endorsement end-to-end (snapshot + DomainEvents) | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyLifecycleServiceTests.cs` |
-| Renewal pricing + lineage | `../tests/InsuranceIntegration.Api.Tests/Policies/PolicyRenewalServiceTests.cs` |
-| Rating / catalog math | `../tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
-| Correlation ID scoping | `../tests/InsuranceIntegration.Api.Tests/Correlation/*` |
-| Policy / Quote snapshot projection | `../tests/InsuranceIntegration.Api.Tests/Snapshots/PolicySnapshotProjectorTests.cs`, `.../SnapshotPipelineTests.cs` |
-| Snapshot rebuild from DomainEvents | `../tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotRebuildServiceTests.cs` |
-| DomainEvents row writes / idempotent replay | `../tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
+| Endpoint routing or wiring | `src/InsuranceIntegration.Api/Endpoints`, `src/InsuranceIntegration.Api/Program.cs` |
+| Dependency registration | `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs` |
+| Risk flow behavior | `tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs`, `.../RiskFlowTransactionTypeTests.cs`, `.../RiskFlowCoverageTests.cs` |
+| Bind preconditions (expired / wrong-status / already-bound quote) | `tests/InsuranceIntegration.Api.Tests/Flows/BindPreconditionServiceTests.cs` |
+| Source mappers | `tests/InsuranceIntegration.Api.Tests/Mappers/Risks/*` |
+| Ingest dispatch + idempotency | `tests/InsuranceIntegration.Api.Tests/Ingest/*` |
+| Risk orchestration (relational write model + outbox enqueue) | `tests/InsuranceIntegration.Api.Tests/Orchestration/RiskSubmissionOrchestratorTests.cs` |
+| Clearance / fuzzy matching | `tests/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
+| Outbox background dispatch | `tests/InsuranceIntegration.Api.Tests/Outbox/*` |
+| Cancellation / endorsement math (pure) | `tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
+| Cancellation / endorsement end-to-end (snapshot + DomainEvents) | `tests/InsuranceIntegration.Api.Tests/Policies/PolicyLifecycleServiceTests.cs` |
+| Renewal pricing + lineage | `tests/InsuranceIntegration.Api.Tests/Policies/PolicyRenewalServiceTests.cs` |
+| Rating / catalog math | `tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
+| Correlation ID scoping | `tests/InsuranceIntegration.Api.Tests/Correlation/*` |
+| Policy / Quote snapshot projection | `tests/InsuranceIntegration.Api.Tests/Snapshots/PolicySnapshotProjectorTests.cs`, `.../SnapshotPipelineTests.cs` |
+| Snapshot rebuild from DomainEvents | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotRebuildServiceTests.cs` |
+| DomainEvents row writes / idempotent replay | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
 
 ## 7. Manual end-to-end testing
 
-Automated tests cover services in isolation. Use these scripted recipes to exercise the running API. Start the app first (see `./USAGE.md`) and substitute your actual port.
+Automated tests cover services in isolation. Use these scripted recipes to exercise the running API. Start the app first (see `docs/guides/USAGE.md`) and substitute your actual port.
 
-For richer per-endpoint scenarios with mandatory-field tables and business-rule annotations, see `./API_EXAMPLES.md`. Reusable payloads live in `./examples/` and can be POSTed via `Invoke-RestMethod -InFile`.
+For richer per-endpoint scenarios with mandatory-field tables and business-rule annotations, see `docs/reference/API_EXAMPLES.md`. Reusable payloads live in `docs/reference/examples/` and can be POSTed via `Invoke-RestMethod -InFile`.
 
 ### 7.1 Smoke test
 
@@ -303,7 +303,7 @@ $again = Invoke-RestMethod `
 $response.outcome.entityId -eq $again.outcome.entityId
 ```
 
-Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` — this matches the behavior asserted by `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
+Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` — this matches the behavior asserted by `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
 
 ### 7.4 Canonical risk submission
 
@@ -348,7 +348,7 @@ $result.cancellation.returnPremium # 6032.97 for the sample above
 $result.domainEventType            # PolicyCancelled
 ```
 
-Expected math: `earnedPremium=5967.03`, `unearnedPremium=6032.97`, `returnPremium=6032.97` (see §7.9 in `./USAGE.md`). The same values are asserted by `PolicyAdjustmentServiceTests`; `PolicyLifecycleServiceTests` further asserts the snapshot transition and the `PolicyCancelled` domain event row.
+Expected math: `earnedPremium=5967.03`, `unearnedPremium=6032.97`, `returnPremium=6032.97` (see §7.9 in `docs/guides/USAGE.md`). The same values are asserted by `PolicyAdjustmentServiceTests`; `PolicyLifecycleServiceTests` further asserts the snapshot transition and the `PolicyCancelled` domain event row.
 
 #### 7.5.2 Endorsement
 
@@ -432,7 +432,7 @@ You can also confirm rows move from `DispatchedAtUtc IS NULL` to a set timestamp
 sqlite3 .\integration.db "SELECT EventId, EventType, DispatchedAtUtc FROM OutboxMessages ORDER BY OccurredAtUtc DESC LIMIT 10;"
 ```
 
-The automated equivalent lives in `../tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs`.
+The automated equivalent lives in `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs`.
 
 ### 7.7 Correlation tracing
 
@@ -450,7 +450,7 @@ The same value is attached to the request's log scope on the server side.
 ## 8. Troubleshooting test failures
 
 - **`SqliteException: SQLite Error 1: 'no such table: ...'`** — the test forgot to call `context.Database.EnsureCreated()`, or the `SqliteConnection` was closed before the test ran. See §5.4 for the correct pattern.
-- **`InvalidOperationException: No risk mapper registered for source 'X' and message type 'Y'.`** — a new mapper was added but not registered in `../src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`. Register it and rerun.
-- **Flaky time-sensitive tests** — inject `TimeProvider` via the constructor (as `../src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs` does). Use `TimeProvider.System` in tests or a controllable fake if you need to pin `now`.
+- **`InvalidOperationException: No risk mapper registered for source 'X' and message type 'Y'.`** — a new mapper was added but not registered in `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`. Register it and rerun.
+- **Flaky time-sensitive tests** — inject `TimeProvider` via the constructor (as `src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs` does). Use `TimeProvider.System` in tests or a controllable fake if you need to pin `now`.
 - **`dotnet test` says "No test is available in ..."** — confirm the test class is `public` and methods are annotated with `[Test]`. `internal` classes are not discovered.
 - **Coverage file missing** — the `--collect` argument must be quoted exactly as `"XPlat Code Coverage"`; otherwise PowerShell splits it into multiple tokens.

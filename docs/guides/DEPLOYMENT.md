@@ -11,7 +11,7 @@ From the repository root:
 docker build -t insurance-integration .
 ```
 
-The multi-stage [Dockerfile](../Dockerfile) restores/publishes with the .NET 10 SDK image and runs
+The multi-stage [Dockerfile](../../Dockerfile) restores/publishes with the .NET 10 SDK image and runs
 on the smaller ASP.NET runtime image as a non-root user.
 
 ## Run the container

@@ -1,0 +1,11 @@
+{
+  "policyReference": "POL-7781",
+  "annualPremium": 10000.00,
+  "inceptionDate": "2026-01-01",
+  "expiryDate": "2026-12-31",
+  "cancellationDate": "2026-04-01",
+  "reinstatementDate": "2026-05-01",
+  "reinstatementFee": 75.00,
+  "chargeLapsedPremium": true,
+  "reason": "Outstanding balance paid; cover restored with no gap"
+}

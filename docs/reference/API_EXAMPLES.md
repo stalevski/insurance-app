@@ -1,6 +1,6 @@
 # API Examples — Manual Testing
 
-This guide pairs every `docs/examples/*.json` file with the endpoint it targets, the **mandatory** vs *optional* fields, and the business rules each scenario exercises. Use it together with `./USAGE.md` (which has the high-level run instructions).
+This guide pairs every `docs/reference/examples/*.json` file with the endpoint it targets, the **mandatory** vs *optional* fields, and the business rules each scenario exercises. Use it together with `docs/guides/USAGE.md` (which has the high-level run instructions).
 
 > Prefer Postman? See [§9 Testing with Postman](#9-testing-with-postman) for the curated collection and three import paths.
 
@@ -23,7 +23,7 @@ curl (works in pwsh too if you use `curl.exe`):
 ```powershell
 curl.exe -X POST http://localhost:5000/api/v1/ingest `
   -H "Content-Type: application/json" `
-  --data-binary "@docs/examples/ingest-contoso-risk-submission.json"
+  --data-binary "@docs/reference/examples/ingest-contoso-risk-submission.json"
 ```
 
 Add `-H "X-Correlation-Id: <guid>"` to trace the request through the logs.
@@ -38,7 +38,7 @@ Add `-H "X-Correlation-Id: <guid>"` to trace the request through the logs.
 |---|---|---|
 | `id` | string | Unique per `source`. Drives idempotency. |
 | `source` | string | e.g. `CONTOSO_UW`. Some handlers route on `(source,type)`, others only on `type`. |
-| `type` | string | Selects the handler — see the dispatch matrix in `./USAGE.md`. |
+| `type` | string | Selects the handler — see the dispatch matrix in `docs/guides/USAGE.md`. |
 | `schemaVersion` | string | Caller-managed. |
 | `occurredAtUtc` | RFC 3339 datetime | Source event time. |
 | `data` | JSON object | Source-specific payload — shape depends on `(source,type)`. |
@@ -269,7 +269,7 @@ The richer the shape, the more business rules fire. Canonical structure:
 
 **Optional**: `basis` (default `ProRata`), `shortRatePenaltyPercent` (default `0.10`), `minimumRetainedPremium` (default `0`).
 
-Examples (already in `docs/examples/`): create from the templates in `./USAGE.md` §7.9. Pro-rata math with the standard sample yields `earnedPremium = 5967.03`, `unearnedPremium = 6032.97`. Switching to `"basis": "ShortRate"` with `0.10` penalty withholds 10% of the unearned portion.
+Examples (already in `docs/reference/examples/`): create from the templates in `docs/guides/USAGE.md` §7.9. Pro-rata math with the standard sample yields `earnedPremium = 5967.03`, `unearnedPremium = 6032.97`. Switching to `"basis": "ShortRate"` with `0.10` penalty withholds 10% of the unearned portion.
 
 ---
 
@@ -317,7 +317,7 @@ Invoke-RestMethod "http://localhost:5000/api/v1/products/COMMERCIAL_PROPERTY/rat
 - If `annualRevenue >= largeAccountThreshold`, a `largeAccountLoadAmount` of `revenueBasedPremium * largeAccountLoad` is added.
 - `technicalPremium = max(revenueBasedPremium + load, minimumPremium)`.
 
-Catalog values (`COMMERCIAL_PROPERTY`, `LIABILITY`, `CYBER`, `MOTOR`) are documented in `./USAGE.md` §7.3.
+Catalog values (`COMMERCIAL_PROPERTY`, `LIABILITY`, `CYBER`, `MOTOR`) are documented in `docs/guides/USAGE.md` §7.3.
 
 ---
 
@@ -331,7 +331,7 @@ Catalog values (`COMMERCIAL_PROPERTY`, `LIABILITY`, `CYBER`, `MOTOR`) are docume
 | `POST /api/v1/policies/cancellations` | `policyReference`, `annualPremium`, `inceptionDate`, `expiryDate`, `cancellationDate` |
 | `POST /api/v1/policies/endorsements` | `policyReference`, `currentAnnualPremium`, `newAnnualPremium`, `inceptionDate`, `expiryDate`, `effectiveDate` |
 
-Mandatory **`data` / `payload` fields** by `(source, type)` are listed in §1 above and again per source in `./USAGE.md` §7.5–7.6.
+Mandatory **`data` / `payload` fields** by `(source, type)` are listed in §1 above and again per source in `docs/guides/USAGE.md` §7.5–7.6.
 
 ---
 
@@ -377,10 +377,10 @@ Three options, in increasing order of setup effort and expressiveness.
 
 ### 9.1 Option A — Import the curated collection (recommended)
 
-Two files live under `./postman/`:
+Two files live under `docs/reference/postman/`:
 
-- `./postman/InsuranceIntegration.postman_collection.json` — every endpoint plus the key business scenarios from §1–§5, organized in folders (`Health & catalog`, `Schemas`, `Ingest - Risk`, `Ingest - Lookup`, `Ingest - Claims`, `Ingest - Billing`, `Ingest - Compliance`, `Risk - Canonical`, `Policies`, `Snapshots`).
-- `./postman/InsuranceIntegration.postman_environment.json` — sets `baseUrl` to `http://localhost:5000`.
+- `docs/reference/postman/InsuranceIntegration.postman_collection.json` — every endpoint plus the key business scenarios from §1–§5, organized in folders (`Health & catalog`, `Schemas`, `Ingest - Risk`, `Ingest - Lookup`, `Ingest - Claims`, `Ingest - Billing`, `Ingest - Compliance`, `Risk - Canonical`, `Policies`, `Snapshots`).
+- `docs/reference/postman/InsuranceIntegration.postman_environment.json` — sets `baseUrl` to `http://localhost:5000`.
 
 Steps:
 
@@ -403,17 +403,17 @@ If you'd rather generate every endpoint from the live API:
 
 1. Start the API in `Development` mode.
 2. In Postman: **File → Import → Link** and paste `http://localhost:5000/openapi/v1.json`.
-3. Postman creates a collection mirroring the OpenAPI document. You'll get all routes but no pre-filled request bodies — you'll fill those in manually (use the templates in §1–§5 or copy from `./examples/*.json`).
+3. Postman creates a collection mirroring the OpenAPI document. You'll get all routes but no pre-filled request bodies — you'll fill those in manually (use the templates in §1–§5 or copy from `docs/reference/examples/*.json`).
 
 Trade-offs vs option A: always in sync with the latest endpoints, but no scenario-specific bodies, no pre-request scripts, and no business-rule annotations.
 
-### 9.3 Option C — Manual request from `docs/examples/*.json`
+### 9.3 Option C — Manual request from `docs/reference/examples/*.json`
 
 For one-off testing without importing anything:
 
 1. **New Request** → set method to `POST` and URL to e.g. `http://localhost:5000/api/v1/risks`.
 2. **Headers** tab → add `Content-Type: application/json` and (optionally) `X-Correlation-Id: <your-guid>`.
-3. **Body** tab → choose **raw** + **JSON**, then paste the contents of any `docs/examples/*.json` file.
+3. **Body** tab → choose **raw** + **JSON**, then paste the contents of any `docs/reference/examples/*.json` file.
 4. **Send**.
 
 ### 9.4 Postman tips that matter for this API

@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-11_
+_Last updated: 2026-06-13_
 
 ## Vision
 
@@ -17,7 +17,7 @@ Docker-capable VPS.
 
 - [x] **Phase 0 — AI-agnostic context + continuity.** `AGENTS.md`, `.github/copilot-instructions.md`,
   `.windsurf/rules/{architecture,testing}.md`, and this `PROGRESS.md`.
-- [x] **Phase 1 — Document bugs.** `docs/KNOWN_ISSUES.md` cataloguing the verified issues found during
+- [x] **Phase 1 — Document bugs.** `docs/project/KNOWN_ISSUES.md` cataloguing the verified issues found during
   analysis (documentation only; no code changes).
 - [x] **Phase 2 — Per-line-of-business risk models.** `LineOfBusiness` enum + optional typed detail
   objects (Property/Cyber/Motor/Liability) on `CanonicalRiskRequest` + `IRiskTypeProfile` strategy
@@ -30,19 +30,27 @@ Docker-capable VPS.
   read-only **DB browser**. UI calls services via an `IUiGateway` facade that opens a fresh DI
   scope per operation (no long-lived circuit-scoped `DbContext`).
 - [ ] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
-  Dockerfile, `.dockerignore`, and `docs/DEPLOYMENT.md` are written (2026-06-11) but the image
+  Dockerfile, `.dockerignore`, and `docs/guides/DEPLOYMENT.md` are written (2026-06-11) but the image
   build is **not yet verified** — Docker daemon was not running on the dev machine. Run
   `docker build -t insurance-integration .` to validate.
+- [x] **Policy reinstatement (lifecycle gap closed).** `POST /api/v1/policies/reinstatements`
+  restores a cancelled policy to in-force (status/phase `Reinstated`, `PolicyReinstated` event in
+  one EF transaction). Added `ReinstatementRequest`/`ReinstatementResult`,
+  `PolicyAdjustmentService.CalculateReinstatement` (lapse-day pro-rata math, optional admin fee,
+  continuous-cover vs gap-in-cover handling), `IPolicyLifecycleService.ApplyReinstatement` (rejects
+  non-cancelled policies), the `Reinstated` policy phase in `SnapshotMerge`, and the `Reinstated`
+  stage in the UI lifecycle diagram. 6 new tests, 1 example JSON (2026-06-13). This was the last
+  unimplemented item in the README "Target product direction" lifecycle list.
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
   M2 (installment rounding residual goes to the last installment). 6 new regression tests;
-  details moved to the "Fixed" section of `docs/KNOWN_ISSUES.md`.
+  details moved to the "Fixed" section of `docs/project/KNOWN_ISSUES.md`.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 134 tests pass** (128 + 6 regression tests from
-  the 2026-06-11 bug-fix pass). UI added in Phase 3 introduces
+- Build green (`dotnet build -c Release`); **all 140 tests pass** (134 + 6 reinstatement tests from
+  the 2026-06-13 lifecycle pass). UI added in Phase 3 introduces
   no new warnings and no new tests (UI is a thin facade over already-tested services).
 - NuGet packages bumped to latest (2026-06-11): EF Core / AspNetCore.OpenApi 10.0.9,
   Swashbuckle.SwaggerUI 10.2.1, NUnit 4.6.1, NUnit3TestAdapter 6.2.0, Test.Sdk 18.6.0,
@@ -54,8 +62,12 @@ Docker-capable VPS.
 - Smoke-tested: app boots in Development, `/`, `/ingest`, `/quotes`, `/policies`, `/events`,
   `/database`, `/health`, and `/app.css` all return 200.
 - Test framework: **NUnit 4** (+ `FakeTimeProvider`).
+- **Docs reorganized (2026-06-13):** all documentation grouped under `docs/{guides,reference,project}/`
+  with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
+  normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
+  no code/build/test impact.
 - **Working on now:** Phase 4 wrap-up — verify the Docker image builds and runs (`docker build`,
-  then the run command in `docs/DEPLOYMENT.md`); Docker daemon was unavailable when the
+  then the run command in `docs/guides/DEPLOYMENT.md`); Docker daemon was unavailable when the
   Dockerfile was authored.
 
 ### Phase 3 UI map (where things live)
@@ -98,15 +110,17 @@ Docker-capable VPS.
 ## Next steps
 
 1. Verify Phase 4: build the image (`docker build -t insurance-integration .`), run it with the
-   `/data` volume per `docs/DEPLOYMENT.md`, and confirm `/health` + UI work in the container.
+   `/data` volume per `docs/guides/DEPLOYMENT.md`, and confirm `/health` + UI work in the container.
 2. Gate the read-only DB browser behind Development or a feature flag before production exposure
-   (interim: proxy-level basic auth / IP allowlist on `/database`, as noted in `docs/DEPLOYMENT.md`).
+   (interim: proxy-level basic auth / IP allowlist on `/database`, as noted in `docs/guides/DEPLOYMENT.md`).
 3. Remaining known issues: M1 (billing fallback due date), M3 (hard-coded underwriting
    thresholds), M4 (`DateTime.UtcNow` in mappers/handlers — inject `TimeProvider`), M5 (snapshot
-   premium not cleared on explicit zero). See `docs/KNOWN_ISSUES.md`.
-4. UI polish (optional): add submission/quote/policy lifecycle action forms (cancel/endorse/renew)
-   that post to the existing `Endpoints/PolicyEndpoints.cs` routes; today those are reachable via
-   Swagger only.
+   premium not cleared on explicit zero). See `docs/project/KNOWN_ISSUES.md`.
+4. UI polish (optional): add submission/quote/policy lifecycle action forms
+   (cancel/endorse/renew/reinstate) that post to the existing `Endpoints/PolicyEndpoints.cs`
+   routes; today those are reachable via Swagger only.
+5. Feature backlog: a full enumeration of candidate functionality (with add/defer/skip verdicts)
+   lives in `docs/project/FEATURE_PLAN.html` — open it in a browser to pick the next feature.
 
 ## Open questions / to confirm with hosting provider
 

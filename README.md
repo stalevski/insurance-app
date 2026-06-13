@@ -102,6 +102,7 @@ Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
 - `POST /api/v1/policies/cancellations`
 - `POST /api/v1/policies/endorsements`
 - `POST /api/v1/policies/renewals`
+- `POST /api/v1/policies/reinstatements` (restore a cancelled policy; `PolicyReinstated` event)
 
 Replay / sanity:
 
@@ -114,7 +115,7 @@ Schemas:
 - `GET /api/v1/schemas/canonical/risk-request`
 - `GET /api/v1/schemas/final/risk-response`
 
-For request / response shapes and examples per endpoint see [docs/USAGE.md §7](docs/USAGE.md). Swagger UI is exposed at `/swagger` in `Development`.
+For request / response shapes and examples per endpoint see [docs/guides/USAGE.md §7](docs/guides/USAGE.md). Swagger UI is exposed at `/swagger` in `Development`.
 
 ## Web UI (Blazor Server)
 
@@ -291,7 +292,7 @@ Each business state change flows through three persistence tiers, each with a di
 | Event log (canonical) | `DomainEvents` | per-aggregate timeline; cross-aggregate queries | rebuild any snapshot from its events |
 | Aggregate state | `PolicySnapshots`, `QuoteSnapshots` | one-row read of the latest state | n/a (this *is* the rebuilt state) |
 
-Domain events are written in the same EF transaction as the snapshot mutation, so the two layers can never disagree. `POST /api/v1/snapshots/policies/{ref}/rebuild` reads every event for an aggregate and runs them through the projector to verify (or recover) the live snapshot. See [docs/USAGE.md §6 "Domain events"](docs/USAGE.md) for the full schema and replay semantics.
+Domain events are written in the same EF transaction as the snapshot mutation, so the two layers can never disagree. `POST /api/v1/snapshots/policies/{ref}/rebuild` reads every event for an aggregate and runs them through the projector to verify (or recover) the live snapshot. See [docs/guides/USAGE.md §6 "Domain events"](docs/guides/USAGE.md) for the full schema and replay semantics.
 
 ## Current implemented vertical slice
 
@@ -317,8 +318,20 @@ dotnet build .\InsuranceIntegration.sln
 
 ## Documentation
 
-- [docs/USAGE.md](docs/USAGE.md) — build, run, configuration, and per-endpoint request/response examples.
-- [docs/TESTING.md](docs/TESTING.md) — running the test suite, conventions, and manual end-to-end recipes.
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — Docker image build and VPS deployment guide.
-- [docs/API_EXAMPLES.md](docs/API_EXAMPLES.md) — manual-testing pack: mandatory fields, business rules, and per-scenario JSON payloads under `docs/examples/`.
-- [docs/postman/](docs/postman) — curated Postman collection + environment ready to import (see `docs/API_EXAMPLES.md` §9).
+All project docs live under **[docs/](docs/README.md)** — see that index for the full map. Organized by purpose:
+
+**Guides** (`docs/guides/`)
+
+- [docs/guides/USAGE.md](docs/guides/USAGE.md) — build, run, configuration, and per-endpoint request/response examples.
+- [docs/guides/TESTING.md](docs/guides/TESTING.md) — running the test suite, conventions, and manual end-to-end recipes.
+- [docs/guides/DEPLOYMENT.md](docs/guides/DEPLOYMENT.md) — Docker image build and VPS deployment guide.
+
+**Reference** (`docs/reference/`)
+
+- [docs/reference/API_EXAMPLES.md](docs/reference/API_EXAMPLES.md) — manual-testing pack: mandatory fields, business rules, and per-scenario JSON payloads under `docs/reference/examples/`.
+- [docs/reference/postman/](docs/reference/postman) — curated Postman collection + environment ready to import (see `docs/reference/API_EXAMPLES.md` §9).
+
+**Project** (`docs/project/`)
+
+- [docs/project/KNOWN_ISSUES.md](docs/project/KNOWN_ISSUES.md) — documented, intentionally-unfixed issues.
+- [docs/project/FEATURE_PLAN.html](docs/project/FEATURE_PLAN.html) — candidate-feature backlog with add/defer/skip verdicts (open in a browser).

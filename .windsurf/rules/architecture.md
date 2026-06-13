@@ -23,4 +23,4 @@ The portable source of truth is `AGENTS.md` at the repo root — read it for ful
   - Migrations are generated via `dotnet ef`, never hand-edited.
 - **Before finishing a change:** `dotnet format --verify-no-changes`, `dotnet build` (no new
   warnings), `dotnet test` green.
-- Documented-but-unfixed issues live in `docs/KNOWN_ISSUES.md`. Multi-device continuity: `PROGRESS.md`.
+- Documented-but-unfixed issues live in `docs/project/KNOWN_ISSUES.md`. Multi-device continuity: `PROGRESS.md`.

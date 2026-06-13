@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "InsuranceIntegration.Api",
-    "description": "Curated Postman collection for the InsuranceIntegration.Api service. Mirrors the scenarios in docs/API_EXAMPLES.md. Set `baseUrl` in the matching environment file (defaults to http://localhost:5000). Each request injects a fresh `X-Correlation-Id` via the collection-level pre-request script so log scopes are unique per send.",
+    "description": "Curated Postman collection for the InsuranceIntegration.Api service. Mirrors the scenarios in docs/reference/API_EXAMPLES.md. Set `baseUrl` in the matching environment file (defaults to http://localhost:5000). Each request injects a fresh `X-Correlation-Id` via the collection-level pre-request script so log scopes are unique per send.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

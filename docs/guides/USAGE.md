@@ -2,11 +2,11 @@
 
 How to build, run, and exercise the **InsuranceIntegration.Api** service.
 
-The service is a headless ASP.NET Core Web API (see `../src/InsuranceIntegration.Api/Program.cs`). All interaction is HTTP/JSON. In `Development` it exposes Swagger UI at `/swagger` for interactive exploration.
+The service is a headless ASP.NET Core Web API (see `src/InsuranceIntegration.Api/Program.cs`). All interaction is HTTP/JSON. In `Development` it exposes Swagger UI at `/swagger` for interactive exploration.
 
 ## 1. Prerequisites
 
-- **.NET SDK 10.0** (matches `TargetFramework` in `../src/InsuranceIntegration.Api/InsuranceIntegration.Api.csproj`)
+- **.NET SDK 10.0** (matches `TargetFramework` in `src/InsuranceIntegration.Api/InsuranceIntegration.Api.csproj`)
 - Windows PowerShell or any shell capable of running `dotnet`
 - No external database required — SQLite is used by default and created on first run
 
@@ -32,9 +32,9 @@ On startup the host logs the listening URL (by default something like `http://lo
 
 The app will:
 
-1. Apply any pending EF Core migrations against the configured SQLite database, or create the schema if no migrations have been applied (`../src/InsuranceIntegration.Api/Program.cs:14-25`).
-2. Start the `OutboxDispatcher` background service which polls the `OutboxMessages` table every 2 seconds and marks pending events as dispatched (`../src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`).
-3. Wire up the `X-Correlation-Id` middleware (`../src/InsuranceIntegration.Api/Middleware/CorrelationIdMiddleware.cs`).
+1. Apply any pending EF Core migrations against the configured SQLite database, or create the schema if no migrations have been applied (`src/InsuranceIntegration.Api/Program.cs:14-25`).
+2. Start the `OutboxDispatcher` background service which polls the `OutboxMessages` table every 2 seconds and marks pending events as dispatched (`src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`).
+3. Wire up the `X-Correlation-Id` middleware (`src/InsuranceIntegration.Api/Middleware/CorrelationIdMiddleware.cs`).
 
 ### Override the listening URL
 
@@ -45,7 +45,7 @@ dotnet run --project .\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csp
 
 ## 4. Configuration
 
-Configuration is read via `IConfiguration` and applied in `../src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`.
+Configuration is read via `IConfiguration` and applied in `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`.
 
 ### Database connection string
 
@@ -75,7 +75,7 @@ The context (`IntegrationDbContext`) owns nine tables:
 | `Quotes` | Normalized relational quote row keyed by `QuoteReference`, linked back to its submission |
 | `Policies` | Normalized relational policy row keyed by `PolicyReference`, linked to its submission/quote |
 
-The last three form a normalized relational write-model that runs alongside the JSON snapshots; they carry a `RowVersion` optimistic-concurrency token stamped by `RowVersionInterceptor` on every insert/update (`../src/InsuranceIntegration.Api/Persistence/RowVersionInterceptor.cs`). Generated migrations live in `../src/InsuranceIntegration.Api/Migrations`.
+The last three form a normalized relational write-model that runs alongside the JSON snapshots; they carry a `RowVersion` optimistic-concurrency token stamped by `RowVersionInterceptor` on every insert/update (`src/InsuranceIntegration.Api/Persistence/RowVersionInterceptor.cs`). Generated migrations live in `src/InsuranceIntegration.Api/Migrations`.
 
 ## 5. Discover the API
 
@@ -100,13 +100,13 @@ GET /api/v1/schemas/canonical/risk-request
 GET /api/v1/schemas/final/risk-response
 ```
 
-Source: `../src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`.
+Source: `src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`.
 
 ## 6. Cross-cutting concerns
 
 ### Correlation IDs
 
-Every request passes through `CorrelationIdMiddleware`. It reads/generates two headers (`../src/InsuranceIntegration.Api/Middleware/CorrelationIdMiddleware.cs`):
+Every request passes through `CorrelationIdMiddleware`. It reads/generates two headers (`src/InsuranceIntegration.Api/Middleware/CorrelationIdMiddleware.cs`):
 
 - **`X-Correlation-Id`** — If the caller sends a valid GUID it is reused; otherwise a new UUIDv7 is generated. It is echoed back on the response and included in log scopes.
 - **`X-Causation-Id`** — Optional GUID. When present it is added to log scopes.
@@ -115,11 +115,11 @@ Always pass `X-Correlation-Id` from upstream systems to make tracing possible.
 
 ### Idempotency for ingest
 
-`POST /api/v1/ingest` is idempotent per `(Source, Id)`. When the same envelope `Id` is sent again for the same `Source`, the dispatcher returns the previously stored `IngestReceipt` without re-running the handler (`../src/InsuranceIntegration.Api/Services/Ingest/IngestDispatcher.cs`). This is persisted in `IngestEntries` via `EfCoreIdempotencyStore` and can also be retrieved later with `GET /api/v1/ingest/{source}/{envelopeId}`.
+`POST /api/v1/ingest` is idempotent per `(Source, Id)`. When the same envelope `Id` is sent again for the same `Source`, the dispatcher returns the previously stored `IngestReceipt` without re-running the handler (`src/InsuranceIntegration.Api/Services/Ingest/IngestDispatcher.cs`). This is persisted in `IngestEntries` via `EfCoreIdempotencyStore` and can also be retrieved later with `GET /api/v1/ingest/{source}/{envelopeId}`.
 
 ### Outbox
 
-Canonical flows (risk, claim, billing, compliance) can enqueue events via `IOutboxWriter` into the `OutboxMessages` table. The `OutboxDispatcher` background service polls every 2 seconds, batches up to 50 pending rows, logs a dispatch line per event, and marks them dispatched (`../src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`). Real transport integration is not implemented yet — logs are the current sink.
+Canonical flows (risk, claim, billing, compliance) can enqueue events via `IOutboxWriter` into the `OutboxMessages` table. The `OutboxDispatcher` background service polls every 2 seconds, batches up to 50 pending rows, logs a dispatch line per event, and marks them dispatched (`src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`). Real transport integration is not implemented yet — logs are the current sink.
 
 ### Domain snapshots (consolidated views per business key)
 
@@ -145,7 +145,7 @@ SourceIngestEnvelope
   → SaveChangesAsync (single EF transaction) → IngestReceipt (returned to caller)
 ```
 
-Sources `../src/InsuranceIntegration.Api/Services/Orchestration/RiskSubmissionOrchestrator.cs`, `../src/InsuranceIntegration.Api/Services/Snapshots/RiskSnapshotRouter.cs`, `PolicySnapshotProjector.cs`, `QuoteSnapshotProjector.cs`.
+Sources `src/InsuranceIntegration.Api/Services/Orchestration/RiskSubmissionOrchestrator.cs`, `src/InsuranceIntegration.Api/Services/Snapshots/RiskSnapshotRouter.cs`, `PolicySnapshotProjector.cs`, `QuoteSnapshotProjector.cs`.
 
 **Merge rules** (`SnapshotMerge.cs`):
 
@@ -184,7 +184,7 @@ Three storage tiers, three replay scopes:
 | `DomainEvents` (canonical events) | event payloads | any snapshot from its events |
 | `PolicySnapshot` / `QuoteSnapshot` | the rebuilt state | fast reads |
 
-Sources: `../src/InsuranceIntegration.Api/Services/Events/DomainEventLog.cs`, `../src/InsuranceIntegration.Api/Services/Snapshots/SnapshotRebuildService.cs`.
+Sources: `src/InsuranceIntegration.Api/Services/Events/DomainEventLog.cs`, `src/InsuranceIntegration.Api/Services/Snapshots/SnapshotRebuildService.cs`.
 
 ### Quote versioning, validity, and bind preconditions
 
@@ -204,11 +204,11 @@ Before a `PolicyBind` produces a `Bound` policy, `BindPreconditionService` check
 - `now > ValidUntilUtc` (expired)
 - the quote's `QuoteStatus` is not in `{Quoted, Indicative}`
 
-A rejected bind produces `policyStatus=Draft`, `finalStatus=BindRejected`, and `bindRejectionReason` populated on the `FinalRiskResponse`. The QuoteSnapshot mirrors the rejection reason on `lifecycle.bindRejectionReason`. Source: `../src/InsuranceIntegration.Api/Services/Flows/BindPreconditionService.cs`.
+A rejected bind produces `policyStatus=Draft`, `finalStatus=BindRejected`, and `bindRejectionReason` populated on the `FinalRiskResponse`. The QuoteSnapshot mirrors the rejection reason on `lifecycle.bindRejectionReason`. Source: `src/InsuranceIntegration.Api/Services/Flows/BindPreconditionService.cs`.
 
 ## 7. Endpoint reference
 
-All endpoints are mapped in `Program.cs` via the route groups under `../src/InsuranceIntegration.Api/Endpoints`.
+All endpoints are mapped in `Program.cs` via the route groups under `src/InsuranceIntegration.Api/Endpoints`.
 
 Summary:
 
@@ -225,6 +225,7 @@ Summary:
 | `POST` | `/api/v1/policies/cancellations` | Apply a cancellation to an existing policy (math + snapshot + `PolicyCancelled` event) |
 | `POST` | `/api/v1/policies/endorsements` | Apply a mid-term endorsement (math + snapshot + `PolicyEndorsed` event) |
 | `POST` | `/api/v1/policies/renewals` | Generate a renewal quote with loss-ratio and exposure-driven re-pricing |
+| `POST` | `/api/v1/policies/reinstatements` | Restore a cancelled policy (lapse math + snapshot + `PolicyReinstated` event) |
 | `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
 | `POST` | `/api/v1/snapshots/policies/{policyReference}/rebuild` | Replay the policy's `DomainEvents` through the projector and return the rebuilt snapshot |
@@ -240,7 +241,7 @@ Summary:
 
 ### 7.1 `GET /health`
 
-Minimal liveness check (`../src/InsuranceIntegration.Api/Endpoints/HealthEndpoints.cs`).
+Minimal liveness check (`src/InsuranceIntegration.Api/Endpoints/HealthEndpoints.cs`).
 
 **Request**
 
@@ -262,7 +263,7 @@ Invoke-RestMethod http://localhost:5000/health
 
 ### 7.2 `GET /api/v1/source-systems`
 
-Returns the catalog of supported source systems, each with a small illustrative `examplePayload` that reflects what the source would send inside a `SourceIngestEnvelope.Data` (`../src/InsuranceIntegration.Api/Services/Catalog/SourceSystemCatalogService.cs`).
+Returns the catalog of supported source systems, each with a small illustrative `examplePayload` that reflects what the source would send inside a `SourceIngestEnvelope.Data` (`src/InsuranceIntegration.Api/Services/Catalog/SourceSystemCatalogService.cs`).
 
 **Request**
 
@@ -293,7 +294,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/source-systems
 
 ### 7.3 `GET /api/v1/products`
 
-Returns the rating-aware product catalog (`../src/InsuranceIntegration.Api/Services/Products/ProductCatalog.cs`).
+Returns the rating-aware product catalog (`src/InsuranceIntegration.Api/Services/Products/ProductCatalog.cs`).
 
 **Response (200 OK)**
 
@@ -310,7 +311,7 @@ Returns the rating-aware product catalog (`../src/InsuranceIntegration.Api/Servi
 
 ### 7.4 `GET /api/v1/products/{productCode}/rating`
 
-On-demand rating for a given product and insured revenue. Reasons are populated in order of application (`../src/InsuranceIntegration.Api/Services/Pricing/RatingService.cs`).
+On-demand rating for a given product and insured revenue. Reasons are populated in order of application (`src/InsuranceIntegration.Api/Services/Pricing/RatingService.cs`).
 
 **Query parameters**
 
@@ -346,7 +347,7 @@ Unknown product codes yield HTTP `500` with an `InvalidOperationException` messa
 
 ### 7.5 `POST /api/v1/ingest`
 
-The generic ingest endpoint. Dispatches to a handler selected by `(Source, Type)` with idempotency keyed on `(Source, Id)` (`../src/InsuranceIntegration.Api/Endpoints/IngestEndpoints.cs:12-16`, `../src/InsuranceIntegration.Api/Services/Ingest/IngestDispatcher.cs`).
+The generic ingest endpoint. Dispatches to a handler selected by `(Source, Type)` with idempotency keyed on `(Source, Id)` (`src/InsuranceIntegration.Api/Endpoints/IngestEndpoints.cs:12-16`, `src/InsuranceIntegration.Api/Services/Ingest/IngestDispatcher.cs`).
 
 **Envelope shape** (`SourceIngestEnvelope`)
 
@@ -371,7 +372,7 @@ The generic ingest endpoint. Dispatches to a handler selected by `(Source, Type)
 | *any* | `InstallmentSchedule` | `BillingIngestHandler` | `InstallmentSchedulePayload` |
 | *any* | `ComplianceResult`, `FraudAssessment` | `ComplianceIngestHandler` | `ComplianceResultPayload` |
 
-Supported types come from each handler's `SupportedTypes` set, e.g. `../src/InsuranceIntegration.Api/Services/Ingest/RiskIngestHandler.cs:9-14`. Any unmatched `(source, type)` combination causes an `InvalidOperationException` — "No ingest handler registered for source '<source>' and type '<type>'.".
+Supported types come from each handler's `SupportedTypes` set, e.g. `src/InsuranceIntegration.Api/Services/Ingest/RiskIngestHandler.cs:9-14`. Any unmatched `(source, type)` combination causes an `InvalidOperationException` — "No ingest handler registered for source '<source>' and type '<type>'.".
 
 **Request (Contoso risk submission)**
 
@@ -431,7 +432,7 @@ Resending the same `id` + `source` returns the stored result without re-running 
 
 ### 7.6 `POST /api/v1/ingest/risks`
 
-Source-shape risk ingest for risk lifecycle only. Bypasses the generic dispatcher and directly invokes `IRiskIngestMapper` + `IRiskFlowService` (`../src/InsuranceIntegration.Api/Endpoints/IngestEndpoints.cs:18-23`).
+Source-shape risk ingest for risk lifecycle only. Bypasses the generic dispatcher and directly invokes `IRiskIngestMapper` + `IRiskFlowService` (`src/InsuranceIntegration.Api/Endpoints/IngestEndpoints.cs:18-23`).
 
 **Body** (`SourceIngestRequest`)
 
@@ -460,13 +461,13 @@ Source-shape risk ingest for risk lifecycle only. Bypasses the generic dispatche
 
 **Response (200 OK)** — a `FinalRiskResponse` (see §7.8).
 
-Allowed `(sourceSystem, messageType)` pairs match the risk entries in the dispatch matrix above. Unmatched pairs produce `InvalidOperationException` — "No risk mapper registered for source '<sourceSystem>' and message type '<messageType>'." (`../src/InsuranceIntegration.Api/Mappers/Risks/RiskIngestMapper.cs`).
+Allowed `(sourceSystem, messageType)` pairs match the risk entries in the dispatch matrix above. Unmatched pairs produce `InvalidOperationException` — "No risk mapper registered for source '<sourceSystem>' and message type '<messageType>'." (`src/InsuranceIntegration.Api/Mappers/Risks/RiskIngestMapper.cs`).
 
 ---
 
 ### 7.7 `POST /api/v1/risks`
 
-Submits a canonical risk request directly — useful when the caller already owns the platform-neutral shape (`../src/InsuranceIntegration.Api/Endpoints/RiskEndpoints.cs`).
+Submits a canonical risk request directly — useful when the caller already owns the platform-neutral shape (`src/InsuranceIntegration.Api/Endpoints/RiskEndpoints.cs`).
 
 For a complete end-to-end sample body, see `../README.md:85-203`.
 
@@ -476,7 +477,7 @@ For a complete end-to-end sample body, see `../README.md:85-203`.
 
 ### 7.8 `FinalRiskResponse` fields
 
-Shape returned by `POST /api/v1/risks` and by the risk branches of `POST /api/v1/ingest` and `POST /api/v1/ingest/risks` (`../src/InsuranceIntegration.Api/Responses/Risks/FinalRiskResponse.cs`).
+Shape returned by `POST /api/v1/risks` and by the risk branches of `POST /api/v1/ingest` and `POST /api/v1/ingest/risks` (`src/InsuranceIntegration.Api/Responses/Risks/FinalRiskResponse.cs`).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -505,7 +506,7 @@ Shape returned by `POST /api/v1/risks` and by the risk branches of `POST /api/v1
 
 ### 7.9 `POST /api/v1/policies/cancellations`
 
-Applies a pro-rata or short-rate cancellation to a previously bound policy. Updates the `PolicySnapshot` to status `Cancelled` and writes a `PolicyCancelled` row to `DomainEvents` in the same EF transaction. Returns 404 if the policy reference is unknown, 400 if the input is invalid (`../src/InsuranceIntegration.Api/Services/Policies/PolicyLifecycleService.cs`).
+Applies a pro-rata or short-rate cancellation to a previously bound policy. Updates the `PolicySnapshot` to status `Cancelled` and writes a `PolicyCancelled` row to `DomainEvents` in the same EF transaction. Returns 404 if the policy reference is unknown, 400 if the input is invalid (`src/InsuranceIntegration.Api/Services/Policies/PolicyLifecycleService.cs`).
 
 **Request body** (`CancellationRequest`)
 
@@ -522,7 +523,7 @@ Applies a pro-rata or short-rate cancellation to a previously bound policy. Upda
 }
 ```
 
-`basis` accepts `ProRata` or `ShortRate` (`../src/InsuranceIntegration.Api/Services/Policies/CancellationBasis.cs`).
+`basis` accepts `ProRata` or `ShortRate` (`src/InsuranceIntegration.Api/Services/Policies/CancellationBasis.cs`).
 
 **Response (200 OK)** (`PolicyLifecycleResult`)
 
@@ -614,7 +615,7 @@ Generates a renewal quote for a bound policy with premium re-priced from the pri
 1. The prior policy gets a `PolicyRenewed` event and its `PolicySnapshot` transitions to `policyStatus=Renewed`.
 2. A fresh `QuoteSnapshot` is created for the new term with `lifecycle.version=1`, a fresh `validUntilUtc`, and `priorPolicyReference` set to the renewed policy. A `QuoteIssued` event is emitted on the new quote aggregate.
 
-Source: `../src/InsuranceIntegration.Api/Services/Policies/PolicyRenewalService.cs`.
+Source: `src/InsuranceIntegration.Api/Services/Policies/PolicyRenewalService.cs`.
 
 **Request body** (`RenewalRequest`)
 
@@ -673,9 +674,72 @@ Returns 404 if the prior policy is unknown, 400 if it's already cancelled, alrea
 
 ---
 
-### 7.12 Snapshot read endpoints
+### 7.12 `POST /api/v1/policies/reinstatements`
 
-Consolidated views per business key, fed by every Risk-domain ingest. See [Domain snapshots](#domain-snapshots-consolidated-views-per-business-key) for the merge semantics. Endpoints live in `../src/InsuranceIntegration.Api/Endpoints/PolicyReadEndpoints.cs` and `../src/InsuranceIntegration.Api/Endpoints/QuoteReadEndpoints.cs`.
+Restores a **cancelled** policy to in-force. The policy's `PolicySnapshot` transitions to `policyStatus=Reinstated` / `currentPhase=Reinstated`, and a `PolicyReinstated` event is appended to the policy aggregate in the same EF transaction. The request is rejected (400) if the policy is not currently `Cancelled`.
+
+Source: `src/InsuranceIntegration.Api/Services/Policies/PolicyAdjustmentService.cs` (math) and `PolicyLifecycleService.cs` (orchestration).
+
+**Request body** (`ReinstatementRequest`)
+
+```json
+{
+  "policyReference": "POL-7781",
+  "annualPremium": 10000.00,
+  "inceptionDate": "2026-01-01",
+  "expiryDate": "2026-12-31",
+  "cancellationDate": "2026-04-01",
+  "reinstatementDate": "2026-05-01",
+  "reinstatementFee": 75.00,
+  "chargeLapsedPremium": true,
+  "reason": "Outstanding balance paid"
+}
+```
+
+Lapse math:
+
+- `lapsedDays` = days between `cancellationDate` and `reinstatementDate` (clamped to the policy period).
+- `lapsedPremium` = pro-rata premium for the lapsed days (`annualPremium * lapsedDays / totalDays`).
+- When `chargeLapsedPremium=true` (continuous cover): `amountDueOnReinstatement = reinstatementFee + lapsedPremium`, and `reinstatedAnnualPremium = annualPremium` (unchanged).
+- When `chargeLapsedPremium=false` (gap in cover): `amountDueOnReinstatement = reinstatementFee` only, and `reinstatedAnnualPremium = annualPremium - lapsedPremium`.
+
+**Response (200 OK)** (`PolicyLifecycleResult` with a `reinstatement` block)
+
+```json
+{
+  "policyReference": "POL-7781",
+  "transactionType": "Reinstatement",
+  "policyStatus": "Reinstated",
+  "currentPhase": "Reinstated",
+  "domainEventId": "5f1c...",
+  "domainEventType": "PolicyReinstated",
+  "reinstatement": {
+    "policyReference": "POL-7781",
+    "lapsedDays": 30,
+    "reinstatementFee": 75.00,
+    "lapsedPremium": 821.92,
+    "amountDueOnReinstatement": 896.92,
+    "reinstatedAnnualPremium": 10000.00,
+    "gapInCoverage": false,
+    "reasons": [
+      "Lapsed days: 30 of 365",
+      "Lapsed premium (pro-rata): 821.92",
+      "Reinstatement fee: 75",
+      "Continuous cover: lapsed premium charged to the insured",
+      "Amount due on reinstatement: 896.92",
+      "Reinstated annual premium: 10000"
+    ]
+  }
+}
+```
+
+Returns 404 if the policy is unknown, 400 if the policy is not currently `Cancelled`, the reinstatement date precedes the cancellation date, or the policy period is invalid.
+
+---
+
+### 7.13 Snapshot read endpoints
+
+Consolidated views per business key, fed by every Risk-domain ingest. See [Domain snapshots](#domain-snapshots-consolidated-views-per-business-key) for the merge semantics. Endpoints live in `src/InsuranceIntegration.Api/Endpoints/PolicyReadEndpoints.cs` and `src/InsuranceIntegration.Api/Endpoints/QuoteReadEndpoints.cs`.
 
 **`GET /api/v1/policies/{policyReference}`** — returns the full `PolicySnapshot` (404 if no events have ever included this `policyReference`).
 
@@ -714,7 +778,7 @@ Response shape (abbreviated):
 
 ---
 
-### 7.13 Snapshot rebuild endpoints
+### 7.14 Snapshot rebuild endpoints
 
 Replay the aggregate's domain events through the projector in memory and return the rebuilt snapshot. Useful for sanity-checking the live snapshot row, recovering after a projector change, or testing new business rules against historical data without mutating the current state.
 
@@ -743,13 +807,13 @@ Response shape (`SnapshotRebuildResult<TSnapshot>`):
 }
 ```
 
-Returns 404 when no events exist for the aggregate. Source: `../src/InsuranceIntegration.Api/Services/Snapshots/SnapshotRebuildService.cs`.
+Returns 404 when no events exist for the aggregate. Source: `src/InsuranceIntegration.Api/Services/Snapshots/SnapshotRebuildService.cs`.
 
 ---
 
-### 7.14 Schema endpoints
+### 7.15 Schema endpoints
 
-Each schema endpoint returns the JSON Schema document for the referenced C# type (`../src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`, `../src/InsuranceIntegration.Api/Services/Schemas`).
+Each schema endpoint returns the JSON Schema document for the referenced C# type (`src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`, `src/InsuranceIntegration.Api/Services/Schemas`).
 
 ```powershell
 Invoke-RestMethod http://localhost:5000/api/v1/schemas/ingest/envelope | ConvertTo-Json -Depth 10
@@ -775,7 +839,7 @@ The same `X-Correlation-Id` value appears in the response header and in the serv
 
 ### Exercise idempotency
 
-Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) — it returns the persisted `IngestReceipt` (see `../tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
+Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) — it returns the persisted `IngestReceipt` (see `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
 
 ### Observe the outbox
 
@@ -789,7 +853,7 @@ Rows are then marked dispatched in `OutboxMessages.DispatchedAtUtc`.
 
 ## 9. Manual testing pack
 
-Ready-to-POST JSON payloads live in `./examples/`, and `./API_EXAMPLES.md` walks through each one with mandatory-field tables and the business rules it exercises (rich sections, sub-limits, deductibles, perils, exclusions, installment schedules, endorsement operations, etc.).
+Ready-to-POST JSON payloads live in `docs/reference/examples/`, and `docs/reference/API_EXAMPLES.md` walks through each one with mandatory-field tables and the business rules it exercises (rich sections, sub-limits, deductibles, perils, exclusions, installment schedules, endorsement operations, etc.).
 
 ```powershell
 Invoke-RestMethod `
@@ -803,6 +867,6 @@ Invoke-RestMethod `
 
 - **`InvalidOperationException: No ingest handler registered...`** — the `(source, type)` combination is not supported. Consult the dispatch matrix in §7.5.
 - **`InvalidOperationException: No risk mapper registered...`** — same issue for `POST /api/v1/ingest/risks`. Check casing of `sourceSystem` and `messageType` (matching is case-insensitive but the values must be one of the configured pairs).
-- **`Unable to deserialize ... payload.`** — the `data` / `payload` object doesn't match the expected source-specific shape. Check the corresponding DTO under `../src/InsuranceIntegration.Api/SourceContracts`.
+- **`Unable to deserialize ... payload.`** — the `data` / `payload` object doesn't match the expected source-specific shape. Check the corresponding DTO under `src/InsuranceIntegration.Api/SourceContracts`.
 - **Swagger UI returns 404** — the app is running in a non-Development environment. Set `ASPNETCORE_ENVIRONMENT=Development` before running.
 - **Database file locked on Windows** — stop all running instances of the API, then delete `integration.db*` files from the working directory to reset.

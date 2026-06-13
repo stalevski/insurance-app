@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Insurance Integration Platform — Feature Exploration &amp; Plan</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel2: #273549; --text: #e2e8f0; --muted: #94a3b8;
+    --border: #334155; --accent: #38bdf8;
+    --done: #16a34a; --done-bg: #052e16; --rec: #2563eb; --rec-bg: #0b1f44;
+    --defer: #ca8a04; --defer-bg: #2a2104; --skip: #64748b; --skip-bg: #1c2430;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.55;
+  }
+  header {
+    padding: 2.2rem 2rem 1.6rem; background: linear-gradient(135deg, #0b1220, #1e293b);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0 0 .35rem; font-size: 1.7rem; }
+  header p { margin: .2rem 0; color: var(--muted); max-width: 70ch; }
+  main { padding: 1.6rem 2rem 4rem; max-width: 1100px; margin: 0 auto; }
+  h2 {
+    margin: 2.2rem 0 .8rem; font-size: 1.25rem; border-left: 4px solid var(--accent);
+    padding-left: .6rem;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0 .4rem; }
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .8rem;
+    margin: 1.2rem 0;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: .9rem 1rem;
+  }
+  .stat .n { font-size: 1.6rem; font-weight: 700; }
+  .stat .l { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+  table { width: 100%; border-collapse: collapse; margin: .4rem 0 1rem; font-size: .92rem; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  tr:hover td { background: var(--panel2); }
+  .feat { font-weight: 600; }
+  .desc { color: var(--muted); font-size: .88rem; }
+  .badge {
+    display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .73rem;
+    font-weight: 700; white-space: nowrap; border: 1px solid transparent;
+  }
+  .b-done { color: #86efac; background: var(--done-bg); border-color: var(--done); }
+  .b-rec { color: #93c5fd; background: var(--rec-bg); border-color: var(--rec); }
+  .b-defer { color: #fde68a; background: var(--defer-bg); border-color: var(--defer); }
+  .b-skip { color: #cbd5e1; background: var(--skip-bg); border-color: var(--skip); }
+  .effort { font-size: .8rem; color: var(--muted); }
+  code { background: #0b1220; padding: .05rem .35rem; border-radius: 4px; font-size: .85em; color: #7dd3fc; }
+  footer { color: var(--muted); font-size: .82rem; padding: 1.5rem 2rem; border-top: 1px solid var(--border); }
+  .note { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Insurance Integration Platform — Feature Exploration &amp; Plan</h1>
+  <p>A structured enumeration of <strong>candidate functionality</strong> for the .NET 10 modular-monolith
+     insurance ingest/transformation platform, each evaluated for whether it should be added. This is a
+     living planning document — pick the next feature from the “Recommended” rows.</p>
+  <p style="color:#64748b;font-size:.85rem">Generated 2026-06-13 · companion to <code>AGENTS.md</code>,
+     <code>README.md</code>, <code>PROGRESS.md</code>.</p>
+</header>
+<main>
+
+  <div class="legend">
+    <span class="badge b-done">Implemented</span>
+    <span class="badge b-rec">Recommended next</span>
+    <span class="badge b-defer">Defer</span>
+    <span class="badge b-skip">Skip / not now</span>
+  </div>
+
+  <div class="summary">
+    <div class="stat"><div class="n" style="color:#86efac">1</div><div class="l">Implemented this pass</div></div>
+    <div class="stat"><div class="n" style="color:#93c5fd">10</div><div class="l">Recommended next</div></div>
+    <div class="stat"><div class="n" style="color:#fde68a">18</div><div class="l">Deferred</div></div>
+    <div class="stat"><div class="n" style="color:#cbd5e1">9</div><div class="l">Skipped</div></div>
+  </div>
+
+  <div class="note">
+    <strong>How verdicts were assigned.</strong> The platform is both a QA testing ground and a nascent
+    deployable product. Features were judged on (a) fit with the existing
+    <code>SourceContracts → Mappers → Canonical → Flows → Responses</code> architecture, (b) whether they
+    complete an already-advertised capability, and (c) value vs. effort. “Skip” means out of scope or
+    better solved by infrastructure, not “bad idea”.
+  </div>
+
+  <h2>1. Policy lifecycle</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Reinstatement</td><td class="desc">Restore a cancelled policy to in-force with lapse-day pro-rata math, admin fee, and continuous-cover vs gap handling. Completes the README lifecycle list.</td><td class="effort">S</td><td><span class="badge b-done">Implemented</span></td></tr>
+      <tr><td class="feat">UI lifecycle action forms</td><td class="desc">Blazor forms for cancel / endorse / renew / reinstate posting to existing endpoints (today Swagger-only).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Lapse / non-renewal</td><td class="desc">Explicit lapse status when payment never arrives, and a non-renewal (NTU) transition distinct from cancellation.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Mid-term cancellation by underwriter</td><td class="desc">Insurer-initiated cancellation (notice period, different return-premium basis) vs insured-initiated.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Bulk / batch endorsements</td><td class="desc">Apply one endorsement template across many policies (e.g. scheme-wide rate change).</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Coinsurance / layering</td><td class="desc">Multiple carriers sharing a risk with participation percentages.</td><td class="effort">L</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Billing &amp; payments</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Payment recording endpoint</td><td class="desc">Record an installment payment; transition installment <code>Issued → Paid</code>; recompute outstanding balance.</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Delinquency / dunning workflow</td><td class="desc">Overdue detection, cancellation-for-non-payment notices, reinstatement reuse (now available).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Refund / return-premium processing</td><td class="desc">Turn cancellation/endorsement return premiums into payable refund records.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Billing fallback due-date fix (M1)</td><td class="desc">Derive next due date from billing frequency, not missed-payment count. Already logged in KNOWN_ISSUES.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Payment-gateway adapter</td><td class="desc">Stripe/GoCardless mandate + collection. Needs secrets &amp; PCI scope.</td><td class="effort">L</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Claims</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Claim reserves &amp; payments</td><td class="desc">Set/adjust reserves, record indemnity &amp; expense payments, track incurred = paid + outstanding.</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Claim status workflow</td><td class="desc">FNOL → Open → Reserved → Settled/Declined/Closed state machine with domain events.</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Claim snapshot read-model</td><td class="desc">A <code>ClaimSnapshot</code> consolidated view per claim key, mirroring policy/quote snapshots.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Subrogation / recovery</td><td class="desc">Track recoveries that offset incurred amounts.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Litigation / vendor management</td><td class="desc">Adjusters, lawyers, supplier assignment.</td><td class="effort">L</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Underwriting &amp; rating</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Configurable underwriting thresholds (M3)</td><td class="desc">Move hard-coded auto-clear/decline money bands into product/config. Logged in KNOWN_ISSUES.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Referral workflow</td><td class="desc">Route <code>ManualUnderwritingReview</code> to a queue with accept/decline/refer actions.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Declination reason catalogue</td><td class="desc">Structured, reportable decline reasons instead of free text.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Rating-table versioning</td><td class="desc">Effective-dated rate tables so re-rating an old transaction uses the period’s rates.</td><td class="effort">L</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Rules engine (DSL)</td><td class="desc">Externalised rule definitions replacing imperative flow logic.</td><td class="effort">L</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Compliance &amp; audit</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Sanctions / PEP screening hook</td><td class="desc">Pluggable screening provider behind the existing compliance flow (stub + interface).</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Immutable audit-trail export</td><td class="desc">Export the append-only domain-event log per aggregate as a signed/CSV bundle.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">GDPR data export / erasure</td><td class="desc">Subject-access export and pseudonymisation of insured PII.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Documents &amp; output</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Policy schedule / quote PDF</td><td class="desc">Render a schedule from a snapshot (QuestPDF). High demo value.</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Certificate of insurance</td><td class="desc">Evidence-of-cover document for third parties.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Templated email / notification output</td><td class="desc">Outbox-driven notifications (bind confirmation, renewal invite).</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Integration &amp; messaging</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Real outbox transport</td><td class="desc">Swap <code>LoggingOutboxPublisher</code> for RabbitMQ / Azure Service Bus (interface already exists).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Outbound webhooks</td><td class="desc">Per-tenant HTTP subscriptions fed by the outbox with retry &amp; signing.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Inbound schema-validation middleware</td><td class="desc">Validate ingest payloads against the published JSON schemas before mapping.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">New source adapter</td><td class="desc">Add a 4th source system mapper to prove the anti-corruption layer extends cleanly.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. Reporting &amp; analytics</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Premium register / bordereaux export</td><td class="desc">CSV/Excel export of bound premium by period, product, broker.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Loss-ratio &amp; KPI dashboard</td><td class="desc">Aggregate analytics page (GWP, loss ratio, hit ratio) over snapshots.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Metrics endpoint (Prometheus)</td><td class="desc"><code>/metrics</code> with ingest counts, outbox depth, processing latency.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. SaaS platform &amp; operations</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">Authentication &amp; API keys</td><td class="desc">Gate write endpoints and the DB browser (currently unauthenticated — see PROGRESS).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Multi-tenancy</td><td class="desc">Tenant column + query filter so multiple insurers/MGAs share the host safely.</td><td class="effort">L</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">OpenTelemetry tracing</td><td class="desc">Distributed traces correlated by the existing <code>X-Correlation-Id</code>.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Rate limiting</td><td class="desc">ASP.NET rate-limiter on ingest to protect the single SQLite writer.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">Verify Docker image (Phase 4)</td><td class="desc">Build/run the container per <code>docs/guides/DEPLOYMENT.md</code>; currently unverified.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Postgres option</td><td class="desc">Provider abstraction so SQLite (dev) and Postgres (prod) both work.</td><td class="effort">L</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. Code-health backlog (from KNOWN_ISSUES.md)</h2>
+  <table>
+    <thead><tr><th>Item</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="feat">M4 — inject <code>TimeProvider</code> in mappers/handlers</td><td class="desc">Remove direct <code>DateTime.UtcNow</code> for determinism.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">M5 — snapshot zero-premium clearing</td><td class="desc">Apply explicit zero premium instead of preserving stale value.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">D2 — warning cleanup</td><td class="desc">Resolve/suppress the ~47 analyzer warnings to restore the “no new warnings” bar.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
+      <tr><td class="feat">L1/L2 — mapper hard-coding &amp; non-deterministic ids</td><td class="desc">Map real source fields; inject an id provider.</td><td class="effort">S</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Suggested sequencing.</strong> 1) UI lifecycle action forms (surfaces everything built so far),
+    2) Payment recording + delinquency (then reinstatement closes the loop end-to-end),
+    3) Claim reserves/payments + status workflow, 4) Auth on writes &amp; the DB browser,
+    5) Policy schedule PDF for demo polish, 6) opportunistic code-health items (M1, M3, M4).
+  </div>
+
+</main>
+<footer>
+  Insurance Integration Platform · feature plan · keep verdicts in sync with <code>PROGRESS.md</code> as items ship.
+</footer>
+</body>
+</html>

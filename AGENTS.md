@@ -61,7 +61,7 @@ SourceContracts ──Mappers──> CanonicalContracts ──Flow services─�
 - **Composition over inheritance.** Prefer small interfaces + DI registration in
   `Configuration/ServiceRegistration.cs`.
 - **Time:** never use `DateTime.UtcNow` directly in logic — inject `TimeProvider` and use
-  `FakeTimeProvider` in tests. (Some legacy code still violates this; see `docs/KNOWN_ISSUES.md`.)
+  `FakeTimeProvider` in tests. (Some legacy code still violates this; see `docs/project/KNOWN_ISSUES.md`.)
 - **Money:** use `decimal`; round deliberately and keep installment/premium totals reconciled.
 - **Migrations are generated, not hand-edited** (use `dotnet ef migrations add`).
 - Code style is enforced at build time (`EnforceCodeStyleInBuild=true`,
@@ -106,7 +106,7 @@ dotnet run --project src/InsuranceIntegration.Api
 | Read models | `src/InsuranceIntegration.Api/Snapshots/`, `Services/Snapshots/` |
 | Blazor Server UI | `src/InsuranceIntegration.Api/Components/`, `wwwroot/`, `Services/Ui/` |
 | Tests | `tests/InsuranceIntegration.Api.Tests/` |
-| Known bugs (documented, unfixed) | `docs/KNOWN_ISSUES.md` |
+| Known bugs (documented, unfixed) | `docs/project/KNOWN_ISSUES.md` |
 | Project progress / continuity | `PROGRESS.md` |
 
 ## Working across multiple devices
