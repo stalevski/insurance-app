@@ -60,6 +60,7 @@ app.MapProductEndpoints();
 app.MapPolicyEndpoints();
 app.MapPolicyReadEndpoints();
 app.MapQuoteReadEndpoints();
+app.MapBillingEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

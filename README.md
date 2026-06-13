@@ -106,6 +106,10 @@ Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
 - `POST /api/v1/policies/lapses` (lapse an in-force policy for non-payment; `PolicyLapsed` event)
 - `POST /api/v1/policies/non-renewals` (mark an in-force policy not-renewed at expiry; `PolicyNonRenewed` event)
 
+Billing:
+
+- `POST /api/v1/billing/payments` (apply a payment to an installment schedule; settles installments `Issued → Paid` in due order and recomputes the billing position)
+
 Replay / sanity:
 
 - `POST /api/v1/snapshots/policies/{policyReference}/rebuild` and `POST /api/v1/snapshots/quotes/{quoteReference}/rebuild` — replay the aggregate's `DomainEvents` through the projector
