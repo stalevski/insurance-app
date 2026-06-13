@@ -207,6 +207,49 @@ Docker-capable VPS.
    setup, common assertions) should be extracted into private helper methods within a test class, or
    a shared **base test class** / fixtures where the duplication spans multiple classes.
 
+## Enterprise / multi-tenant backlog (candidate epic — design first, not yet scheduled)
+
+Captured from an enterprise expansion brief. These are **large, cross-cutting** changes; each needs
+its own design pass + KNOWN_ISSUES/FEATURE_PLAN entry before implementation. Listed roughly in
+dependency order:
+
+1. **Multi-tenant data isolation.** Introduce a `TenantId` primitive (or elevate `SourceSystem`).
+   Add a request-scoped `ITenantProvider` resolving the tenant from the API key / a JWT claim / an
+   HTTP header, and enforce isolation via EF Core **global query filters** in `IntegrationDbContext`
+   so every read/update/snapshot query is tenant-scoped. Update `DevelopmentDataSeeder` to assign
+   tenants. *Risk:* query filters interact with the existing `RowVersionInterceptor` and the
+   same-transaction event+snapshot invariant — needs careful testing. Migration adds a column to
+   `IngestEntries`, `DomainEvents`, `PolicySnapshots`, `QuoteSnapshots`.
+2. **Dynamic per-product JSON Schema validation.** Replace compile-time contract annotations with a
+   config/DB-backed lookup keyed by `ProductCode` / line of business (Property, Cyber, Motor,
+   Liability). Add a pre-ingest pipeline step that validates raw source envelopes against the
+   runtime schema *before* mapping to canonical contracts. We already vendor a JSON Schema stack
+   (`IJsonSchemaService`) — evaluate reusing it before adding `JsonSchema.Net` (respect the
+   "no phantom dependencies" rule).
+3. **Aggregate version sequencing (stronger concurrency control).** Add an explicit
+   `AggregateVersion` integer to `DomainEvents` and the snapshot documents, and enforce a
+   sequence check in the snapshot projector: abort unless the incoming event targets
+   `CurrentSnapshot.Version + 1`. Complements (does not replace) the existing `RowVersion`
+   optimistic concurrency. Closes the high-volume read-modify-write race (concurrent broker
+   adjustments to the same policy reference).
+4. **Outbox DLQ operational UI + manual re-drive.** Add a thin read-only endpoint + Blazor page
+   listing pending / failed / poisoned outbox messages (the dispatcher already tracks
+   `DispatchAttempts`, `LastError`, and the poison cap), plus a guarded admin action to invoke a
+   targeted `OutboxDispatcher` retry cycle for an individual message. Builds directly on the
+   configurable transport just shipped (`Logging` / `File` / `Webhook`).
+5. **System branding/rename (decision required, do NOT action yet).** The brief proposes renaming
+   the source-system placeholders: Contoso → **Nexus**, QuoteForge → **SlipStream**, BindPoint →
+   **Bedrock**. This touches `SourceContracts`, `Mappers`, the source-system catalog, sample
+   payloads, Postman collection, docs, and many tests — treat as a dedicated mechanical rename pass
+   only after confirming the new names are final. Until then, keep the existing terms.
+
+> Architectural guards to preserve across all of the above: thin endpoints; strict
+> `SourceContracts → Mappers → CanonicalContracts → Responses` separation; one public type per file
+> with namespace matching folder; inject `TimeProvider` (no `DateTime.UtcNow` in logic); `decimal`
+> for money; all mutating writes flow through `ApiKeyAuthenticationMiddleware` (`X-Api-Key`) and
+> integration recipes must supply that header; no new heavy dependencies (AutoMapper/MediatR) — use
+> plain C# orchestration + the existing configuration extensions.
+
 ## Open questions / to confirm with hosting provider
 
 - VPS provider: which Linux OS options, and is Docker installable out of the box? (Confirm with the
