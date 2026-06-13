@@ -92,6 +92,18 @@ dotnet run --project src/InsuranceIntegration.Api
 2. `dotnet build` succeeds (don't add new warnings).
 3. `dotnet test` is green; new behavior has NUnit tests (AAA style, `FakeTimeProvider` for time).
 4. Conventions above are respected; contract layers stay separate.
+5. **Documentation is updated in the same change** — do not leave it as a follow-up. Whenever
+   behavior, endpoints, configuration, conventions, or project structure change, update the
+   relevant Markdown/docs so they stay accurate, at minimum:
+   - `PROGRESS.md` — always, so the next device/agent has current context.
+   - `README.md` (and `docs/README.md`) — when features, run/usage, or the structure map change.
+   - `docs/guides/USAGE.md`, `docs/guides/DEPLOYMENT.md`, `docs/guides/TESTING.md` — when usage,
+     deployment, or testing change.
+   - `docs/project/FEATURE_PLAN.html` — when a planned feature is implemented (flip its badge and
+     bump the counters).
+   - `docs/project/KNOWN_ISSUES.md` — when a known issue is introduced, fixed, or changes.
+   - `docs/reference/API_EXAMPLES.md` / `docs/reference/examples/*` — when request/response shapes
+     or example payloads change.
 
 ## Where things live (quick map)
 
