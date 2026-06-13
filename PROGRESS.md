@@ -91,6 +91,13 @@ Docker-capable VPS.
   `PolicySnapshot` using QuestPDF (free Community license, self-declared in `PolicyScheduleService`).
   Layout lives in `PolicyScheduleDocument`; a pure `IPolicyScheduleService` returns the PDF bytes,
   the endpoint serves `application/pdf` (404 when the snapshot is missing). 3 new tests (2026-06-13).
+- [x] **UI lifecycle action forms.** The policy detail page (`/policies/{ref}`) now has a
+  `LifecycleActions` panel to cancel / endorse / renew / reinstate / lapse / non-renew a policy
+  directly from the Blazor UI (previously Swagger-only). Fields are pre-filled from the snapshot; the
+  facade methods were added to `IUiGateway` / `UiGateway` (each opens its own DI scope and calls the
+  existing `IPolicyLifecycleService` / `IPolicyRenewalService`), and a successful action reloads the
+  snapshot in place. UI remains a thin facade over already-tested services, so no new unit tests
+  (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and

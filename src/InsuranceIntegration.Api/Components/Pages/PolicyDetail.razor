@@ -57,6 +57,8 @@ else
         }
     </div>
 
+    <LifecycleActions Policy="_policy" OnCompleted="ReloadAsync" />
+
     <EventFlow AggregateKind="Policy" AggregateKey="@_policy.PolicyReference" />
 }
 
@@ -72,6 +74,11 @@ else
         _loaded = false;
         _policy = await Gateway.FindPolicyAsync(PolicyReference);
         _loaded = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        _policy = await Gateway.FindPolicyAsync(PolicyReference);
     }
 
     private static string Show(DateOnly? value) => value?.ToString("yyyy-MM-dd") ?? "—";

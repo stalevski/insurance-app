@@ -1,0 +1,293 @@
+@using System.Globalization
+@using InsuranceIntegration.Api.Services.Policies
+@using InsuranceIntegration.Api.Services.Ui
+@inject IUiGateway Gateway
+
+<div class="panel">
+    <h2>Lifecycle actions</h2>
+    <p class="muted">Apply a post-bind lifecycle transaction. Fields are pre-filled from the
+        current snapshot where possible.</p>
+
+    <div class="field">
+        <label for="lifecycle-action">Action</label>
+        <select id="lifecycle-action" @bind="_action" @bind:after="OnActionChanged">
+            <option value="@ActionCancel">Cancel policy</option>
+            <option value="@ActionEndorse">Endorse policy</option>
+            <option value="@ActionRenew">Renew policy</option>
+            <option value="@ActionReinstate">Reinstate policy</option>
+            <option value="@ActionLapse">Lapse policy</option>
+            <option value="@ActionNonRenew">Non-renewal</option>
+        </select>
+    </div>
+
+    @if (_action == ActionCancel)
+    {
+        <div class="form-grid">
+            <div class="field"><label>Annual premium</label><input type="number" step="0.01" @bind="_annualPremium" /></div>
+            <div class="field"><label>Inception date</label><input type="date" @bind="_inceptionDate" /></div>
+            <div class="field"><label>Expiry date</label><input type="date" @bind="_expiryDate" /></div>
+            <div class="field"><label>Cancellation date</label><input type="date" @bind="_effectiveDate" /></div>
+            <div class="field">
+                <label>Basis</label>
+                <select @bind="_cancellationBasis">
+                    <option value="@CancellationBasis.ProRata">Pro-rata</option>
+                    <option value="@CancellationBasis.ShortRate">Short-rate</option>
+                </select>
+            </div>
+            <div class="field"><label>Short-rate penalty %</label><input type="number" step="0.01" @bind="_shortRatePenaltyPercent" /></div>
+        </div>
+    }
+    else if (_action == ActionEndorse)
+    {
+        <div class="form-grid">
+            <div class="field"><label>Current annual premium</label><input type="number" step="0.01" @bind="_annualPremium" /></div>
+            <div class="field"><label>New annual premium</label><input type="number" step="0.01" @bind="_newAnnualPremium" /></div>
+            <div class="field"><label>Inception date</label><input type="date" @bind="_inceptionDate" /></div>
+            <div class="field"><label>Expiry date</label><input type="date" @bind="_expiryDate" /></div>
+            <div class="field"><label>Effective date</label><input type="date" @bind="_effectiveDate" /></div>
+        </div>
+    }
+    else if (_action == ActionRenew)
+    {
+        <div class="form-grid">
+            <div class="field"><label>New quote reference</label><input @bind="_newQuoteReference" /></div>
+            <div class="field"><label>New inception date</label><input type="date" @bind="_newInceptionDate" /></div>
+            <div class="field"><label>New expiry date</label><input type="date" @bind="_newExpiryDate" /></div>
+            <div class="field"><label>Prior annual premium</label><input type="number" step="0.01" @bind="_annualPremium" /></div>
+            <div class="field"><label>Prior claims paid</label><input type="number" step="0.01" @bind="_priorClaimsPaid" /></div>
+            <div class="field"><label>Revenue delta % (0.10 = +10%)</label><input type="number" step="0.01" @bind="_revenueDeltaPercent" /></div>
+        </div>
+    }
+    else if (_action == ActionReinstate)
+    {
+        <div class="form-grid">
+            <div class="field"><label>Annual premium</label><input type="number" step="0.01" @bind="_annualPremium" /></div>
+            <div class="field"><label>Inception date</label><input type="date" @bind="_inceptionDate" /></div>
+            <div class="field"><label>Expiry date</label><input type="date" @bind="_expiryDate" /></div>
+            <div class="field"><label>Cancellation / lapse date</label><input type="date" @bind="_effectiveDate" /></div>
+            <div class="field"><label>Reinstatement date</label><input type="date" @bind="_secondaryDate" /></div>
+            <div class="field"><label>Reinstatement fee</label><input type="number" step="0.01" @bind="_fee" /></div>
+            <div class="field checkbox"><label><input type="checkbox" @bind="_chargeLapsedPremium" /> Charge lapsed premium (continuous cover)</label></div>
+        </div>
+    }
+    else if (_action == ActionLapse)
+    {
+        <div class="form-grid">
+            <div class="field"><label>Annual premium</label><input type="number" step="0.01" @bind="_annualPremium" /></div>
+            <div class="field"><label>Inception date</label><input type="date" @bind="_inceptionDate" /></div>
+            <div class="field"><label>Expiry date</label><input type="date" @bind="_expiryDate" /></div>
+            <div class="field"><label>Lapse date</label><input type="date" @bind="_effectiveDate" /></div>
+            <div class="field"><label>Paid to date</label><input type="number" step="0.01" @bind="_paidToDate" /></div>
+        </div>
+    }
+    else if (_action == ActionNonRenew)
+    {
+        <div class="form-grid">
+            <div class="field"><label>Annual premium</label><input type="number" step="0.01" @bind="_annualPremium" /></div>
+            <div class="field"><label>Inception date</label><input type="date" @bind="_inceptionDate" /></div>
+            <div class="field"><label>Expiry date</label><input type="date" @bind="_expiryDate" /></div>
+            <div class="field">
+                <label>Initiated by</label>
+                <select @bind="_initiatedBy">
+                    <option value="@NonRenewalInitiator.Insurer">Insurer</option>
+                    <option value="@NonRenewalInitiator.Insured">Insured</option>
+                </select>
+            </div>
+            <div class="field"><label>Notice days</label><input type="number" @bind="_noticeDays" /></div>
+        </div>
+    }
+
+    <div class="field">
+        <label>Reason (optional)</label>
+        <input @bind="_reason" />
+    </div>
+
+    <button type="button" @onclick="SubmitAsync" disabled="@_submitting">
+        @(_submitting ? "Applying…" : "Apply action")
+    </button>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert error">@_error</div>
+}
+
+@if (_success is not null)
+{
+    <div class="alert success">@_success</div>
+}
+
+@code {
+    private const string ActionCancel = "cancel";
+    private const string ActionEndorse = "endorse";
+    private const string ActionRenew = "renew";
+    private const string ActionReinstate = "reinstate";
+    private const string ActionLapse = "lapse";
+    private const string ActionNonRenew = "nonrenew";
+
+    [Parameter]
+    public PolicySnapshot Policy { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnCompleted { get; set; }
+
+    private string _action = ActionCancel;
+    private bool _submitting;
+    private string? _error;
+    private string? _success;
+
+    private decimal _annualPremium;
+    private decimal _newAnnualPremium;
+    private decimal _priorClaimsPaid;
+    private decimal _revenueDeltaPercent;
+    private decimal _shortRatePenaltyPercent = 0.10m;
+    private decimal _fee;
+    private decimal _paidToDate;
+    private DateOnly _inceptionDate;
+    private DateOnly _expiryDate;
+    private DateOnly _effectiveDate;
+    private DateOnly _secondaryDate;
+    private DateOnly _newInceptionDate;
+    private DateOnly _newExpiryDate;
+    private string _cancellationBasis = CancellationBasis.ProRata;
+    private string _initiatedBy = NonRenewalInitiator.Insurer;
+    private string _newQuoteReference = string.Empty;
+    private bool _chargeLapsedPremium;
+    private int _noticeDays = 30;
+    private string? _reason;
+
+    protected override void OnParametersSet()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        _annualPremium = Policy.Premium.Adjusted ?? Policy.Premium.Base ?? 0m;
+        _newAnnualPremium = _annualPremium;
+        _inceptionDate = Policy.Dates.InceptionDate ?? today;
+        _expiryDate = Policy.Dates.ExpiryDate ?? today.AddYears(1);
+        _effectiveDate = today;
+        _secondaryDate = today;
+        _newInceptionDate = _expiryDate;
+        _newExpiryDate = _expiryDate.AddYears(1);
+        _newQuoteReference = $"{Policy.PolicyReference}-R";
+    }
+
+    private void OnActionChanged()
+    {
+        _error = null;
+        _success = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        _error = null;
+        _success = null;
+        _submitting = true;
+        try
+        {
+            var result = _action switch
+            {
+                ActionCancel => Describe(await Gateway.CancelPolicyAsync(BuildCancellation())),
+                ActionEndorse => Describe(await Gateway.EndorsePolicyAsync(BuildEndorsement())),
+                ActionRenew => DescribeRenewal(await Gateway.RenewPolicyAsync(BuildRenewal())),
+                ActionReinstate => Describe(await Gateway.ReinstatePolicyAsync(BuildReinstatement())),
+                ActionLapse => Describe(await Gateway.LapsePolicyAsync(BuildLapse())),
+                ActionNonRenew => Describe(await Gateway.NonRenewPolicyAsync(BuildNonRenewal())),
+                _ => "Unknown action."
+            };
+
+            _success = result;
+            await OnCompleted.InvokeAsync();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private CancellationRequest BuildCancellation() => new()
+    {
+        PolicyReference = Policy.PolicyReference,
+        AnnualPremium = _annualPremium,
+        InceptionDate = _inceptionDate,
+        ExpiryDate = _expiryDate,
+        CancellationDate = _effectiveDate,
+        Basis = _cancellationBasis,
+        ShortRatePenaltyPercent = _shortRatePenaltyPercent
+    };
+
+    private EndorsementRequest BuildEndorsement() => new()
+    {
+        PolicyReference = Policy.PolicyReference,
+        CurrentAnnualPremium = _annualPremium,
+        NewAnnualPremium = _newAnnualPremium,
+        InceptionDate = _inceptionDate,
+        ExpiryDate = _expiryDate,
+        EffectiveDate = _effectiveDate
+    };
+
+    private RenewalRequest BuildRenewal() => new()
+    {
+        PolicyReference = Policy.PolicyReference,
+        NewQuoteReference = _newQuoteReference,
+        NewInceptionDate = _newInceptionDate,
+        NewExpiryDate = _newExpiryDate,
+        PriorAnnualPremium = _annualPremium,
+        PriorClaimsPaid = _priorClaimsPaid,
+        RevenueDeltaPercent = _revenueDeltaPercent
+    };
+
+    private ReinstatementRequest BuildReinstatement() => new()
+    {
+        PolicyReference = Policy.PolicyReference,
+        AnnualPremium = _annualPremium,
+        InceptionDate = _inceptionDate,
+        ExpiryDate = _expiryDate,
+        CancellationDate = _effectiveDate,
+        ReinstatementDate = _secondaryDate,
+        ReinstatementFee = _fee,
+        ChargeLapsedPremium = _chargeLapsedPremium,
+        Reason = NullIfBlank(_reason)
+    };
+
+    private LapseRequest BuildLapse() => new()
+    {
+        PolicyReference = Policy.PolicyReference,
+        AnnualPremium = _annualPremium,
+        InceptionDate = _inceptionDate,
+        ExpiryDate = _expiryDate,
+        LapseDate = _effectiveDate,
+        PaidToDate = _paidToDate,
+        Reason = NullIfBlank(_reason)
+    };
+
+    private NonRenewalRequest BuildNonRenewal() => new()
+    {
+        PolicyReference = Policy.PolicyReference,
+        AnnualPremium = _annualPremium,
+        InceptionDate = _inceptionDate,
+        ExpiryDate = _expiryDate,
+        InitiatedBy = _initiatedBy,
+        NoticeDays = _noticeDays,
+        Reason = NullIfBlank(_reason)
+    };
+
+    private static string Describe(PolicyLifecycleResult result) =>
+        $"{result.TransactionType} applied — status {result.PolicyStatus} (phase {result.CurrentPhase}); event {result.DomainEventType}.";
+
+    private static string DescribeRenewal(RenewalResult result) =>
+        $"Renewal applied — new quote {result.NewQuoteReference}, renewal premium {result.RenewalPremium.ToString("N2", CultureInfo.InvariantCulture)}.";
+
+    private static string? NullIfBlank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
+}

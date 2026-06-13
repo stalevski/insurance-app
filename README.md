@@ -142,7 +142,10 @@ toolchain). Browse to the application root (`/`) when it is running. Pages:
 - **Quotes / Policies** (`/quotes`, `/policies`) — paged list + detail views over the
   `QuoteSnapshot` / `PolicySnapshot` read-models. Each detail page shows a **lifecycle stage**
   diagram (canonical phases with the current stage highlighted) so you can see where the risk
-  sits, plus a **lifecycle flow** diagram built from its event stream.
+  sits, plus a **lifecycle flow** diagram built from its event stream. The policy detail page also
+  has a **lifecycle actions** panel — cancel, endorse, renew, reinstate, lapse, or non-renew the
+  policy directly from the UI (fields pre-filled from the snapshot), which previously required
+  Swagger.
 - **Domain events** (`/events`) — filterable event log; each aggregate detail page renders a
   **Mermaid lifecycle flow diagram** built from its event stream.
 - **Database browser** (`/database`) — read-only view of the SQLite tables.

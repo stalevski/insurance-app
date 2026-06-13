@@ -1,6 +1,7 @@
 using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Responses.Ingest;
 using InsuranceIntegration.Api.Services.Catalog;
+using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Products;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.Snapshots.Policies;
@@ -38,4 +39,16 @@ public interface IUiGateway
     Task<IReadOnlyList<string>> ListTablesAsync(CancellationToken ct = default);
 
     Task<TablePage> QueryTableAsync(string tableName, int skip, int take, CancellationToken ct = default);
+
+    Task<PolicyLifecycleResult> CancelPolicyAsync(CancellationRequest request, CancellationToken ct = default);
+
+    Task<PolicyLifecycleResult> EndorsePolicyAsync(EndorsementRequest request, CancellationToken ct = default);
+
+    Task<RenewalResult> RenewPolicyAsync(RenewalRequest request, CancellationToken ct = default);
+
+    Task<PolicyLifecycleResult> ReinstatePolicyAsync(ReinstatementRequest request, CancellationToken ct = default);
+
+    Task<PolicyLifecycleResult> LapsePolicyAsync(LapseRequest request, CancellationToken ct = default);
+
+    Task<PolicyLifecycleResult> NonRenewPolicyAsync(NonRenewalRequest request, CancellationToken ct = default);
 }

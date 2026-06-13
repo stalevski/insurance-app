@@ -3,6 +3,7 @@ using InsuranceIntegration.Api.Responses.Ingest;
 using InsuranceIntegration.Api.Services.Catalog;
 using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Ingest;
+using InsuranceIntegration.Api.Services.Policies;
 using InsuranceIntegration.Api.Services.Products;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.Snapshots.Policies;
@@ -228,6 +229,48 @@ public sealed class UiGateway : IUiGateway
         parameter.ParameterName = name;
         parameter.Value = value;
         command.Parameters.Add(parameter);
+    }
+
+    public async Task<PolicyLifecycleResult> CancelPolicyAsync(CancellationRequest request, CancellationToken ct = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IPolicyLifecycleService>();
+        return lifecycle.ApplyCancellation(request);
+    }
+
+    public async Task<PolicyLifecycleResult> EndorsePolicyAsync(EndorsementRequest request, CancellationToken ct = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IPolicyLifecycleService>();
+        return lifecycle.ApplyEndorsement(request);
+    }
+
+    public async Task<RenewalResult> RenewPolicyAsync(RenewalRequest request, CancellationToken ct = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var renewal = scope.ServiceProvider.GetRequiredService<IPolicyRenewalService>();
+        return renewal.ApplyRenewal(request);
+    }
+
+    public async Task<PolicyLifecycleResult> ReinstatePolicyAsync(ReinstatementRequest request, CancellationToken ct = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IPolicyLifecycleService>();
+        return lifecycle.ApplyReinstatement(request);
+    }
+
+    public async Task<PolicyLifecycleResult> LapsePolicyAsync(LapseRequest request, CancellationToken ct = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IPolicyLifecycleService>();
+        return lifecycle.ApplyLapse(request);
+    }
+
+    public async Task<PolicyLifecycleResult> NonRenewPolicyAsync(NonRenewalRequest request, CancellationToken ct = default)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var lifecycle = scope.ServiceProvider.GetRequiredService<IPolicyLifecycleService>();
+        return lifecycle.ApplyNonRenewal(request);
     }
 
     private static int Clamp(int take) => take switch

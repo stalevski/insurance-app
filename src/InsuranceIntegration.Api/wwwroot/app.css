@@ -319,6 +319,24 @@ textarea {
     margin-bottom: 0.25rem;
 }
 
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.field.checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+}
+
+.field.checkbox input {
+    width: auto;
+}
+
 .alert {
     padding: 1rem 1.25rem;
     border-radius: var(--radius);
