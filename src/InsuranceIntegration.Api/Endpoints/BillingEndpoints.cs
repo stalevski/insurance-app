@@ -19,6 +19,19 @@ public static class BillingEndpoints
             }
         });
 
+        endpoints.MapPost("/api/v1/billing/delinquency", (DelinquencyAssessmentRequest request, IDelinquencyAssessmentService delinquency) =>
+        {
+            try
+            {
+                var result = delinquency.Assess(request);
+                return Results.Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid delinquency assessment request");
+            }
+        });
+
         return endpoints;
     }
 }

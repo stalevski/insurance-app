@@ -58,6 +58,14 @@ Docker-capable VPS.
   Overpayment is surfaced as `UnappliedCredit`. Pure service (`IPaymentApplicationService` /
   `PaymentApplicationService`, no new entities/migrations — billing is computation-only) behind a
   thin endpoint. 8 new tests (2026-06-13).
+- [x] **Billing delinquency / dunning.** `POST /api/v1/billing/delinquency` assesses an installment
+  schedule as of a date (defaults to now, optional grace period): open installments whose due date
+  has passed the grace cutoff transition `Issued`/`Planned` → `Overdue`, then the dunning and
+  non-payment-cancellation recommendation is recomputed via `BillingFlowService` (≥1 overdue →
+  dunning, ≥3 → `SeverelyDelinquent` + `PendingNonPaymentCancellation`). Pure service
+  (`IDelinquencyAssessmentService` / `DelinquencyAssessmentService`, no new entities) behind a thin
+  endpoint; pairs with the existing reinstatement flow to recover a lapsed/cancelled policy.
+  8 new tests (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -66,9 +74,9 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 162 tests pass** (billing payment recording added
-  +8 on 2026-06-13; lifecycle lapse/non-renewal added +10; earlier passes added reinstatement and
-  the M1/M3/M4 fixes). UI added in
+- Build green (`dotnet build -c Release`); **all 170 tests pass** (billing delinquency/dunning added
+  +8 on 2026-06-13; billing payment recording added +8; lifecycle lapse/non-renewal added +10;
+  earlier passes added reinstatement and the M1/M3/M4 fixes). UI added in
   Phase 3 introduces no new warnings and no new tests (UI is a thin facade over already-tested services).
 - NuGet packages bumped to latest (2026-06-11): EF Core / AspNetCore.OpenApi 10.0.9,
   Swashbuckle.SwaggerUI 10.2.1, NUnit 4.6.1, NUnit3TestAdapter 6.2.0, Test.Sdk 18.6.0,

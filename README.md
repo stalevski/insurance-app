@@ -109,6 +109,7 @@ Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
 Billing:
 
 - `POST /api/v1/billing/payments` (apply a payment to an installment schedule; settles installments `Issued → Paid` in due order and recomputes the billing position)
+- `POST /api/v1/billing/delinquency` (flag open installments past due — with optional grace period — as `Overdue` and recompute dunning / cancellation-for-non-payment recommendation)
 
 Replay / sanity:
 

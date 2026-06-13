@@ -229,6 +229,7 @@ Summary:
 | `POST` | `/api/v1/policies/lapses` | Lapse an in-force policy for non-payment (pro-rata earned premium + outstanding shortfall + snapshot + `PolicyLapsed` event) |
 | `POST` | `/api/v1/policies/non-renewals` | Mark an in-force policy not-renewed at expiry (snapshot + `PolicyNonRenewed` event) |
 | `POST` | `/api/v1/billing/payments` | Apply a payment to an installment schedule — settles installments `Issued → Paid` in due order and recomputes outstanding balance / delinquency |
+| `POST` | `/api/v1/billing/delinquency` | Flag open installments past due (with optional grace period) as `Overdue` and recompute dunning / non-payment-cancellation recommendation |
 | `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
 | `POST` | `/api/v1/snapshots/policies/{policyReference}/rebuild` | Replay the policy's `DomainEvents` through the projector and return the rebuilt snapshot |
