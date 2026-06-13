@@ -239,9 +239,9 @@ public sealed class BindPreconditionServiceTests : IDisposable
         var riskFlowService = new RiskFlowService(clearanceService, registry, bindPrecondition);
         var riskIngestMapper = new RiskIngestMapper(new ISourceRiskMapper[]
         {
-            new ContosoRiskMapper(),
-            new QuoteForgeRiskMapper(),
-            new BindPointRiskMapper()
+            new ContosoRiskMapper(time),
+            new QuoteForgeRiskMapper(time),
+            new BindPointRiskMapper(time)
         });
 
         var policyService = new PolicySnapshotService(context, new PolicySnapshotProjector());

@@ -5,7 +5,7 @@ using InsuranceIntegration.Api.SourceContracts.Risks;
 
 namespace InsuranceIntegration.Api.Mappers.Risks;
 
-public sealed class ContosoRiskMapper : ISourceRiskMapper
+public sealed class ContosoRiskMapper(TimeProvider timeProvider) : ISourceRiskMapper
 {
     public bool CanMap(SourceIngestRequest request)
     {
@@ -22,7 +22,7 @@ public sealed class ContosoRiskMapper : ISourceRiskMapper
             throw new InvalidOperationException("Unable to deserialize Contoso risk payload.");
         }
 
-        var transactionTimestampUtc = DateTime.UtcNow;
+        var transactionTimestampUtc = timeProvider.GetUtcNow().UtcDateTime;
         var entityId = Guid.NewGuid();
 
         return new CanonicalRiskRequest

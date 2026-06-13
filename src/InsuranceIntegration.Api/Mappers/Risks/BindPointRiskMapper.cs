@@ -5,7 +5,7 @@ using InsuranceIntegration.Api.SourceContracts.Risks;
 
 namespace InsuranceIntegration.Api.Mappers.Risks;
 
-public sealed class BindPointRiskMapper : ISourceRiskMapper
+public sealed class BindPointRiskMapper(TimeProvider timeProvider) : ISourceRiskMapper
 {
     private const string SystemCode = "BINDPOINT";
     private const string SupportedMessageType = "PolicyBindRequest";
@@ -21,7 +21,7 @@ public sealed class BindPointRiskMapper : ISourceRiskMapper
         var payload = request.Payload.Deserialize<BindPointPolicyBindPayload>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException("Unable to deserialize BindPoint policy bind payload.");
 
-        var transactionTimestampUtc = DateTime.UtcNow;
+        var transactionTimestampUtc = timeProvider.GetUtcNow().UtcDateTime;
         var installmentAmount = payload.InstallmentCount > 0
             ? Math.Round(payload.BoundPremium / payload.InstallmentCount, 2, MidpointRounding.AwayFromZero)
             : 0m;

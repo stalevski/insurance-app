@@ -1,15 +1,18 @@
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
+using Microsoft.Extensions.Time.Testing;
 using System.Text.Json;
 
 namespace InsuranceIntegration.Api.Tests.Mappers.Risks;
 
 public sealed class BindPointRiskMapperTests
 {
+    private static readonly FakeTimeProvider Time = new(new DateTimeOffset(2026, 1, 15, 8, 30, 0, TimeSpan.Zero));
+
     [Test]
     public void CanMap_ReturnsTrueForPolicyBindRequestFromBindPoint()
     {
-        var mapper = new BindPointRiskMapper();
+        var mapper = new BindPointRiskMapper(Time);
 
         var result = mapper.CanMap(CreateRequest());
 
@@ -19,10 +22,11 @@ public sealed class BindPointRiskMapperTests
     [Test]
     public void Map_TransformsBindPointPayloadIntoCanonicalPolicyBindRequest()
     {
-        var mapper = new BindPointRiskMapper();
+        var mapper = new BindPointRiskMapper(Time);
 
         var result = mapper.Map(CreateRequest());
 
+        Assert.That(result.TransactionTimestampUtc, Is.EqualTo(Time.GetUtcNow().UtcDateTime));
         Assert.That(result.ExternalReference, Is.EqualTo("POL-7781"));
         Assert.That(result.SourceSystem, Is.EqualTo("BINDPOINT"));
         Assert.That(result.TransactionType, Is.EqualTo("PolicyBind"));
@@ -36,7 +40,7 @@ public sealed class BindPointRiskMapperTests
     [Test]
     public void Map_InstallmentsSumExactlyToBoundPremium_WhenDivisionDoesNotRoundEvenly()
     {
-        var mapper = new BindPointRiskMapper();
+        var mapper = new BindPointRiskMapper(Time);
 
         // 1000 / 3 = 333.33 rounded; naive equal installments would sum to 999.99.
         var result = mapper.Map(CreateRequest(boundPremium: 1000m, installmentCount: 3));
@@ -53,7 +57,7 @@ public sealed class BindPointRiskMapperTests
     [Test]
     public void Map_InstallmentsRemainEqual_WhenDivisionRoundsEvenly()
     {
-        var mapper = new BindPointRiskMapper();
+        var mapper = new BindPointRiskMapper(Time);
 
         var result = mapper.Map(CreateRequest(boundPremium: 8500m, installmentCount: 4));
 

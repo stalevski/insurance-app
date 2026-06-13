@@ -1,15 +1,18 @@
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
+using Microsoft.Extensions.Time.Testing;
 using System.Text.Json;
 
 namespace InsuranceIntegration.Api.Tests.Mappers.Risks;
 
 public sealed class ContosoRiskMapperTests
 {
+    private static readonly FakeTimeProvider Time = new(new DateTimeOffset(2026, 1, 15, 8, 30, 0, TimeSpan.Zero));
+
     [Test]
     public void CanMap_ReturnsTrueForSupportedSourceAndMessageType()
     {
-        var mapper = new ContosoRiskMapper();
+        var mapper = new ContosoRiskMapper(Time);
 
         var result = mapper.CanMap(CreateRequest());
 
@@ -19,10 +22,11 @@ public sealed class ContosoRiskMapperTests
     [Test]
     public void Map_TransformsContosoPayloadIntoCanonicalRiskRequest()
     {
-        var mapper = new ContosoRiskMapper();
+        var mapper = new ContosoRiskMapper(Time);
 
         var result = mapper.Map(CreateRequest());
 
+        Assert.That(result.TransactionTimestampUtc, Is.EqualTo(Time.GetUtcNow().UtcDateTime));
         Assert.That(result.ExternalReference, Is.EqualTo("Q-100045"));
         Assert.That(result.ProductCode, Is.EqualTo("COMMERCIALPROPERTY"));
         Assert.That(result.SourceSystem, Is.EqualTo("CONTOSO_UW"));

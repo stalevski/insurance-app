@@ -66,7 +66,7 @@ public sealed class RiskIngestHandlerTests
         var registry = new InMemorySubmissionRegistry();
         var clearanceService = new SubmissionClearanceService(registry, calculator);
         var riskFlowService = new RiskFlowService(clearanceService, registry);
-        var riskIngestMapper = new RiskIngestMapper([new ContosoRiskMapper(), new QuoteForgeRiskMapper(), new BindPointRiskMapper()]);
+        var riskIngestMapper = new RiskIngestMapper([new ContosoRiskMapper(TimeProvider.System), new QuoteForgeRiskMapper(TimeProvider.System), new BindPointRiskMapper(TimeProvider.System)]);
         return new RiskIngestHandler(riskIngestMapper, new StubOrchestrator(riskFlowService), TimeProvider.System);
     }
 

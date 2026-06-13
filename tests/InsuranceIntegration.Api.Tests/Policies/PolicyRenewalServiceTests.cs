@@ -305,9 +305,9 @@ public sealed class PolicyRenewalServiceTests : IDisposable
         var riskFlowService = new RiskFlowService(clearanceService, registry, bindPrecondition);
         var riskIngestMapper = new RiskIngestMapper(new ISourceRiskMapper[]
         {
-            new ContosoRiskMapper(),
-            new QuoteForgeRiskMapper(),
-            new BindPointRiskMapper()
+            new ContosoRiskMapper(TimeProvider.System),
+            new QuoteForgeRiskMapper(TimeProvider.System),
+            new BindPointRiskMapper(TimeProvider.System)
         });
         var policyService = new PolicySnapshotService(context, new PolicySnapshotProjector());
         var eventLog = new DomainEventLog(context);

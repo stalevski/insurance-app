@@ -302,9 +302,9 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
         var riskFlowService = new RiskFlowService(clearanceService, registry);
         var riskIngestMapper = new RiskIngestMapper(new ISourceRiskMapper[]
         {
-            new ContosoRiskMapper(),
-            new QuoteForgeRiskMapper(),
-            new BindPointRiskMapper()
+            new ContosoRiskMapper(TimeProvider.System),
+            new QuoteForgeRiskMapper(TimeProvider.System),
+            new BindPointRiskMapper(TimeProvider.System)
         });
 
         var policyProjector = new PolicySnapshotProjector();

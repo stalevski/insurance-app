@@ -5,7 +5,7 @@ using InsuranceIntegration.Api.SourceContracts.Risks;
 
 namespace InsuranceIntegration.Api.Mappers.Risks;
 
-public sealed class QuoteForgeRiskMapper : ISourceRiskMapper
+public sealed class QuoteForgeRiskMapper(TimeProvider timeProvider) : ISourceRiskMapper
 {
     private const string SystemCode = "QUOTEFORGE";
     private const string SupportedMessageType = "QuoteRequest";
@@ -21,7 +21,7 @@ public sealed class QuoteForgeRiskMapper : ISourceRiskMapper
         var payload = request.Payload.Deserialize<QuoteForgeQuoteRequestPayload>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidOperationException("Unable to deserialize QuoteForge quote request payload.");
 
-        var transactionTimestampUtc = DateTime.UtcNow;
+        var transactionTimestampUtc = timeProvider.GetUtcNow().UtcDateTime;
 
         return new CanonicalRiskRequest
         {

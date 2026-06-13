@@ -158,7 +158,8 @@ Assert.That(result.AdjustedPremium, Is.GreaterThan(result.BasePremium));
 Model after `tests/InsuranceIntegration.Api.Tests/Mappers/Risks/QuoteForgeRiskMapperTests.cs`:
 
 ```csharp
-var mapper = new QuoteForgeRiskMapper();
+var time = new FakeTimeProvider(new DateTimeOffset(2026, 1, 15, 8, 30, 0, TimeSpan.Zero));
+var mapper = new QuoteForgeRiskMapper(time);
 var request = new SourceIngestRequest
 {
     SourceSystem = "QUOTEFORGE",
