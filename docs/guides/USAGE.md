@@ -257,6 +257,7 @@ Summary:
 | `POST` | `/api/v1/claims/financials` | Set/adjust the case reserve or record an indemnity / expense payment; recomputes `incurred = paid + outstanding reserve` |
 | `GET` | `/api/v1/policies` | List recent policy snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/policies/{policyReference}` | Full `PolicySnapshot` consolidated from all events for that key |
+| `GET` | `/api/v1/policies/{policyReference}/schedule.pdf` | Rendered policy-schedule PDF (QuestPDF) built from the snapshot; `application/pdf` |
 | `POST` | `/api/v1/snapshots/policies/{policyReference}/rebuild` | Replay the policy's `DomainEvents` through the projector and return the rebuilt snapshot |
 | `GET` | `/api/v1/quotes` | List recent quote snapshots (paginated, summary fields only) |
 | `GET` | `/api/v1/quotes/{quoteReference}` | Full `QuoteSnapshot` consolidated from all events for that key |
@@ -804,6 +805,14 @@ Response shape (abbreviated):
 **`GET /api/v1/quotes/{quoteReference}`** — same shape as policy snapshot but keyed by quote reference, with `lifecycle.isBound` and a top-level `policyReference` populated once a bind event arrives. `lifecycle.currentPhase` advances to `Bound` at the same time.
 
 **`GET /api/v1/quotes?skip=0&take=100`** — paginated summary list of quote snapshots.
+
+**`GET /api/v1/policies/{policyReference}/schedule.pdf`** — renders a one-page policy schedule as a PDF (built from the `PolicySnapshot` with [QuestPDF](https://www.questpdf.com/)). Returns `application/pdf` as a file download, or 404 if the policy snapshot does not exist. The document covers policy identifiers, parties, the cover period, premium, coverage totals, and the transaction history.
+
+```powershell
+Invoke-WebRequest http://localhost:5000/api/v1/policies/POL-7781/schedule.pdf -OutFile schedule.pdf
+```
+
+Rendering uses the free QuestPDF **Community** license, self-declared in `PolicyScheduleService` (`src/InsuranceIntegration.Api/Services/Documents/`). The document layout lives in `PolicyScheduleDocument`.
 
 ---
 

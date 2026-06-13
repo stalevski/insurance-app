@@ -1,3 +1,4 @@
+using InsuranceIntegration.Api.Services.Documents;
 using InsuranceIntegration.Api.Services.Snapshots;
 
 namespace InsuranceIntegration.Api.Endpoints;
@@ -16,6 +17,18 @@ public static class PolicyReadEndpoints
         {
             var snapshot = service.Find(policyReference);
             return snapshot is null ? Results.NotFound() : Results.Ok(snapshot);
+        });
+
+        endpoints.MapGet("/api/v1/policies/{policyReference}/schedule.pdf", (string policyReference, IPolicySnapshotService service, IPolicyScheduleService schedule) =>
+        {
+            var snapshot = service.Find(policyReference);
+            if (snapshot is null)
+            {
+                return Results.NotFound();
+            }
+
+            var pdf = schedule.GenerateSchedule(snapshot);
+            return Results.File(pdf, "application/pdf", $"policy-schedule-{policyReference}.pdf");
         });
 
         endpoints.MapPost("/api/v1/snapshots/policies/{policyReference}/rebuild", (string policyReference, ISnapshotRebuildService rebuild) =>

@@ -5,6 +5,7 @@ using InsuranceIntegration.Api.Services.Catalog;
 using InsuranceIntegration.Api.Services.Claims;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Correlation;
+using InsuranceIntegration.Api.Services.Documents;
 using InsuranceIntegration.Api.Services.Events;
 using InsuranceIntegration.Api.Services.Billing;
 using InsuranceIntegration.Api.Services.Flows;
@@ -82,6 +83,8 @@ public static class ServiceRegistration
         services.AddScoped<IDelinquencyAssessmentService, DelinquencyAssessmentService>();
         services.AddScoped<IClaimLifecycleService, ClaimLifecycleService>();
         services.AddScoped<IClaimFinancialService, ClaimFinancialService>();
+
+        services.AddSingleton<IPolicyScheduleService, PolicyScheduleService>();
 
         services.AddSingleton<IPolicySnapshotProjector, PolicySnapshotProjector>();
         services.AddSingleton<IQuoteSnapshotProjector, QuoteSnapshotProjector>();

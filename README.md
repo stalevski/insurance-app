@@ -95,6 +95,7 @@ Ingest and discovery:
 Snapshot reads:
 
 - `GET /api/v1/policies` and `GET /api/v1/policies/{policyReference}` (consolidated `PolicySnapshot` per policy key)
+- `GET /api/v1/policies/{policyReference}/schedule.pdf` — rendered policy-schedule PDF (QuestPDF) built from the snapshot
 - `GET /api/v1/quotes` and `GET /api/v1/quotes/{quoteReference}` (consolidated `QuoteSnapshot` per quote key)
 
 Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):

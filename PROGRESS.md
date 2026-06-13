@@ -86,6 +86,11 @@ Docker-capable VPS.
   Decision logic is isolated in a pure, unit-testable `ApiKeyValidator` (fixed-time key comparison);
   GET reads, `/health`, `/swagger`, OpenAPI, and static assets are never gated. 20 new test cases
   (2026-06-13).
+- [x] **Policy schedule PDF.** `GET /api/v1/policies/{policyReference}/schedule.pdf` renders a
+  one-page policy schedule (identifiers, parties, cover period, premium, coverage, history) from the
+  `PolicySnapshot` using QuestPDF (free Community license, self-declared in `PolicyScheduleService`).
+  Layout lives in `PolicyScheduleDocument`; a pure `IPolicyScheduleService` returns the PDF bytes,
+  the endpoint serves `application/pdf` (404 when the snapshot is missing). 3 new tests (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -94,7 +99,8 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 219 tests pass** (API-key auth added +20 on
+- Build green (`dotnet build -c Release`); **all 222 tests pass** (policy schedule PDF added +3 and
+  API-key auth added +20 on
   2026-06-13; claim reserves/payments added +10
   on 2026-06-13; claim status workflow added +19; billing delinquency/dunning added +8; billing
   payment recording added +8; lifecycle lapse/non-renewal added +10; earlier passes added
