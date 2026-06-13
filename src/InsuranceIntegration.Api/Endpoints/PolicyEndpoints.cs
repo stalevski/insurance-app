@@ -57,6 +57,23 @@ public static class PolicyEndpoints
             }
         });
 
+        endpoints.MapPost("/api/v1/policies/reinstatements", (ReinstatementRequest request, IPolicyLifecycleService lifecycle) =>
+        {
+            try
+            {
+                var result = lifecycle.ApplyReinstatement(request);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Policy not found");
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid reinstatement request");
+            }
+        });
+
         return endpoints;
     }
 }

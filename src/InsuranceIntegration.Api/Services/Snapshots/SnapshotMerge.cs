@@ -59,6 +59,11 @@ internal static class SnapshotMerge
             return "Renewed";
         }
 
+        if (string.Equals(policyStatus, PolicyStatusValue.Reinstated, StringComparison.OrdinalIgnoreCase))
+        {
+            return "Reinstated";
+        }
+
         if (string.Equals(policyStatus, PolicyStatusValue.ReadyToBind, StringComparison.OrdinalIgnoreCase))
         {
             return "ReadyToBind";

@@ -157,6 +157,96 @@ public sealed class PolicyLifecycleServiceTests : IDisposable
         }));
     }
 
+    [Test]
+    public void ApplyReinstatement_OnCancelledPolicy_RestoresPolicyAndWritesPolicyReinstatedEvent()
+    {
+        SeedBoundPolicy("POL-LIFE-003", "QT-LIFE-003");
+
+        var (lifecycle, _) = BuildServices();
+        lifecycle.ApplyCancellation(new CancellationRequest
+        {
+            PolicyReference = "POL-LIFE-003",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            Basis = CancellationBasis.ProRata
+        });
+
+        var result = lifecycle.ApplyReinstatement(new ReinstatementRequest
+        {
+            PolicyReference = "POL-LIFE-003",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            ReinstatementDate = new DateOnly(2026, 5, 1),
+            ReinstatementFee = 75m,
+            ChargeLapsedPremium = true,
+            Reason = "Payment received"
+        });
+
+        using var verifyContext = new IntegrationDbContext(_options);
+        var policyService = new PolicySnapshotService(verifyContext, new PolicySnapshotProjector());
+        var snapshot = policyService.Find("POL-LIFE-003");
+        var eventLog = new DomainEventLog(verifyContext);
+        var policyEvents = eventLog.GetByAggregate(DomainEventAggregateKind.Policy, "POL-LIFE-003");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.PolicyStatus, Is.EqualTo(PolicyStatusValue.Reinstated));
+            Assert.That(result.CurrentPhase, Is.EqualTo("Reinstated"));
+            Assert.That(result.DomainEventType, Is.EqualTo(DomainEventType.PolicyReinstated));
+            Assert.That(result.DomainEventId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(result.Reinstatement, Is.Not.Null);
+            Assert.That(result.Reinstatement!.AmountDueOnReinstatement, Is.GreaterThanOrEqualTo(75m));
+
+            Assert.That(snapshot, Is.Not.Null);
+            Assert.That(snapshot!.Lifecycle.PolicyStatus, Is.EqualTo(PolicyStatusValue.Reinstated));
+            Assert.That(snapshot.Lifecycle.CurrentPhase, Is.EqualTo("Reinstated"));
+            Assert.That(snapshot.History.Select(h => h.TransactionType), Does.Contain(PolicyTransactionType.Reinstatement));
+
+            Assert.That(policyEvents.Select(e => e.EventType), Is.EqualTo(new[]
+            {
+                DomainEventType.PolicyBound,
+                DomainEventType.PolicyCancelled,
+                DomainEventType.PolicyReinstated
+            }));
+        });
+    }
+
+    [Test]
+    public void ApplyReinstatement_OnActivePolicy_ThrowsArgumentException()
+    {
+        SeedBoundPolicy("POL-LIFE-004", "QT-LIFE-004");
+
+        var (lifecycle, _) = BuildServices();
+        Assert.Throws<ArgumentException>(() => lifecycle.ApplyReinstatement(new ReinstatementRequest
+        {
+            PolicyReference = "POL-LIFE-004",
+            AnnualPremium = 10000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            ReinstatementDate = new DateOnly(2026, 5, 1)
+        }));
+    }
+
+    [Test]
+    public void ApplyReinstatement_OnUnknownPolicy_ThrowsKeyNotFound()
+    {
+        var (lifecycle, _) = BuildServices();
+        Assert.Throws<KeyNotFoundException>(() => lifecycle.ApplyReinstatement(new ReinstatementRequest
+        {
+            PolicyReference = "POL-DOES-NOT-EXIST",
+            AnnualPremium = 1000m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            ReinstatementDate = new DateOnly(2026, 5, 1)
+        }));
+    }
+
     private void SeedBoundPolicy(string policyReference, string quoteReference)
     {
         var (_, dispatcher) = BuildServices();

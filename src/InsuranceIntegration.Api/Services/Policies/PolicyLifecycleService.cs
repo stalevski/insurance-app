@@ -120,6 +120,49 @@ public sealed class PolicyLifecycleService : IPolicyLifecycleService
         };
     }
 
+    public PolicyLifecycleResult ApplyReinstatement(ReinstatementRequest request)
+    {
+        var snapshot = LoadSnapshotOrThrow(request.PolicyReference);
+
+        if (!string.Equals(snapshot.Lifecycle.PolicyStatus, PolicyStatusValue.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                $"Policy '{request.PolicyReference}' is '{snapshot.Lifecycle.PolicyStatus}'. Only a cancelled policy can be reinstated.");
+        }
+
+        var math = _adjustmentService.CalculateReinstatement(request);
+        var nowUtc = _time.GetUtcNow().UtcDateTime;
+
+        var canonical = SynthesizeCanonical(
+            snapshot,
+            transactionType: PolicyTransactionType.Reinstatement,
+            transactionTimestampUtc: nowUtc,
+            brokerPremium: math.ReinstatedAnnualPremium,
+            inceptionDate: request.InceptionDate,
+            expiryDate: request.ExpiryDate,
+            sectionOperations: []);
+
+        var context = BuildInternalContext(
+            request.PolicyReference,
+            messageType: "PolicyReinstatement",
+            occurredAtUtc: nowUtc);
+
+        var (response, eventId) = RouteAndCaptureEventId(canonical, context);
+
+        var refreshed = _policySnapshotService.Find(request.PolicyReference) ?? snapshot;
+
+        return new PolicyLifecycleResult
+        {
+            PolicyReference = request.PolicyReference,
+            TransactionType = PolicyTransactionType.Reinstatement,
+            PolicyStatus = response.PolicyStatus,
+            CurrentPhase = refreshed.Lifecycle.CurrentPhase,
+            DomainEventId = eventId,
+            DomainEventType = DomainEventType.PolicyReinstated,
+            Reinstatement = math
+        };
+    }
+
     private PolicySnapshot LoadSnapshotOrThrow(string policyReference)
     {
         var snapshot = _policySnapshotService.Find(policyReference);

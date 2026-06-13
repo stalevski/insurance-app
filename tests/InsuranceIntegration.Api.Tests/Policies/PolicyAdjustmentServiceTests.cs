@@ -85,4 +85,69 @@ public sealed class PolicyAdjustmentServiceTests
         Assert.That(result.AdjustmentDirection, Is.EqualTo("ReturnPremium"));
         Assert.That(result.ProRataAdjustment, Is.LessThan(0m));
     }
+
+    [Test]
+    public void CalculateReinstatement_GapInCover_DeductsLapsedPremiumAndChargesFeeOnly()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new ReinstatementRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            ReinstatementDate = new DateOnly(2026, 5, 1),
+            ReinstatementFee = 50m,
+            ChargeLapsedPremium = false
+        };
+
+        var result = service.CalculateReinstatement(request);
+
+        Assert.That(result.GapInCoverage, Is.True);
+        Assert.That(result.LapsedDays, Is.EqualTo(30));
+        Assert.That(result.LapsedPremium, Is.GreaterThan(0m));
+        Assert.That(result.AmountDueOnReinstatement, Is.EqualTo(50m));
+        Assert.That(result.ReinstatedAnnualPremium, Is.EqualTo(1200m - result.LapsedPremium));
+    }
+
+    [Test]
+    public void CalculateReinstatement_ContinuousCover_ChargesLapsedPremiumPlusFeeAndKeepsAnnualPremium()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new ReinstatementRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            CancellationDate = new DateOnly(2026, 4, 1),
+            ReinstatementDate = new DateOnly(2026, 5, 1),
+            ReinstatementFee = 50m,
+            ChargeLapsedPremium = true
+        };
+
+        var result = service.CalculateReinstatement(request);
+
+        Assert.That(result.GapInCoverage, Is.False);
+        Assert.That(result.ReinstatedAnnualPremium, Is.EqualTo(1200m));
+        Assert.That(result.AmountDueOnReinstatement, Is.EqualTo(50m + result.LapsedPremium));
+    }
+
+    [Test]
+    public void CalculateReinstatement_ReinstatementBeforeCancellation_Throws()
+    {
+        var service = new PolicyAdjustmentService();
+        var request = new ReinstatementRequest
+        {
+            PolicyReference = "POL-1",
+            AnnualPremium = 1200m,
+            InceptionDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2027, 1, 1),
+            CancellationDate = new DateOnly(2026, 5, 1),
+            ReinstatementDate = new DateOnly(2026, 4, 1)
+        };
+
+        Assert.Throws<ArgumentException>(() => service.CalculateReinstatement(request));
+    }
 }

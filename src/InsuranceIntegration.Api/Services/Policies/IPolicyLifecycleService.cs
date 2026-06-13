@@ -12,4 +12,6 @@ public interface IPolicyLifecycleService
     PolicyLifecycleResult ApplyCancellation(CancellationRequest request);
 
     PolicyLifecycleResult ApplyEndorsement(EndorsementRequest request);
+
+    PolicyLifecycleResult ApplyReinstatement(ReinstatementRequest request);
 }

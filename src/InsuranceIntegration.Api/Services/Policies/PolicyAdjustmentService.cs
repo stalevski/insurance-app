@@ -108,6 +108,72 @@ public sealed class PolicyAdjustmentService : IPolicyAdjustmentService
         };
     }
 
+    public ReinstatementResult CalculateReinstatement(ReinstatementRequest request)
+    {
+        ValidatePolicyPeriod(request.InceptionDate, request.ExpiryDate);
+
+        if (request.ReinstatementDate < request.CancellationDate)
+        {
+            throw new ArgumentException("Reinstatement date cannot be earlier than the cancellation date.");
+        }
+
+        if (request.ReinstatementFee < 0m)
+        {
+            throw new ArgumentException("Reinstatement fee cannot be negative.");
+        }
+
+        var totalDays = Math.Max(1, (request.ExpiryDate.ToDateTime(TimeOnly.MinValue) - request.InceptionDate.ToDateTime(TimeOnly.MinValue)).Days);
+        var cancellationDate = ClampToPolicyPeriod(request.CancellationDate, request.InceptionDate, request.ExpiryDate);
+        var reinstatementDate = ClampToPolicyPeriod(request.ReinstatementDate, request.InceptionDate, request.ExpiryDate);
+        var lapsedDays = Math.Max(0, (reinstatementDate.ToDateTime(TimeOnly.MinValue) - cancellationDate.ToDateTime(TimeOnly.MinValue)).Days);
+
+        var lapsedPremium = Math.Round(request.AnnualPremium * lapsedDays / totalDays, 2, MidpointRounding.AwayFromZero);
+
+        decimal amountDue;
+        decimal reinstatedAnnualPremium;
+        if (request.ChargeLapsedPremium)
+        {
+            // Continuous cover: insured pays for the gap plus the admin fee; premium unchanged.
+            amountDue = request.ReinstatementFee + lapsedPremium;
+            reinstatedAnnualPremium = request.AnnualPremium;
+        }
+        else
+        {
+            // Gap in cover: insured pays only the admin fee; the lapsed premium is not earned.
+            amountDue = request.ReinstatementFee;
+            reinstatedAnnualPremium = Math.Max(0m, request.AnnualPremium - lapsedPremium);
+        }
+
+        var reasons = new List<string>
+        {
+            $"Lapsed days: {lapsedDays} of {totalDays}",
+            $"Lapsed premium (pro-rata): {lapsedPremium:0.##}",
+            $"Reinstatement fee: {request.ReinstatementFee:0.##}",
+            request.ChargeLapsedPremium
+                ? "Continuous cover: lapsed premium charged to the insured"
+                : "Gap in cover: lapsed premium deducted from annual premium",
+            $"Amount due on reinstatement: {amountDue:0.##}",
+            $"Reinstated annual premium: {reinstatedAnnualPremium:0.##}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.Reason))
+        {
+            reasons.Add($"Reason: {request.Reason}");
+        }
+
+        return new ReinstatementResult
+        {
+            PolicyReference = request.PolicyReference,
+            LapsedDays = lapsedDays,
+            ReinstatementFee = request.ReinstatementFee,
+            LapsedPremium = lapsedPremium,
+            AmountDueOnReinstatement = amountDue,
+            ReinstatedAnnualPremium = reinstatedAnnualPremium,
+            GapInCoverage = !request.ChargeLapsedPremium,
+            Reasons = reasons
+        };
+    }
+
     private static string DescribeOperation(SectionEndorsementOperation operation)
     {
         var target = string.IsNullOrWhiteSpace(operation.SubcoverCode)

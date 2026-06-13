@@ -26,6 +26,7 @@ public static class LifecycleStageDiagram
             "Endorsed" => PolicyStages.Append("Endorsed").ToArray(),
             "Renewed" => PolicyStages.Append("Renewed").ToArray(),
             "Cancelled" => PolicyStages.Append("Cancelled").ToArray(),
+            "Reinstated" => PolicyStages.Append("Cancelled").Append("Reinstated").ToArray(),
             _ => PolicyStages,
         };
 

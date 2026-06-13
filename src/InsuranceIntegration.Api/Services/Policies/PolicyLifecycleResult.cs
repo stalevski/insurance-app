@@ -22,4 +22,6 @@ public sealed class PolicyLifecycleResult
     public CancellationResult? Cancellation { get; init; }
 
     public EndorsementResult? Endorsement { get; init; }
+
+    public ReinstatementResult? Reinstatement { get; init; }
 }
