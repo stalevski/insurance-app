@@ -56,7 +56,7 @@ public sealed class BillingFlowService : IBillingFlowService
         var nonPaymentCancellation = missedPayments >= MissedPaymentCancellationThreshold;
         var nextDueDate = hasSchedule
             ? nextInstallment?.DueDate
-            : request.FirstDueDate?.AddMonths(Math.Max(request.MissedPayments, 0));
+            : ResolveScheduleFreeNextDueDate(request.FirstDueDate, installmentCount, paidToDate, installmentAmount);
 
         var reasons = new List<string>
         {
@@ -114,5 +114,50 @@ public sealed class BillingFlowService : IBillingFlowService
         }
 
         return "Current";
+    }
+
+    // Without an explicit schedule the next due date is derived from the billing
+    // frequency implied by the installment count (12 -> monthly, 4 -> quarterly,
+    // 2 -> semi-annual, 1 -> annual) advanced by the number of settled installments.
+    // It must not be driven by the count of missed payments.
+    private static DateOnly? ResolveScheduleFreeNextDueDate(DateOnly? firstDueDate, int installmentCount, decimal paidToDate, decimal installmentAmount)
+    {
+        if (firstDueDate is null)
+        {
+            return null;
+        }
+
+        var settledInstallments = installmentAmount > 0m
+            ? (int)Math.Floor(paidToDate / installmentAmount)
+            : 0;
+
+        if (installmentCount > 0)
+        {
+            settledInstallments = Math.Clamp(settledInstallments, 0, installmentCount);
+
+            // Every installment is settled -> nothing further is due.
+            if (settledInstallments >= installmentCount)
+            {
+                return null;
+            }
+        }
+        else
+        {
+            settledInstallments = Math.Max(settledInstallments, 0);
+        }
+
+        var billingPeriodMonths = ResolveBillingPeriodMonths(installmentCount);
+        return firstDueDate.Value.AddMonths(settledInstallments * billingPeriodMonths);
+    }
+
+    private static int ResolveBillingPeriodMonths(int installmentCount)
+    {
+        if (installmentCount <= 1)
+        {
+            return 12;
+        }
+
+        // Assume a 12-month billing term.
+        return Math.Max(1, 12 / installmentCount);
     }
 }

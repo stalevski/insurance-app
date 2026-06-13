@@ -78,7 +78,7 @@
   </div>
 
   <div class="summary">
-    <div class="stat"><div class="n" style="color:#86efac">1</div><div class="l">Implemented this pass</div></div>
+    <div class="stat"><div class="n" style="color:#86efac">4</div><div class="l">Implemented this pass</div></div>
     <div class="stat"><div class="n" style="color:#93c5fd">10</div><div class="l">Recommended next</div></div>
     <div class="stat"><div class="n" style="color:#fde68a">18</div><div class="l">Deferred</div></div>
     <div class="stat"><div class="n" style="color:#cbd5e1">9</div><div class="l">Skipped</div></div>
@@ -112,7 +112,7 @@
       <tr><td class="feat">Payment recording endpoint</td><td class="desc">Record an installment payment; transition installment <code>Issued → Paid</code>; recompute outstanding balance.</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
       <tr><td class="feat">Delinquency / dunning workflow</td><td class="desc">Overdue detection, cancellation-for-non-payment notices, reinstatement reuse (now available).</td><td class="effort">M</td><td><span class="badge b-rec">Recommended next</span></td></tr>
       <tr><td class="feat">Refund / return-premium processing</td><td class="desc">Turn cancellation/endorsement return premiums into payable refund records.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
-      <tr><td class="feat">Billing fallback due-date fix (M1)</td><td class="desc">Derive next due date from billing frequency, not missed-payment count. Already logged in KNOWN_ISSUES.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Billing fallback due-date fix (M1)</td><td class="desc">Derive next due date from billing frequency, not missed-payment count. Already logged in KNOWN_ISSUES.</td><td class="effort">S</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">Payment-gateway adapter</td><td class="desc">Stripe/GoCardless mandate + collection. Needs secrets &amp; PCI scope.</td><td class="effort">L</td><td><span class="badge b-skip">Skip / not now</span></td></tr>
     </tbody>
   </table>
@@ -133,7 +133,7 @@
   <table>
     <thead><tr><th>Feature</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
     <tbody>
-      <tr><td class="feat">Configurable underwriting thresholds (M3)</td><td class="desc">Move hard-coded auto-clear/decline money bands into product/config. Logged in KNOWN_ISSUES.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">Configurable underwriting thresholds (M3)</td><td class="desc">Move hard-coded auto-clear/decline money bands into product/config. Logged in KNOWN_ISSUES.</td><td class="effort">S</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">Referral workflow</td><td class="desc">Route <code>ManualUnderwritingReview</code> to a queue with accept/decline/refer actions.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">Declination reason catalogue</td><td class="desc">Structured, reportable decline reasons instead of free text.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">Rating-table versioning</td><td class="desc">Effective-dated rate tables so re-rating an old transaction uses the period’s rates.</td><td class="effort">L</td><td><span class="badge b-defer">Defer</span></td></tr>
@@ -199,7 +199,7 @@
   <table>
     <thead><tr><th>Item</th><th>What it adds</th><th>Effort</th><th>Verdict</th></tr></thead>
     <tbody>
-      <tr><td class="feat">M4 — inject <code>TimeProvider</code> in mappers/handlers</td><td class="desc">Remove direct <code>DateTime.UtcNow</code> for determinism.</td><td class="effort">S</td><td><span class="badge b-rec">Recommended next</span></td></tr>
+      <tr><td class="feat">M4 — inject <code>TimeProvider</code> in mappers/handlers</td><td class="desc">Remove direct <code>DateTime.UtcNow</code> for determinism.</td><td class="effort">S</td><td><span class="badge b-done">Implemented</span></td></tr>
       <tr><td class="feat">M5 — snapshot zero-premium clearing</td><td class="desc">Apply explicit zero premium instead of preserving stale value.</td><td class="effort">S</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">D2 — warning cleanup</td><td class="desc">Resolve/suppress the ~47 analyzer warnings to restore the “no new warnings” bar.</td><td class="effort">M</td><td><span class="badge b-defer">Defer</span></td></tr>
       <tr><td class="feat">L1/L2 — mapper hard-coding &amp; non-deterministic ids</td><td class="desc">Map real source fields; inject an id provider.</td><td class="effort">S</td><td><span class="badge b-skip">Skip / not now</span></td></tr>

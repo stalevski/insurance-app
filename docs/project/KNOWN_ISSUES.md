@@ -20,37 +20,6 @@ _None open. H1–H3 were fixed on 2026-06-11 — see the Fixed section below._
 
 ## 🟠 Medium
 
-### M1 — Billing next-due-date derived from missed-payment count (no-schedule path)
-- **Where:** `Services/Flows/BillingFlowService.cs`, around line 58:
-  `nextDueDate = request.FirstDueDate?.AddMonths(Math.Max(request.MissedPayments, 0))`.
-- **What:** When there is no explicit installment schedule, the next due date is the first due date
-  plus *the number of missed payments* in months.
-- **Why it matters:** Number of missed payments is unrelated to the billing cadence; this yields
-  arbitrary due dates (e.g. 5 missed → first due + 5 months). The scheduled path (using the next
-  open installment's `DueDate`) is correct; only the fallback is wrong.
-- **Suggested fix:** Derive next due date from the billing frequency/cycle, not the missed count.
-
-### M3 — Hard-coded, inconsistent underwriting thresholds
-- **Where:** `Services/Flows/RiskFlowService.cs` — auto-clearance requires `totalIncurred <= 5000m`
-  (line ~555) while insured decline triggers at `totalIncurred > 25000m` (line ~365).
-- **What:** Two unrelated hard-coded money thresholds govern related decisions, leaving a 5k–25k
-  band where behavior is implicit and untunable.
-- **Why it matters:** Underwriting thresholds should be configuration/product-driven (as
-  `Clearance.PremiumThreshold` already is). Hard-coded magic numbers are hard to reason about and
-  tune, and the two values aren't obviously consistent.
-- **Suggested fix:** Move both thresholds into configuration/product definitions and document the
-  intended bands.
-
-### M4 — `DateTime.UtcNow` used directly in logic (violates `TimeProvider` convention)
-- **Where (examples):**
-  - `Services/Flows/RiskFlowService.cs` line ~319 (`DateTime.UtcNow.Year`).
-  - `Mappers/Risks/BindPointRiskMapper.cs` (~line 23), `ContosoRiskMapper.cs`,
-    `QuoteForgeRiskMapper.cs`, and some ingest handlers.
-- **What:** Wall-clock time is read directly instead of an injected `TimeProvider`.
-- **Why it matters:** Non-deterministic; can cause year-boundary bugs and flaky tests. The repo
-  convention (see `AGENTS.md`) is to inject `TimeProvider` and use `FakeTimeProvider` in tests.
-- **Suggested fix:** Inject `TimeProvider` into these types and replace `DateTime.UtcNow`.
-
 ### M5 — Snapshot premium not cleared when an update sets premium to zero
 - **Where:** `Services/Snapshots/PolicySnapshotProjector.cs` (premium update guarded by
   `> 0m` checks).
@@ -105,6 +74,32 @@ _When an item here is fixed, remove it (or move it to a "Fixed" section) and add
 ---
 
 ## ✅ Fixed
+
+### M1 — Billing next-due-date derived from missed-payment count (no-schedule path) _(fixed 2026-06-13)_
+- `BillingFlowService` now derives the no-schedule next due date from the billing frequency implied
+  by the installment count (12 → monthly, 4 → quarterly, 2 → semi-annual, 1 → annual), advanced by
+  the number of settled installments — not the missed-payment count. Fully-settled schedules return
+  no next due date, matching the explicit-schedule path.
+- Regression tests: `tests/.../Flows/BillingFlowServiceTests.cs`
+  (`Process_DerivesQuarterlyNextDueDateFromBillingFrequency_WhenScheduleNotProvided`,
+  `Process_DerivesMonthlyNextDueDateFromBillingFrequency_WhenScheduleNotProvided`).
+
+### M3 — Hard-coded, inconsistent underwriting thresholds _(fixed 2026-06-13)_
+- The decline (25,000) and auto-clear (5,000) incurred-loss thresholds moved out of
+  `RiskFlowService` into `ClearanceData` (`DeclineIncurredThreshold`, `AutoClearIncurredThreshold`),
+  mirroring the existing `PremiumThreshold`. Defaults preserve prior behavior; both are now
+  overridable per request/product.
+- Regression tests: `tests/.../Flows/RiskFlowServiceTests.cs`
+  (`Process_DeclineIncurredThreshold_IsConfigurable`, `Process_AutoClearIncurredThreshold_IsConfigurable`).
+
+### M4 — `DateTime.UtcNow` used directly in logic (violates `TimeProvider` convention) _(fixed 2026-06-13)_
+- `BindPointRiskMapper`, `ContosoRiskMapper`, and `QuoteForgeRiskMapper` now take an injected
+  `TimeProvider`; `RiskFlowService` takes an (optional) `TimeProvider` and uses it for the
+  year-boundary enrichment check. The ingest handlers already received a `TimeProvider`. (The
+  Blazor `Ingest.razor` demo page still stamps `occurredAtUtc` with wall-clock time — that is
+  presentation-layer sample data, not business logic.)
+- Regression tests: mapper tests pin a `FakeTimeProvider` and assert deterministic
+  `TransactionTimestampUtc` (`tests/.../Mappers/Risks/*RiskMapperTests.cs`).
 
 ### H1 — Outbox messages were marked dispatched but never actually sent _(fixed 2026-06-11)_
 - Introduced `IOutboxPublisher` (default `LoggingOutboxPublisher`; swap the DI registration for a
