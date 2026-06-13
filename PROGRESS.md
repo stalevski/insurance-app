@@ -200,6 +200,12 @@ Docker-capable VPS.
    routes; today those are reachable via Swagger only.
 5. Feature backlog: a full enumeration of candidate functionality (with add/defer/skip verdicts)
    lives in `docs/project/FEATURE_PLAN.html` — open it in a browser to pick the next feature.
+6. Test refactoring (tech debt): the test suite likely needs an **expected-results builder** to
+   construct the expected canonical/response objects (and request fixtures) instead of hand-building
+   them inline in each test. Related: **review the test classes for code duplication** — repeated
+   arrange/setup (e.g. building requests, `FakeTimeProvider` wiring, in-memory SQLite/`DbContext`
+   setup, common assertions) should be extracted into private helper methods within a test class, or
+   a shared **base test class** / fixtures where the duplication spans multiple classes.
 
 ## Open questions / to confirm with hosting provider
 
