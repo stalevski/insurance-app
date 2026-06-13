@@ -30,9 +30,14 @@ Docker-capable VPS.
   read-only **DB browser**. UI calls services via an `IUiGateway` facade that opens a fresh DI
   scope per operation (no long-lived circuit-scoped `DbContext`).
 - [ ] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
-  Dockerfile, `.dockerignore`, and `docs/guides/DEPLOYMENT.md` are written (2026-06-11) but the image
-  build is **not yet verified** — Docker daemon was not running on the dev machine. Run
-  `docker build -t insurance-integration .` to validate.
+  Dockerfile, `.dockerignore`, and `docs/guides/DEPLOYMENT.md` are written (2026-06-11). The image
+  build is **still not verified end-to-end** — the Docker daemon was unavailable again on
+  2026-06-13. What *was* verified locally that day: the Dockerfile's restore+publish stage runs
+  clean against the same sources (`dotnet publish -c Release` succeeds and emits
+  `InsuranceIntegration.Api.dll`, matching the `ENTRYPOINT`), and the `/health` path the
+  `HEALTHCHECK` probes is mapped (`HealthEndpoints.MapHealthEndpoints`). Remaining to confirm on a
+  Docker-capable machine: `docker build -t insurance-integration .` then the run command in
+  `docs/guides/DEPLOYMENT.md`.
 - [x] **Policy reinstatement (lifecycle gap closed).** `POST /api/v1/policies/reinstatements`
   restores a cancelled policy to in-force (status/phase `Reinstated`, `PolicyReinstated` event in
   one EF transaction). Added `ReinstatementRequest`/`ReinstatementResult`,
@@ -137,9 +142,12 @@ Docker-capable VPS.
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
   normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
   no code/build/test impact.
-- **Working on now:** Phase 4 wrap-up — verify the Docker image builds and runs (`docker build`,
-  then the run command in `docs/guides/DEPLOYMENT.md`); Docker daemon was unavailable when the
-  Dockerfile was authored.
+- **Working on now:** Phase 4 wrap-up — verifying the Docker image. On 2026-06-13 the Docker daemon
+  was again unavailable, so the container could not be built/run. Verified the next-best way: the
+  Dockerfile's restore+publish stage was reproduced locally (`dotnet publish -c Release` succeeds
+  and produces the `InsuranceIntegration.Api.dll` entrypoint) and the `/health` endpoint the
+  HEALTHCHECK probes exists. Full `docker build` / `docker run` verification per
+  `docs/guides/DEPLOYMENT.md` still needs a Docker-capable machine.
 
 ### Phase 3 UI map (where things live)
 
