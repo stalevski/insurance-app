@@ -23,4 +23,14 @@ public static class DomainEventType
     public const string PolicyNonRenewed = "PolicyNonRenewed";
 
     public const string ClaimNotified = "ClaimNotified";
+
+    public const string ClaimOpened = "ClaimOpened";
+
+    public const string ClaimReserved = "ClaimReserved";
+
+    public const string ClaimSettled = "ClaimSettled";
+
+    public const string ClaimDeclined = "ClaimDeclined";
+
+    public const string ClaimClosed = "ClaimClosed";
 }

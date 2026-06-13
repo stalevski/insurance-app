@@ -1,6 +1,7 @@
 using InsuranceIntegration.Api.Mappers.Risks;
 using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Services.Catalog;
+using InsuranceIntegration.Api.Services.Claims;
 using InsuranceIntegration.Api.Services.Clearance;
 using InsuranceIntegration.Api.Services.Correlation;
 using InsuranceIntegration.Api.Services.Events;
@@ -73,6 +74,7 @@ public static class ServiceRegistration
         services.AddScoped<IComplianceFlowService, ComplianceFlowService>();
         services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
         services.AddScoped<IDelinquencyAssessmentService, DelinquencyAssessmentService>();
+        services.AddScoped<IClaimLifecycleService, ClaimLifecycleService>();
 
         services.AddSingleton<IPolicySnapshotProjector, PolicySnapshotProjector>();
         services.AddSingleton<IQuoteSnapshotProjector, QuoteSnapshotProjector>();

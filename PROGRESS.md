@@ -66,6 +66,13 @@ Docker-capable VPS.
   (`IDelinquencyAssessmentService` / `DelinquencyAssessmentService`, no new entities) behind a thin
   endpoint; pairs with the existing reinstatement flow to recover a lapsed/cancelled policy.
   8 new tests (2026-06-13).
+- [x] **Claim status workflow.** `POST /api/v1/claims/transitions` validates a claim status move
+  through the `Notified → Open → Reserved → Settled/Declined → Closed` state machine, rejecting
+  illegal jumps and terminal-state moves, and requiring a reserve amount when reserving / a
+  settlement amount when settling. Added `ClaimStatusValue`, the `Claim{Opened,Reserved,Settled,
+  Declined,Closed}` domain-event types, and a pure `IClaimLifecycleService` /
+  `ClaimLifecycleService` (claims remain computation-only — persisting the event log awaits the
+  deferred claim snapshot). 19 new test cases (2026-06-13).
 - [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
   `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
@@ -74,9 +81,10 @@ Docker-capable VPS.
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 170 tests pass** (billing delinquency/dunning added
-  +8 on 2026-06-13; billing payment recording added +8; lifecycle lapse/non-renewal added +10;
-  earlier passes added reinstatement and the M1/M3/M4 fixes). UI added in
+- Build green (`dotnet build -c Release`); **all 189 tests pass** (claim status workflow added +19
+  on 2026-06-13; billing delinquency/dunning added +8; billing payment recording added +8;
+  lifecycle lapse/non-renewal added +10; earlier passes added reinstatement and the M1/M3/M4
+  fixes). UI added in
   Phase 3 introduces no new warnings and no new tests (UI is a thin facade over already-tested services).
 - NuGet packages bumped to latest (2026-06-11): EF Core / AspNetCore.OpenApi 10.0.9,
   Swashbuckle.SwaggerUI 10.2.1, NUnit 4.6.1, NUnit3TestAdapter 6.2.0, Test.Sdk 18.6.0,

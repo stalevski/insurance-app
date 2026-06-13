@@ -111,6 +111,10 @@ Billing:
 - `POST /api/v1/billing/payments` (apply a payment to an installment schedule; settles installments `Issued → Paid` in due order and recomputes the billing position)
 - `POST /api/v1/billing/delinquency` (flag open installments past due — with optional grace period — as `Overdue` and recompute dunning / cancellation-for-non-payment recommendation)
 
+Claims:
+
+- `POST /api/v1/claims/transitions` (validate a claim status move `Notified → Open → Reserved → Settled/Declined → Closed`; returns the resulting status and matching `Claim*` event type)
+
 Replay / sanity:
 
 - `POST /api/v1/snapshots/policies/{policyReference}/rebuild` and `POST /api/v1/snapshots/quotes/{quoteReference}/rebuild` — replay the aggregate's `DomainEvents` through the projector
