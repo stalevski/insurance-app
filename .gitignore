@@ -65,7 +65,9 @@ appsettings.*.local.json
 # IDEs
 # ============================================================
 .vs/
-.vscode/
+.vscode/*
+# Keep shared, repo-level VS Code tasks (Start app / Stop app) under version control.
+!.vscode/tasks.json
 .idea/
 _ReSharper*/
 

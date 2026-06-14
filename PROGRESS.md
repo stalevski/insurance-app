@@ -135,8 +135,17 @@ Docker-capable VPS.
   middleware) returns **404** for `/database` when disabled — 404 rather than 403 so the page's
   existence is not revealed — and the nav link + page render conditionally on the same gate (defence
   in depth). Follows the existing `ApiKeyOptions`/`ApiKeyValidator` pattern. Closes "Next steps #2".
-  15 new tests (2026-06-14).
-
+  15 new tests (2026-06-14).- [x] **README human-friendly rewrite + UI screenshots, and 1-based list pagers.** Added a
+  plain-language intro to `README.md` (what the platform does, who it's for, a Mermaid pipeline
+  diagram), a **"Visual tour"** section embedding seven captured UI screenshots under
+  `docs/screenshots/` (dashboard, ingest, quotes, policies, policy detail, events, DB browser), and
+  a "Run it locally" quick-start — all preserving the existing technical depth. Screenshots are
+  captured headlessly with Playwright at 1440×1000 (deviceScaleFactor 2) against the seeded
+  Development data. Also made the Quotes/Policies/Events list pagers 1-based ("Showing 1–9" not
+  "0–9"), matching the earlier Database-page fix. Added `scripts/start.ps1` / `scripts/stop.ps1`
+  dev helpers (start/stop the app, free port 5000) and matching VS Code "Start app" / "Stop app"
+  tasks (`.vscode/tasks.json` un-ignored in `.gitignore` so it is shared). Docs + Razor UI + dev
+  tooling only; no new tests (still 257) (2026-06-14).
 ## Current status
 
 - Build green (`dotnet build -c Release`); **all 257 tests pass** (DB browser environment gate added
@@ -162,10 +171,15 @@ Docker-capable VPS.
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
   normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
   no code/build/test impact.
-- **Working on now:** **DB browser environment gate (2026-06-14)** — the read-only `/database`
-  browser is now gated by `DatabaseBrowserGate` + `DatabaseBrowserGateMiddleware` (off → 404 outside
-  Development unless `DatabaseBrowser__Enabled=true`); the nav link and page render on the same gate.
-  This closes the pre-production "Next steps #2" hardening item. Earlier on 2026-06-14: Phase 4 was
+- **Working on now:** **README human-friendly rewrite + UI screenshots (2026-06-14)** — `README.md`
+  now opens with a plain-language explanation, a Mermaid pipeline diagram, a "Run it locally"
+  quick-start, and a **"Visual tour"** embedding seven UI screenshots (`docs/screenshots/01..07`),
+  while keeping all the existing technical sections. The Quotes/Policies/Events list pagers were also
+  made 1-based to match the Database page. Earlier on 2026-06-14: the **DB browser environment gate**
+  — the read-only `/database` browser is now gated by `DatabaseBrowserGate` +
+  `DatabaseBrowserGateMiddleware` (off → 404 outside Development unless `DatabaseBrowser__Enabled=true`);
+  the nav link and page render on the same gate. This closes the pre-production "Next steps #2"
+  hardening item. Also on 2026-06-14: Phase 4 was
   **verified end-to-end** (Docker daemon finally available — 29.5.3) — the image builds, the
   container runs **healthy** on port 8080, host `/health` → 200 and the Blazor UI `/` → 200,
   Production hardening confirmed (`/swagger` 404, non-root UID 1654, SQLite on the `/data` volume);

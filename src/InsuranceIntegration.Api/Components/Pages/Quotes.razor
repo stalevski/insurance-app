@@ -54,7 +54,7 @@
 
         <div class="pager">
             <button class="secondary" @onclick="PrevAsync" disabled="@(_skip == 0)">Previous</button>
-            <span class="muted">Showing @_skip–@(_skip + _quotes.Count)</span>
+            <span class="muted">Showing @(_quotes.Count == 0 ? 0 : _skip + 1)–@(_skip + _quotes.Count)</span>
             <button class="secondary" @onclick="NextAsync" disabled="@(_quotes.Count < _take)">Next</button>
         </div>
     }
