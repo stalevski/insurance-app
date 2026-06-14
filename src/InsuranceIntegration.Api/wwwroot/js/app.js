@@ -15,6 +15,11 @@ window.themeInterop = {
         } catch (e) {
             // Ignore storage failures (e.g. private mode); theme still applies for this session.
         }
+        // Mermaid bakes the theme into the SVG at render time, so re-render any
+        // existing diagrams to match the new light/dark theme.
+        if (window.mermaidInterop && typeof window.mermaidInterop.rerenderAll === "function") {
+            window.mermaidInterop.rerenderAll();
+        }
         return next;
     },
 
@@ -25,7 +30,11 @@ window.themeInterop = {
 
 // Mermaid interop for the domain-event flow diagram.
 window.mermaidInterop = {
-    initialized: false,
+    initializedTheme: null,
+
+    // Remember each rendered diagram so it can be re-rendered when the light/dark
+    // theme changes (Mermaid bakes the theme into the SVG at render time).
+    diagrams: new Map(),
 
     // Resolve once the Mermaid script has finished loading. The component's
     // OnAfterRenderAsync can fire before the script is ready, so we poll
@@ -50,13 +59,49 @@ window.mermaidInterop = {
         });
     },
 
+    // Mermaid's "dark" theme renders light text and edges for a dark surface;
+    // "neutral" suits the light theme. Mirror the document's data-theme.
+    themeForDocument: function () {
+        return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "neutral";
+    },
+
     ensureInit: function () {
-        if (this.initialized || typeof mermaid === "undefined") {
+        if (typeof mermaid === "undefined") {
             return;
         }
 
-        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "neutral" });
-        this.initialized = true;
+        const theme = this.themeForDocument();
+        if (this.initializedTheme === theme) {
+            return;
+        }
+
+        // Match the diagram canvas to the surrounding panel so there is no bright
+        // rectangle in dark mode.
+        const surface = getComputedStyle(document.documentElement)
+            .getPropertyValue("--panel-muted").trim();
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: "strict",
+            theme: theme,
+            themeVariables: surface ? { background: surface } : {}
+        });
+        this.initializedTheme = theme;
+    },
+
+    renderInto: async function (elementId, definition) {
+        try {
+            const { svg } = await mermaid.render(elementId + "-svg", definition);
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = svg;
+            }
+        } catch (err) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = "<p class='muted'>Unable to render flow diagram.</p>";
+            }
+            console.error("mermaid render failed", err);
+        }
     },
 
     render: async function (elementId, definition) {
@@ -67,6 +112,7 @@ window.mermaidInterop = {
 
         if (!definition) {
             element.innerHTML = "";
+            this.diagrams.delete(elementId);
             return;
         }
 
@@ -76,14 +122,30 @@ window.mermaidInterop = {
             return;
         }
 
+        this.diagrams.set(elementId, definition);
         this.ensureInit();
+        await this.renderInto(elementId, definition);
+    },
 
-        try {
-            const { svg } = await mermaid.render(elementId + "-svg", definition);
-            element.innerHTML = svg;
-        } catch (err) {
-            element.innerHTML = "<p class='muted'>Unable to render flow diagram.</p>";
-            console.error("mermaid render failed", err);
+    // Re-render every cached diagram (e.g. after the theme changes) so existing
+    // diagrams pick up the new Mermaid theme.
+    rerenderAll: async function () {
+        if (this.diagrams.size === 0) {
+            return;
+        }
+
+        const ready = await this.waitForMermaid(5000);
+        if (!ready) {
+            return;
+        }
+
+        this.ensureInit();
+        for (const [elementId, definition] of this.diagrams) {
+            if (document.getElementById(elementId)) {
+                await this.renderInto(elementId, definition);
+            } else {
+                this.diagrams.delete(elementId);
+            }
         }
     }
 };

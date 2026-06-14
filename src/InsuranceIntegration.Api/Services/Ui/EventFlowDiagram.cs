@@ -35,7 +35,7 @@ public static class EventFlowDiagram
         }
 
         builder.Append("    class n").Append(ordered.Count - 1).Append(" current;\n");
-        builder.Append("    classDef current fill:#dbeafe,stroke:#2563eb,stroke-width:2px;\n");
+        builder.Append("    classDef current fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;\n");
 
         return builder.ToString();
     }

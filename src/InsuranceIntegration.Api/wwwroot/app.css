@@ -404,10 +404,6 @@ pre.code {
     overflow-x: auto;
 }
 
-html[data-theme="dark"] .mermaid-diagram {
-    background: #f8fafc;
-}
-
 .pager {
     display: flex;
     gap: 0.5rem;

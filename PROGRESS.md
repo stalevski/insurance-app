@@ -146,6 +146,15 @@ Docker-capable VPS.
   dev helpers (start/stop the app, free port 5000) and matching VS Code "Start app" / "Stop app"
   tasks (`.vscode/tasks.json` un-ignored in `.gitignore` so it is shared). Docs + Razor UI + dev
   tooling only; no new tests (still 257) (2026-06-14).
+- [x] **Dark-mode UI screenshots + theme-aware Mermaid diagrams.** Recaptured all seven
+  `docs/screenshots/01..07` in dark mode, and made the Mermaid lifecycle diagrams theme-aware so
+  their canvas matches the dark panel instead of rendering a bright white rectangle. `mermaidInterop`
+  (`wwwroot/js/app.js`) now picks Mermaid's `dark`/`neutral` theme from the document `data-theme`,
+  sets `themeVariables.background` to the computed `--panel-muted` surface, caches each rendered
+  diagram, and re-renders them all when the theme toggles; the `.mermaid-diagram` dark-mode
+  background override was removed from `app.css`, and `EventFlowDiagram` gives the highlighted
+  "current" node explicit dark text so it stays legible. Static assets + one diagram-builder string
+  only; no new tests (still 257) (2026-06-14).
 ## Current status
 
 - Build green (`dotnet build -c Release`); **all 257 tests pass** (DB browser environment gate added
@@ -171,11 +180,14 @@ Docker-capable VPS.
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
   normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
   no code/build/test impact.
-- **Working on now:** **README human-friendly rewrite + UI screenshots (2026-06-14)** — `README.md`
-  now opens with a plain-language explanation, a Mermaid pipeline diagram, a "Run it locally"
-  quick-start, and a **"Visual tour"** embedding seven UI screenshots (`docs/screenshots/01..07`),
-  while keeping all the existing technical sections. The Quotes/Policies/Events list pagers were also
-  made 1-based to match the Database page. Earlier on 2026-06-14: the **DB browser environment gate**
+- **Working on now:** **Dark-mode UI polish (2026-06-14)** — recaptured the seven Visual-tour
+  screenshots (`docs/screenshots/01..07`) in dark mode and made the Mermaid lifecycle diagrams
+  theme-aware (dark canvas matching `--panel-muted`, re-render on theme toggle) so they no longer
+  show a white rectangle in dark mode. Preceded by the **README human-friendly rewrite + UI
+  screenshots** — `README.md` now opens with a plain-language explanation, a Mermaid pipeline
+  diagram, a "Run it locally" quick-start, and a **"Visual tour"** embedding the seven UI
+  screenshots, while keeping all the existing technical sections. The Quotes/Policies/Events list
+  pagers were also made 1-based to match the Database page. Earlier on 2026-06-14: the **DB browser environment gate**
   — the read-only `/database` browser is now gated by `DatabaseBrowserGate` +
   `DatabaseBrowserGateMiddleware` (off → 404 outside Development unless `DatabaseBrowser__Enabled=true`);
   the nav link and page render on the same gate. This closes the pre-production "Next steps #2"
@@ -197,7 +209,11 @@ Docker-capable VPS.
 - Mermaid: `Services/Ui/EventFlowDiagram.cs` builds the flowchart; `wwwroot/js/app.js`
   (`mermaidInterop.render`) renders it via the locally-vendored `wwwroot/js/mermaid.min.js`
   (pinned `mermaid@11.6.0`, UMD build exposing `globalThis.mermaid`), referenced from
-  `Components/App.razor`. No CDN/network dependency at runtime.
+  `Components/App.razor`. No CDN/network dependency at runtime. `mermaidInterop` is **theme-aware**:
+  it initializes Mermaid with the `dark`/`neutral` theme from the document `data-theme`, sets
+  `themeVariables.background` to the computed `--panel-muted` surface, caches each diagram, and
+  `themeInterop.set` calls `mermaidInterop.rerenderAll()` so diagrams re-render on a light/dark
+  toggle.
 - Components: `Components/{App,Routes,_Imports}.razor`, `Components/Layout/*`,
   `Components/Shared/EventFlow.razor`, `Components/Pages/{Home,Ingest,Quotes,QuoteDetail,Policies,
   PolicyDetail,Events,Database}.razor`. Styles in `wwwroot/app.css`.
