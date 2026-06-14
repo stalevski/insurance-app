@@ -1,4 +1,6 @@
 @using Microsoft.AspNetCore.Components.Routing
+@using InsuranceIntegration.Api.Security
+@inject DatabaseBrowserGate DatabaseBrowserGate
 
 <ul class="nav">
     <li><NavLink class="nav-link" href="" Match="NavLinkMatch.All">Dashboard</NavLink></li>
@@ -6,7 +8,10 @@
     <li><NavLink class="nav-link" href="quotes">Quotes</NavLink></li>
     <li><NavLink class="nav-link" href="policies">Policies</NavLink></li>
     <li><NavLink class="nav-link" href="events">Domain events</NavLink></li>
-    <li><NavLink class="nav-link" href="database">Database browser</NavLink></li>
+    @if (DatabaseBrowserGate.IsEnabled)
+    {
+        <li><NavLink class="nav-link" href="database">Database browser</NavLink></li>
+    }
 </ul>
 
 <div class="nav-footer">

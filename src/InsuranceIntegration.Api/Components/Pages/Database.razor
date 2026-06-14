@@ -1,9 +1,18 @@
 @page "/database"
+@using InsuranceIntegration.Api.Security
 @inject IUiGateway Gateway
+@inject DatabaseBrowserGate Gate
 
 <PageTitle>Database browser</PageTitle>
 
 <h1>Database browser</h1>
+
+@if (!Gate.IsEnabled)
+{
+    <p class="subtitle">The database browser is disabled in this environment.</p>
+}
+else
+{
 <p class="subtitle">Read-only view of the SQLite tables. No data can be changed from here.</p>
 
 <div class="panel">
@@ -62,6 +71,7 @@
         </div>
     }
 </div>
+}
 
 @code {
     private IReadOnlyList<string> _tables = [];
@@ -72,6 +82,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!Gate.IsEnabled)
+        {
+            return;
+        }
+
         _tables = await Gateway.ListTablesAsync();
     }
 

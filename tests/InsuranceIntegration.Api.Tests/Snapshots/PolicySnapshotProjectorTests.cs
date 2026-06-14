@@ -111,6 +111,41 @@ public sealed class PolicySnapshotProjectorTests
         Assert.That(merged.Coverage.Warnings, Has.Count.EqualTo(1));
     }
 
+    [Test]
+    public void Apply_AppliesExplicitZeroPremium_WhenTransactionProvidesZeroPremium()
+    {
+        var projector = new PolicySnapshotProjector();
+
+        var (firstRequest, firstResponse, firstContext) = BuildBindEvent(
+            source: "BINDPOINT",
+            envelopeId: "evt-bp-1",
+            policyReference: "POL-7781",
+            quoteReference: "QT-2201",
+            insuredName: "Northwind Storage Ltd",
+            basePremium: 12500m,
+            adjustedPremium: 13750m);
+        var snapshot = projector.Apply(null, firstRequest, firstResponse, firstContext);
+        Assert.That(snapshot.Premium.Base, Is.EqualTo(12500m));
+
+        // Second event: a waiver that explicitly carries a zero premium. The flow resolves the
+        // premium from the request inputs, so a provided zero must clear the stale snapshot value
+        // rather than be ignored (M5).
+        var (waiverRequest, waiverResponse, waiverContext) = BuildBindEvent(
+            source: "CONTOSO_UW",
+            envelopeId: "evt-contoso-2",
+            policyReference: "POL-7781",
+            quoteReference: null,
+            insuredName: null,
+            basePremium: 0m,
+            adjustedPremium: 0m,
+            annualizedGrossPremium: 0m,
+            externalReference: "Q-100045-WAIVER");
+        var merged = projector.Apply(snapshot, waiverRequest, waiverResponse, waiverContext);
+
+        Assert.That(merged.Premium.Base, Is.EqualTo(0m), "Explicit zero premium must clear the stale snapshot premium");
+        Assert.That(merged.Premium.Adjusted, Is.EqualTo(0m), "Explicit zero adjusted premium must clear the stale value");
+    }
+
     private static (CanonicalRiskRequest, FinalRiskResponse, IngestContext) BuildBindEvent(
         string source,
         string envelopeId,
@@ -122,7 +157,8 @@ public sealed class PolicySnapshotProjectorTests
         int sectionCount = 0,
         decimal totalSumInsured = 0m,
         IEnumerable<string>? warnings = null,
-        string? externalReference = null)
+        string? externalReference = null,
+        decimal? annualizedGrossPremium = null)
     {
         var request = new CanonicalRiskRequest
         {
@@ -131,6 +167,7 @@ public sealed class PolicySnapshotProjectorTests
             SourceSystem = source,
             TransactionType = "PolicyBind",
             CurrencyCode = "USD",
+            AnnualizedGrossPremium = annualizedGrossPremium,
             Insured = new InsuredData { FullName = insuredName },
             Quote = new QuoteData { QuoteReference = quoteReference, EffectiveDate = new DateOnly(2026, 5, 1), ExpiryDate = new DateOnly(2027, 4, 30) },
             Policy = new PolicyData { PolicyReference = policyReference }

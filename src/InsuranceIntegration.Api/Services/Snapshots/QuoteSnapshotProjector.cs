@@ -57,13 +57,13 @@ public sealed class QuoteSnapshotProjector : IQuoteSnapshotProjector
             snapshot.Lifecycle.BindRejectionReason = response.BindRejectionReason;
         }
 
-        if (response.BasePremium > 0m)
+        // Apply the premium when the transaction carried one: either the resolved premium is
+        // positive, or the request explicitly provided a premium input (which may be a legitimate
+        // zero, e.g. a waived policy). An explicit zero then clears any stale value, while an
+        // absent premium preserves the existing one (M5).
+        if (response.BasePremium > 0m || SnapshotMerge.PremiumProvided(request))
         {
             snapshot.Premium.Base = response.BasePremium;
-        }
-
-        if (response.AdjustedPremium > 0m)
-        {
             snapshot.Premium.Adjusted = response.AdjustedPremium;
         }
 

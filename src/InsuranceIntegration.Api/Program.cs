@@ -37,6 +37,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
+app.UseMiddleware<DatabaseBrowserGateMiddleware>();
 
 app.MapOpenApi();
 

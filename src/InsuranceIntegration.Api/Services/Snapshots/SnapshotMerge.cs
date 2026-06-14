@@ -25,6 +25,21 @@ internal static class SnapshotMerge
         return incoming ?? current;
     }
 
+    /// <summary>
+    /// Indicates whether the incoming transaction actually carried a premium. The risk flow
+    /// resolves the base premium from these nullable inputs and falls back to <c>0</c> when none
+    /// are present, so the resolved premium alone cannot distinguish "no premium provided" from a
+    /// legitimate zero (e.g. a waived policy). Projectors use this signal so an explicit zero
+    /// clears any stale snapshot premium while an absent premium preserves the existing value.
+    /// Mirrors the precedence in <c>RiskFlowService.ResolveBasePremium</c>.
+    /// </summary>
+    public static bool PremiumProvided(CanonicalRiskRequest request)
+    {
+        return request.Submission.BrokerPremium.HasValue
+            || request.Submission.TechnicalPremium.HasValue
+            || request.AnnualizedGrossPremium.HasValue;
+    }
+
     public static void MergeInsured(PolicyParty target, InsuredData incoming)
     {
         target.Name = Coalesce(target.Name, incoming.FullName);

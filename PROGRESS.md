@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-13_
+_Last updated: 2026-06-14_
 
 ## Vision
 
@@ -29,15 +29,18 @@ Docker-capable VPS.
   with filters, per-aggregate **Mermaid lifecycle flow diagram** from the event log, and a
   read-only **DB browser**. UI calls services via an `IUiGateway` facade that opens a fresh DI
   scope per operation (no long-lived circuit-scoped `DbContext`).
-- [ ] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
-  Dockerfile, `.dockerignore`, and `docs/guides/DEPLOYMENT.md` are written (2026-06-11). The image
-  build is **still not verified end-to-end** — the Docker daemon was unavailable again on
-  2026-06-13. What *was* verified locally that day: the Dockerfile's restore+publish stage runs
-  clean against the same sources (`dotnet publish -c Release` succeeds and emits
-  `InsuranceIntegration.Api.dll`, matching the `ENTRYPOINT`), and the `/health` path the
-  `HEALTHCHECK` probes is mapped (`HealthEndpoints.MapHealthEndpoints`). Remaining to confirm on a
-  Docker-capable machine: `docker build -t insurance-integration .` then the run command in
-  `docs/guides/DEPLOYMENT.md`.
+- [x] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
+  Dockerfile, `.dockerignore`, and `docs/guides/DEPLOYMENT.md` (2026-06-11). **Verified end-to-end
+  on 2026-06-14** with Docker 29.5.3: `docker build -t insurance-integration .` completes the
+  multi-stage restore→publish→runtime build (~46s), and `docker run -d -p 8080:8080 -v
+  insurance-data:/data` (per `docs/guides/DEPLOYMENT.md`) starts a container that reports
+  **`Up (healthy)`** (the `/health` HEALTHCHECK passes). Confirmed from the host: `GET /health` →
+  200 (`{"status":"Healthy",... ".NET 10.0.9"}`) and the Blazor UI `/` → 200
+  (`<title>Insurance Integration</title>`). Production hardening confirmed: `/swagger` → 404
+  (disabled outside Development), the process runs as the **non-root** user (UID 1654), and the
+  SQLite database is written to the mounted volume at `/data/integration.db` (migrations applied on
+  startup). Remaining is real-world deployment only (provision a VPS + TLS reverse proxy per the
+  guide).
 - [x] **Policy reinstatement (lifecycle gap closed).** `POST /api/v1/policies/reinstatements`
   restores a cancelled policy to in-force (status/phase `Reinstated`, `PolicyReinstated` event in
   one EF transaction). Added `ReinstatementRequest`/`ReinstatementResult`,
@@ -117,10 +120,27 @@ Docker-capable VPS.
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
   M2 (installment rounding residual goes to the last installment). 6 new regression tests;
   details moved to the "Fixed" section of `docs/project/KNOWN_ISSUES.md`.
+- [x] **M5 snapshot zero-premium fix.** The policy and quote snapshot projectors no longer guard
+  premium updates with `> 0m` (which silently ignored a legitimate zero, e.g. a waived policy).
+  They now apply the premium when the resolved premium is positive or the request explicitly
+  provided a premium input — the latter via a shared `SnapshotMerge.PremiumProvided(request)` signal
+  mirroring `RiskFlowService.ResolveBasePremium`'s nullable inputs (`Submission.BrokerPremium`,
+  `Submission.TechnicalPremium`, `AnnualizedGrossPremium`) — so an explicit zero clears the stale
+  snapshot value while an absent premium preserves it. 1 new regression test; details in the
+  "Fixed" section of `docs/project/KNOWN_ISSUES.md` (2026-06-14).
+- [x] **DB browser environment gate (pre-prod hardening).** The read-only `/database` browser is
+  now gated by a pure, unit-tested `DatabaseBrowserGate`: enabled only in the Development environment
+  by default, overridable via the `DatabaseBrowser` config section (`DatabaseBrowser__Enabled=true`
+  to force on, `false` to force off). A `DatabaseBrowserGateMiddleware` (runs right after the API-key
+  middleware) returns **404** for `/database` when disabled — 404 rather than 403 so the page's
+  existence is not revealed — and the nav link + page render conditionally on the same gate (defence
+  in depth). Follows the existing `ApiKeyOptions`/`ApiKeyValidator` pattern. Closes "Next steps #2".
+  15 new tests (2026-06-14).
 
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 241 tests pass** (configurable outbox transport
+- Build green (`dotnet build -c Release`); **all 257 tests pass** (DB browser environment gate added
+  +15 and M5 snapshot zero-premium fix added +1 on 2026-06-14; configurable outbox transport
   added +19 and policy schedule PDF added +3 and
   API-key auth added +20 on
   2026-06-13; claim reserves/payments added +10
@@ -142,12 +162,16 @@ Docker-capable VPS.
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
   normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
   no code/build/test impact.
-- **Working on now:** Phase 4 wrap-up — verifying the Docker image. On 2026-06-13 the Docker daemon
-  was again unavailable, so the container could not be built/run. Verified the next-best way: the
-  Dockerfile's restore+publish stage was reproduced locally (`dotnet publish -c Release` succeeds
-  and produces the `InsuranceIntegration.Api.dll` entrypoint) and the `/health` endpoint the
-  HEALTHCHECK probes exists. Full `docker build` / `docker run` verification per
-  `docs/guides/DEPLOYMENT.md` still needs a Docker-capable machine.
+- **Working on now:** **DB browser environment gate (2026-06-14)** — the read-only `/database`
+  browser is now gated by `DatabaseBrowserGate` + `DatabaseBrowserGateMiddleware` (off → 404 outside
+  Development unless `DatabaseBrowser__Enabled=true`); the nav link and page render on the same gate.
+  This closes the pre-production "Next steps #2" hardening item. Earlier on 2026-06-14: Phase 4 was
+  **verified end-to-end** (Docker daemon finally available — 29.5.3) — the image builds, the
+  container runs **healthy** on port 8080, host `/health` → 200 and the Blazor UI `/` → 200,
+  Production hardening confirmed (`/swagger` 404, non-root UID 1654, SQLite on the `/data` volume);
+  and M5 (snapshot zero-premium) was fixed — the last documented High/Medium bug is now cleared. All
+  four roadmap phases are complete; remaining work is real-world VPS deployment (provision host + TLS
+  reverse proxy per `docs/guides/DEPLOYMENT.md`) and the optional/backlog items below.
 
 ### Phase 3 UI map (where things live)
 
@@ -163,9 +187,10 @@ Docker-capable VPS.
 - Components: `Components/{App,Routes,_Imports}.razor`, `Components/Layout/*`,
   `Components/Shared/EventFlow.razor`, `Components/Pages/{Home,Ingest,Quotes,QuoteDetail,Policies,
   PolicyDetail,Events,Database}.razor`. Styles in `wwwroot/app.css`.
-- **DB browser has no auth** (per locked-in decision) — gate behind Development / a feature flag
-  before any real production exposure. Mermaid is vendored locally (`wwwroot/js/mermaid.min.js`),
-  so the UI renders diagrams fully offline.
+- **DB browser is environment-gated** by `DatabaseBrowserGate` + `DatabaseBrowserGateMiddleware`:
+  on in Development, off (returns 404) elsewhere unless `DatabaseBrowser__Enabled=true`. The nav link
+  and page render only when the gate is enabled. Mermaid is vendored locally
+  (`wwwroot/js/mermaid.min.js`), so the UI renders diagrams fully offline.
 
 ## Decisions locked in
 
@@ -173,8 +198,9 @@ Docker-capable VPS.
   self-contained) — not React/Vue, to minimise toolchains.
 - **Bugs:** document now (Phase 1), fix in a later separate pass.
 - **Risk models:** lightweight (additive typed detail objects + strategy), not a subclass hierarchy.
-- **DB browser:** read-only, available in all environments, no auth yet (revisit before real
-  production exposure — recommend gating behind Development or a feature flag).
+- **DB browser:** read-only; **gated by environment** — available in Development, returns 404
+  elsewhere unless explicitly enabled via the `DatabaseBrowser:Enabled` flag
+  (`DatabaseBrowser__Enabled=true`). Even when exposed, front it with proxy auth / an IP allowlist.
 - **Hosting target:** a Docker-capable Linux **VPS** (root access required for Docker; shared/cPanel
   hosting cannot run the app).
 - **No language/stack migration (hosting analysis).** Hosting cost is driven by the VPS, not the
@@ -188,13 +214,17 @@ Docker-capable VPS.
 
 ## Next steps
 
-1. Verify Phase 4: build the image (`docker build -t insurance-integration .`), run it with the
-   `/data` volume per `docs/guides/DEPLOYMENT.md`, and confirm `/health` + UI work in the container.
-2. Gate the read-only DB browser behind Development or a feature flag before production exposure
-   (interim: proxy-level basic auth / IP allowlist on `/database`, as noted in `docs/guides/DEPLOYMENT.md`).
-3. Remaining known issues: M1 (billing fallback due date), M3 (hard-coded underwriting
-   thresholds), M4 (`DateTime.UtcNow` in mappers/handlers — inject `TimeProvider`), M5 (snapshot
-   premium not cleared on explicit zero). See `docs/project/KNOWN_ISSUES.md`.
+1. Phase 4 image build/run is **verified** (2026-06-14, see Current status). Remaining is
+   real-world deployment only: provision a Docker-capable Linux VPS, then build + run per
+   `docs/guides/DEPLOYMENT.md` behind a TLS reverse proxy (Caddy/Nginx).
+2. ~~Gate the read-only DB browser behind Development or a feature flag before production exposure.~~
+   **Done (2026-06-14):** `DatabaseBrowserGate` + `DatabaseBrowserGateMiddleware` disable `/database`
+   (404) outside Development unless `DatabaseBrowser__Enabled=true`. For deliberate exposure, still
+   add proxy-level basic auth / an IP allowlist on `/database` (see `docs/guides/DEPLOYMENT.md`).
+3. Remaining known issues: all High and Medium items are fixed; only low/debatable ones remain —
+   L1 (Contoso mapper hard-codes insured/broker data), L2 (`Guid.NewGuid()` entity ids in
+   mappers/handlers), D1 (BindPoint installment due dates — confirm the intended convention), and
+   D2 (38 pre-existing build warnings). See `docs/project/KNOWN_ISSUES.md`.
 4. UI polish (optional): add submission/quote/policy lifecycle action forms
    (cancel/endorse/renew/reinstate) that post to the existing `Endpoints/PolicyEndpoints.cs`
    routes; today those are reachable via Swagger only.

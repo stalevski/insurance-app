@@ -45,6 +45,14 @@ public static class ServiceRegistration
         services.AddSingleton(apiKeyOptions);
         services.AddSingleton(new ApiKeyValidator(apiKeyOptions));
 
+        var databaseBrowserOptions = new DatabaseBrowserOptions();
+        configuration?.GetSection(DatabaseBrowserOptions.SectionName).Bind(databaseBrowserOptions);
+        services.AddSingleton(databaseBrowserOptions);
+        services.AddSingleton(sp =>
+            new DatabaseBrowserGate(
+                databaseBrowserOptions,
+                sp.GetRequiredService<IHostEnvironment>().IsDevelopment()));
+
         services.AddScoped<ICorrelationContext, CorrelationContext>();
         services.AddScoped<IOutboxWriter, OutboxWriter>();
 

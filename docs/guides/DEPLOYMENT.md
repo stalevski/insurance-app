@@ -31,8 +31,10 @@ Key facts:
 - The SQLite database is written to **`/data/integration.db`** (overridden via
   `ConnectionStrings__Integration`). The named volume `insurance-data` keeps data across
   container replacement; migrations run automatically on startup.
-- Environment defaults to `Production`, which disables Swagger UI and the development data
-  seeder. Set `-e ASPNETCORE_ENVIRONMENT=Development` to get both back (not for real exposure).
+- Environment defaults to `Production`, which disables Swagger UI, the development data
+  seeder, and the read-only DB browser at `/database`. Set `-e ASPNETCORE_ENVIRONMENT=Development`
+  to get them back (not for real exposure), or `-e DatabaseBrowser__Enabled=true` to force-enable
+  just the DB browser.
 - A container `HEALTHCHECK` probes `GET /health`.
 
 Verify:
@@ -57,8 +59,9 @@ curl http://localhost:8080/health
 
    Caddy obtains and renews Let's Encrypt certificates automatically. Nginx + certbot works too.
 5. **Do not expose the app without a proxy/firewall.** The read-only DB browser at `/database`
-   currently has no authentication (locked-in decision — see `PROGRESS.md`). Until it is gated,
-   restrict access at the proxy (e.g. basic auth or IP allowlist on `/database`).
+   is now **gated**: it is off by default outside Development and returns `404` (see `PROGRESS.md`).
+   To deliberately expose it, set `DatabaseBrowser__Enabled=true` — and even then put auth in front
+   at the proxy (e.g. basic auth or IP allowlist on `/database`).
 
 ## Updating
 

@@ -20,14 +20,7 @@ _None open. H1–H3 were fixed on 2026-06-11 — see the Fixed section below._
 
 ## 🟠 Medium
 
-### M5 — Snapshot premium not cleared when an update sets premium to zero
-- **Where:** `Services/Snapshots/PolicySnapshotProjector.cs` (premium update guarded by
-  `> 0m` checks).
-- **What:** Premium fields are only updated when the incoming value is `> 0`. A legitimate update to
-  `0` (e.g. a waived policy) leaves the old premium in the snapshot.
-- **Why it matters:** Stale premium in the read model → wrong reporting/analytics.
-- **Suggested fix:** Distinguish "no premium provided" from "premium is zero" (e.g. nullable input)
-  and apply zero when explicitly provided.
+_None open. M1–M5 have been fixed — see the Fixed section below._
 
 ---
 
@@ -74,6 +67,18 @@ _When an item here is fixed, remove it (or move it to a "Fixed" section) and add
 ---
 
 ## ✅ Fixed
+
+### M5 — Snapshot premium not cleared when an update sets premium to zero _(fixed 2026-06-14)_
+- The policy and quote snapshot projectors previously guarded premium updates with `> 0m`, which
+  conflated "no premium provided" with a legitimate zero. They now apply the premium when the
+  resolved premium is positive **or** the request explicitly provided a premium input — the latter
+  via a shared `SnapshotMerge.PremiumProvided(request)` signal that mirrors
+  `RiskFlowService.ResolveBasePremium`'s nullable inputs (`Submission.BrokerPremium`,
+  `Submission.TechnicalPremium`, `AnnualizedGrossPremium`). An explicit zero (e.g. a waived policy)
+  now clears the stale snapshot value, while an absent premium still preserves the existing one.
+- Regression test: `tests/.../Snapshots/PolicySnapshotProjectorTests.cs`
+  (`Apply_AppliesExplicitZeroPremium_WhenTransactionProvidesZeroPremium`); the existing
+  `Apply_MergesSubsequentEventPreservingExistingFields` covers the absent-premium preserve case.
 
 ### M1 — Billing next-due-date derived from missed-payment count (no-schedule path) _(fixed 2026-06-13)_
 - `BillingFlowService` now derives the no-schedule next due date from the billing frequency implied

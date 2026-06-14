@@ -35,13 +35,13 @@ public sealed class PolicySnapshotProjector : IPolicySnapshotProjector
         snapshot.Lifecycle.FinalStatus = SnapshotMerge.CoalesceRequired(snapshot.Lifecycle.FinalStatus, response.FinalStatus);
         snapshot.Lifecycle.CurrentPhase = SnapshotMerge.ResolvePolicyPhase(response.PolicyStatus, response.QuoteStatus, response.SubmissionStatus, snapshot.Lifecycle.CurrentPhase);
 
-        if (response.BasePremium > 0m)
+        // Apply the premium when the transaction carried one: either the resolved premium is
+        // positive, or the request explicitly provided a premium input (which may be a legitimate
+        // zero, e.g. a waived policy). An explicit zero then clears any stale value, while an
+        // absent premium preserves the existing one (M5).
+        if (response.BasePremium > 0m || SnapshotMerge.PremiumProvided(request))
         {
             snapshot.Premium.Base = response.BasePremium;
-        }
-
-        if (response.AdjustedPremium > 0m)
-        {
             snapshot.Premium.Adjusted = response.AdjustedPremium;
         }
 
