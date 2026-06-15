@@ -1,9 +1,13 @@
 # Insurance Integration Platform
 
-> A backend platform that takes messy, source-specific insurance messages from many systems, turns
-> them into one clean internal format, runs the real insurance lifecycle on them (quote → bind →
-> policy → claims → billing), and hands clean results to downstream systems — with a built-in web UI
-> to watch it all happen.
+> **Primarily a QA testing ground.** A realistic, fully-owned insurance back office — REST API,
+> Blazor web UI, event-sourced core, and seeded sample data — built to be exercised by automated and
+> manual tests, so QA has a non-trivial system under test instead of another to-do app.
+
+> Functionally it takes messy, source-specific insurance messages from many systems, turns them into
+> one clean internal format, runs the real insurance lifecycle on them (quote → bind → policy →
+> claims → billing), and hands clean results to downstream systems — with a built-in web UI to watch
+> it all happen.
 
 > **Built AI-assisted, human-directed.** Planned, generated, reviewed, and tested with
 > AI tooling under my direction — the architecture, code review, and final decisions are mine.
@@ -35,9 +39,10 @@ flowchart LR
     C --> F["Outbox →<br/>downstream consumers"]
 ```
 
-**Who is it for?** Engineers evaluating a clean, testable way to build an insurance integration
-layer — and anyone who wants to see modular-monolith and event-sourced-style patterns applied to a
-real domain rather than a to-do app.
+**Who is it for?** QA / SDET engineers who want a realistic, fully-owned system under test — a REST
+API, a Blazor UI, deterministic seeded data, and a read-only DB browser to assert against — and
+engineers evaluating a clean, testable way to build an insurance integration layer, with
+modular-monolith and event-sourced-style patterns applied to a real domain rather than a to-do app.
 
 **What makes it interesting?**
 
@@ -50,6 +55,9 @@ real domain rather than a to-do app.
 - A built-in **Blazor Server UI** (no separate JS build) to ingest messages, browse snapshots, and
   watch the event flow as live diagrams.
 - Built on **.NET 10**, EF Core + SQLite, with a full NUnit 4 test suite (**257 tests**).
+- **Built to be tested**: deterministic seeded data, a read-only `/database` browser for state
+  assertions, Swagger + a ready-to-import Postman collection, and idempotent ingest make it a
+  realistic system under test for API and UI automation.
 
 ## Run it locally
 
@@ -133,7 +141,7 @@ read models — without a separate database tool.
 
 ## Project goal
 
-This repository contains a SaaS insurance ingest and transformation platform built as a modular monolith. The platform is designed to receive source-specific insurance messages, normalize them into platform-owned canonical contracts, execute lifecycle-aware processing logic, and emit final outbound messages for downstream consumers.
+This repository is primarily a **QA testing ground**: a realistic insurance ingest and transformation platform (modular monolith) that exists to be exercised by automated and manual tests, and is being grown into a deployable product with a Blazor UI. The platform receives source-specific insurance messages, normalizes them into platform-owned canonical contracts, executes lifecycle-aware processing logic, and emits final outbound messages for downstream consumers.
 
 ## Architectural direction
 
@@ -503,6 +511,16 @@ The current implementation delivers a coherent end-to-end policy lifecycle:
 ```powershell
 dotnet build .\InsuranceIntegration.sln
 ```
+
+## Testing
+
+Testing is the point of this project — the app is a realistic system under test, not just a demo to read.
+
+```powershell
+dotnet test .\InsuranceIntegration.sln
+```
+
+The suite is **257 NUnit 4 tests** (unit plus service- and persistence-level integration on in-memory SQLite), all green and running in a few seconds with no external dependencies. Coverage is strongest at the service, flow, mapper, snapshot, outbox, and security layers. **HTTP-endpoint and Blazor-UI tests are the main open gaps** and are tracked as a backlog in [PROGRESS.md](PROGRESS.md). For the test stack, conventions, patterns, and manual end-to-end recipes see [docs/guides/TESTING.md](docs/guides/TESTING.md).
 
 ## Documentation
 

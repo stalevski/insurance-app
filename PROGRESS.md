@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-14_
+_Last updated: 2026-06-15_
 
 ## Vision
 
@@ -155,6 +155,14 @@ Docker-capable VPS.
   background override was removed from `app.css`, and `EventFlowDiagram` gives the highlighted
   "current" node explicit dark text so it stays legible. Static assets + one diagram-builder string
   only; no new tests (still 257) (2026-06-14).
+- [x] **README reframed to lead with QA-testing-ground purpose + test-gap audit.** Rewrote the
+  `README.md` opening, "Who is it for?", and "Project goal", and added a top-level **Testing**
+  section, so the README leads with the project's primary purpose — a realistic system under test
+  with a REST API and a Blazor UI — instead of reading as a backend-only platform; the GitHub About
+  was updated to match. Ran a full coverage audit (suite green at **257 tests**) and captured the
+  gaps — zero HTTP-endpoint tests, zero Blazor-UI tests, and six untested service modules — as the
+  new "Test coverage backlog" section below. Docs only; no code or test changes (still 257)
+  (2026-06-15).
 ## Current status
 
 - Build green (`dotnet build -c Release`); **all 257 tests pass** (DB browser environment gate added
@@ -266,6 +274,42 @@ Docker-capable VPS.
    arrange/setup (e.g. building requests, `FakeTimeProvider` wiring, in-memory SQLite/`DbContext`
    setup, common assertions) should be extracted into private helper methods within a test class, or
    a shared **base test class** / fixtures where the duplication spans multiple classes.
+
+## Test coverage backlog (gaps to fill, audited 2026-06-15)
+
+Current suite: **257 NUnit 4 tests, all green** — strong at the service / flow / mapper / snapshot /
+outbox / security layers (unit + in-memory-SQLite integration). Since QA is this project's primary
+purpose, the coverage gaps below are first-class backlog items. A 2026-06-15 audit found **zero
+HTTP-endpoint tests and zero Blazor-UI tests**, plus six service modules with no direct unit tests.
+Listed most-valuable first:
+
+1. **HTTP endpoint integration tests** (biggest gap). Stand up the API in-process with
+   `WebApplicationFactory<Program>` (the API uses top-level `Program.cs` — expose it with
+   `public partial class Program { }`) and assert status codes, JSON bodies, and headers for the
+   ~29 routes across `Endpoints/*.cs`. One happy-path test per route first, then the error paths.
+2. **HTTP error / validation paths** — 400 (missing/invalid fields), 404 (unknown policy / quote /
+   envelope), and 401 (API-key enforcement on writes + the `/database` browser) per endpoint family.
+3. **Middleware pipeline at the HTTP layer** — correlation-id echo (`CorrelationIdMiddleware`),
+   `X-Api-Key` accept/reject (`ApiKeyAuthenticationMiddleware`), and the `/database` 404 gate
+   (`DatabaseBrowserGateMiddleware`) exercised through real requests, not just their pure validators.
+4. **Untested service modules** (no direct unit tests today): `Services/Events/DomainEventLog`
+   (filtering + ordering + same-transaction writes), `Services/Schemas/JsonSchemaService` (schema
+   shape per contract), `Services/Catalog/SourceSystemCatalogService`, `Services/Products/ProductCatalog`
+   (lookups + rating defaults), `Services/Seeding/DevelopmentDataSeeder` (idempotency / no-op when
+   data already exists), and the `Services/Ui/*` facade (`UiGateway` aggregation + paging,
+   `EventFlowDiagram` / lifecycle-stage Mermaid output).
+5. **Blazor UI component tests** with **bUnit** — render `Home`, `Ingest`, `Quotes`, `Policies`,
+   `PolicyDetail`, `Events`, `Database` against a stub `IUiGateway`; assert rendered rows, 1-based
+   pager state, filter behaviour, and the lifecycle-actions panel.
+6. **End-to-end UI smoke** with **Playwright** — drive quote → bind → policy → claim → billing
+   through the running app and assert the UI + the `/database` browser reflect the change (mirrors
+   the Playwright tooling already used for the screenshot capture).
+7. **Concurrency / race tests** — idempotency store first-writer-wins under parallel ingest, outbox
+   dispatch under contention, and snapshot rebuild while events are appended.
+
+> Approach note: prefer the existing in-memory-SQLite + `WebApplicationFactory` stack (no Docker
+> needed for the API tests); keep bUnit / Playwright additive so `dotnet test` stays fast and
+> dependency-light. Record the new test totals here as each slice lands.
 
 ## Enterprise / multi-tenant backlog (candidate epic — design first, not yet scheduled)
 
