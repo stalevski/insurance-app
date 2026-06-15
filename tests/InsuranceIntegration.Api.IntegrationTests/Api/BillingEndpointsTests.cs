@@ -13,13 +13,15 @@ namespace InsuranceIntegration.Api.IntegrationTests.Api;
 /// </summary>
 public sealed class BillingEndpointsTests : ApiTestBase
 {
+    private const string SourceSystemCode = "PAYMENTRAIL";
+
     [Test]
     public async Task RecordPayment_SettlesEveryOpenInstallment()
     {
         var request = new PaymentRecordRequest
         {
             PolicyReference = "POL-BILL-001",
-            SourceSystem = "PAYMENTRAIL",
+            SourceSystem = SourceSystemCode,
             Installments = BillingScheduleBuilder.WithStatuses(
                 250m,
                 BillingInstallmentStatus.Issued,
@@ -46,7 +48,7 @@ public sealed class BillingEndpointsTests : ApiTestBase
         var request = new PaymentRecordRequest
         {
             PolicyReference = "POL-BILL-002",
-            SourceSystem = "PAYMENTRAIL",
+            SourceSystem = SourceSystemCode,
             Installments = BillingScheduleBuilder.WithStatuses(250m, BillingInstallmentStatus.Issued),
             Amount = 400m,
         };
@@ -67,7 +69,7 @@ public sealed class BillingEndpointsTests : ApiTestBase
         var request = new PaymentRecordRequest
         {
             PolicyReference = "POL-BILL-003",
-            SourceSystem = "PAYMENTRAIL",
+            SourceSystem = SourceSystemCode,
             Installments = BillingScheduleBuilder.WithStatuses(250m, BillingInstallmentStatus.Issued),
             Amount = 0m,
         };
@@ -83,7 +85,7 @@ public sealed class BillingEndpointsTests : ApiTestBase
         var request = new PaymentRecordRequest
         {
             PolicyReference = "POL-BILL-004",
-            SourceSystem = "PAYMENTRAIL",
+            SourceSystem = SourceSystemCode,
             Installments = [],
             Amount = 250m,
         };
@@ -99,7 +101,7 @@ public sealed class BillingEndpointsTests : ApiTestBase
         var request = new DelinquencyAssessmentRequest
         {
             PolicyReference = "POL-BILL-005",
-            SourceSystem = "PAYMENTRAIL",
+            SourceSystem = SourceSystemCode,
             Installments = BillingScheduleBuilder.WithStatuses(
                 250m,
                 BillingInstallmentStatus.Issued,
@@ -121,7 +123,7 @@ public sealed class BillingEndpointsTests : ApiTestBase
         var request = new DelinquencyAssessmentRequest
         {
             PolicyReference = "POL-BILL-006",
-            SourceSystem = "PAYMENTRAIL",
+            SourceSystem = SourceSystemCode,
             Installments = BillingScheduleBuilder.WithStatuses(250m, BillingInstallmentStatus.Issued),
             GracePeriodDays = -5,
         };
