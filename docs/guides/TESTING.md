@@ -4,13 +4,20 @@ How to run, extend, and manually exercise the test suite for **InsuranceIntegrat
 
 ## 1. Test stack
 
-- **Framework**: [NUnit 4.4](https://docs.nunit.org/) (see `tests/InsuranceIntegration.Api.Tests/InsuranceIntegration.Api.Tests.csproj`)
+The solution has **two test projects**:
+
+- `tests/InsuranceIntegration.Api.Tests` — unit + service/persistence integration tests (the bulk of the suite).
+- `tests/InsuranceIntegration.Api.IntegrationTests` — **HTTP-endpoint integration tests** (the API hosted in-process) and **Blazor-UI component tests** (added 2026-06-15).
+
+- **Framework**: [NUnit 4](https://docs.nunit.org/) across both projects (constraint model: `Assert.That(...)`)
 - **Test runner**: `dotnet test` via `Microsoft.NET.Test.Sdk` + `NUnit3TestAdapter`
 - **Coverage**: `coverlet.collector` is available for producing Cobertura reports
-- **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory (`DataSource=:memory:`) — no external DB required
+- **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory — `DataSource=:memory:` in the unit project; a unique shared-cache in-memory database per `WebApplicationFactory` fixture in the integration project. No external DB required.
+- **HTTP-endpoint tests**: `Microsoft.AspNetCore.Mvc.Testing` hosts the API in-process via `WebApplicationFactory<Program>` (`Infrastructure/InsuranceApiFactory.cs`) so tests issue real `HttpClient` requests against the running pipeline (routing, middleware, API-key auth, JSON serialization).
+- **Blazor-UI tests**: [bUnit](https://bunit.dev/) renders Razor components against a stub `IUiGateway` (`Ui/UiGatewayStub.cs`) — no browser required.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
-- **Global usings**: `global using NUnit.Framework;` lives in `tests/InsuranceIntegration.Api.Tests/GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
-- **Total tests**: 128 (and counting). Run `dotnet test` to see the current tally.
+- **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
+- **Total tests**: **329** (257 unit/service + 72 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
 
 ## 2. Run the tests
 
@@ -20,10 +27,14 @@ How to run, extend, and manually exercise the test suite for **InsuranceIntegrat
 dotnet test .\InsuranceIntegration.sln
 ```
 
-### Run only the API test project
+### Run only one test project
 
 ```powershell
+# Unit + service/persistence tests
 dotnet test .\tests\InsuranceIntegration.Api.Tests\InsuranceIntegration.Api.Tests.csproj
+
+# HTTP-endpoint + Blazor-UI integration tests
+dotnet test .\tests\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj
 ```
 
 ### Run a single fixture or test
@@ -111,6 +122,46 @@ tests/InsuranceIntegration.Api.Tests/
 ```
 
 Folders mirror the production layout under `src/InsuranceIntegration.Api/Services` and `src/InsuranceIntegration.Api/Mappers`. Keep them aligned when adding new tests.
+
+The HTTP-endpoint and Blazor-UI tests live in a second project:
+
+```text
+tests/InsuranceIntegration.Api.IntegrationTests/
+  Api/                                      # HTTP-endpoint tests (WebApplicationFactory<Program>)
+    HealthEndpointsTests.cs
+    SchemaEndpointsTests.cs
+    SourceSystemEndpointsTests.cs
+    ProductEndpointsTests.cs                # product catalog + rating
+    QuoteReadEndpointsTests.cs
+    PolicyReadEndpointsTests.cs
+    PolicyLifecycleEndpointsTests.cs        # cancel/endorse/renew/reinstate/lapse/non-renew
+    BillingEndpointsTests.cs
+    ClaimEndpointsTests.cs
+    RiskEndpointsTests.cs
+    IngestEndpointsTests.cs                 # ingest + idempotent replay
+    SecurityEndpointsTests.cs               # X-Api-Key accept/reject (401/200)
+  Builders/
+    CanonicalRiskRequestBuilder.cs
+    QuoteForgeEnvelopeBuilder.cs
+    BillingScheduleBuilder.cs
+    ExpectedRatingResult.cs                 # rating-math oracle (expected-results builder)
+  Infrastructure/
+    InsuranceApiFactory.cs                  # WebApplicationFactory<Program> + per-fixture in-memory SQLite
+    ApiTestBase.cs                          # Factory/Client + GetAsync/PostAsync helpers
+    SeededApiTestBase.cs                    # seeds development data once per fixture
+    HttpJsonExtensions.cs                   # ReadAsAsync<T> / ReadAsJsonAsync
+    HttpResponseAssertions.cs               # ShouldHaveStatus / ShouldReturnJsonAsync / ShouldReturnAsync<T>
+  Ui/                                       # Blazor component tests (bUnit)
+    UiGatewayStub.cs                        # stub IUiGateway returning canned data
+    UiTestData.cs                           # quote/policy/event factories
+    PageRenderer.cs                         # per-test BunitContext factory (loose JSInterop)
+    DashboardPageTests.cs
+    QuotesPageTests.cs
+    PoliciesPageTests.cs
+    EventsPageTests.cs
+  GlobalUsings.cs
+  InsuranceIntegration.Api.IntegrationTests.csproj
+```
 
 ## 4. Conventions
 
@@ -221,6 +272,50 @@ Follow `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`
 
 Stubs live in the same folder as the tests that need them. Keep the file `internal`-scoped to the test project, e.g. `tests/InsuranceIntegration.Api.Tests/Ingest/StubIngestHandler.cs`. Prefer simple, readable stubs over reflection-heavy mock frameworks.
 
+### 5.7 HTTP-endpoint integration test
+
+Lives in `tests/InsuranceIntegration.Api.IntegrationTests/Api`. Derive from `ApiTestBase` (empty database) or `SeededApiTestBase` (development data seeded once per fixture); both expose `GetAsync`/`PostAsync` helpers over an in-process `HttpClient`, and `HttpResponseAssertions` gives fluent status/JSON checks. Model after `ProductEndpointsTests`:
+
+```csharp
+public sealed class ProductEndpointsTests : ApiTestBase
+{
+    [Test]
+    public async Task ListProducts_ReturnsTheCatalog()
+    {
+        using var response = await GetAsync("/api/v1/products");
+
+        var products = await response.ShouldReturnAsync<List<ProductDefinition>>();
+        Assert.That(products, Is.Not.Empty);
+    }
+}
+```
+
+- Each fixture gets its own isolated in-memory SQLite database (see `Infrastructure/InsuranceApiFactory.cs`), so tests never share state.
+- Assert error paths with `response.ShouldHaveStatus(HttpStatusCode.NotFound)` (or `BadRequest`, etc.).
+- For API-key-gated writes, construct the base with `: base("integration-test-key")` and send the `X-Api-Key` header on an `HttpRequestMessage` (see `Api/SecurityEndpointsTests.cs`).
+- Build request payloads with the fluent builders in `Builders/`, and check rating math against the `ExpectedRatingResult` oracle rather than hard-coding numbers.
+
+### 5.8 Blazor-UI component test (bUnit)
+
+Lives in `tests/InsuranceIntegration.Api.IntegrationTests/Ui`. Render a page against `UiGatewayStub` (a hand-written `IUiGateway` stub) using the `PageRenderer.ContextFor(stub)` helper. Model after `QuotesPageTests`:
+
+```csharp
+[Test]
+public void Quotes_RendersARowPerQuote()
+{
+    var stub = new UiGatewayStub { Quotes = [UiTestData.Quote()] };
+    using var context = PageRenderer.ContextFor(stub);
+
+    var cut = context.Render<Quotes>();
+
+    Assert.That(cut.FindAll("tbody tr"), Has.Count.EqualTo(1));
+}
+```
+
+- Use a **fresh `BunitContext` per test** (loose JSInterop) — NUnit reuses one fixture instance per class, so sharing a context would leak service registrations between tests.
+- The `Events` page name collides with the `InsuranceIntegration.Api.Events` namespace — alias it: `using EventsPage = InsuranceIntegration.Api.Components.Pages.Events;`.
+- Drive `<select>` filters with `element.Change(value)` and assert the stub captured the forwarded argument (see `Ui/EventsPageTests.cs`).
+
 ## 6. Matching tests to production code
 
 Use this table when debugging a failure or extending a feature:
@@ -244,6 +339,9 @@ Use this table when debugging a failure or extending a feature:
 | Policy / Quote snapshot projection | `tests/InsuranceIntegration.Api.Tests/Snapshots/PolicySnapshotProjectorTests.cs`, `.../SnapshotPipelineTests.cs` |
 | Snapshot rebuild from DomainEvents | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotRebuildServiceTests.cs` |
 | DomainEvents row writes / idempotent replay | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
+| HTTP endpoint status codes / JSON bodies | `tests/InsuranceIntegration.Api.IntegrationTests/Api/*EndpointsTests.cs` |
+| API-key enforcement at the HTTP layer | `tests/InsuranceIntegration.Api.IntegrationTests/Api/SecurityEndpointsTests.cs` |
+| Blazor page rendering / pager / filters | `tests/InsuranceIntegration.Api.IntegrationTests/Ui/*PageTests.cs` |
 
 ## 7. Manual end-to-end testing
 

@@ -21,7 +21,9 @@ and is on a path to becoming a deployable product.
 - **Migrations:** EF Core code-first; applied automatically on startup (`Program.cs`)
 - **API docs:** OpenAPI/Swagger (`/swagger` in Development), plus JSON Schema endpoints
 - **Tests:** **NUnit 4** + NUnit3TestAdapter + coverlet (coverage) + `FakeTimeProvider`
-  (`Microsoft.Extensions.TimeProvider.Testing`)
+  (`Microsoft.Extensions.TimeProvider.Testing`); plus `Microsoft.AspNetCore.Mvc.Testing`
+  (`WebApplicationFactory`) for HTTP-endpoint integration tests and **bUnit** for Blazor-UI
+  component tests (in `tests/InsuranceIntegration.Api.IntegrationTests`)
 - **Frontend:** Blazor (added in the UI phase; same .NET host, no separate JS toolchain)
 
 ## Architecture: layered model separation
