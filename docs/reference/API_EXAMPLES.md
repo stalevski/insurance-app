@@ -1,10 +1,10 @@
-# API Examples — Manual Testing
+# API Examples - Manual Testing
 
 This guide pairs every `docs/reference/examples/*.json` file with the endpoint it targets, the **mandatory** vs *optional* fields, and the business rules each scenario exercises. Use it together with `docs/guides/USAGE.md` (which has the high-level run instructions).
 
 > Prefer Postman? See [§9 Testing with Postman](#9-testing-with-postman) for the curated collection and three import paths.
 
-> All `source` and `sourceSystem` codes used here (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`, `CLAIMFORGE`, `PAYMENTRAIL`, `SANCTIONSCAN`, `BROKER_PORTAL`, …) are **fictional** — they live only in this codebase's catalog (`src/InsuranceIntegration.Api/Services/Catalog/SourceSystemCatalogService.cs`). Three of them have real risk mappers (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`); the rest are echoed through verbatim so any string works.
+> All `source` and `sourceSystem` codes used here (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`, `CLAIMFORGE`, `PAYMENTRAIL`, `SANCTIONSCAN`, `BROKER_PORTAL`, ...) are **fictional** - they live only in this codebase's catalog (`src/InsuranceIntegration.Api/Services/Catalog/SourceSystemCatalogService.cs`). Three of them have real risk mappers (`CONTOSO_UW`, `QUOTEFORGE`, `BINDPOINT`); the rest are echoed through verbatim so any string works.
 
 ## How to send an example
 
@@ -30,7 +30,7 @@ Add `-H "X-Correlation-Id: <guid>"` to trace the request through the logs.
 
 ---
 
-## 1. `POST /api/v1/ingest` — generic envelope
+## 1. `POST /api/v1/ingest` - generic envelope
 
 ### Envelope mandatory fields
 
@@ -38,14 +38,14 @@ Add `-H "X-Correlation-Id: <guid>"` to trace the request through the logs.
 |---|---|---|
 | `id` | string | Unique per `source`. Drives idempotency. |
 | `source` | string | e.g. `CONTOSO_UW`. Some handlers route on `(source,type)`, others only on `type`. |
-| `type` | string | Selects the handler — see the dispatch matrix in `docs/guides/USAGE.md`. |
+| `type` | string | Selects the handler - see the dispatch matrix in `docs/guides/USAGE.md`. |
 | `schemaVersion` | string | Caller-managed. |
 | `occurredAtUtc` | RFC 3339 datetime | Source event time. |
-| `data` | JSON object | Source-specific payload — shape depends on `(source,type)`. |
+| `data` | JSON object | Source-specific payload - shape depends on `(source,type)`. |
 
 Optional: `correlationId` (string, GUID echoed into log scopes).
 
-### 1.1 Contoso risk submission — `ingest-contoso-risk-submission.json`
+### 1.1 Contoso risk submission - `ingest-contoso-risk-submission.json`
 
 Routes to `RiskIngestHandler` → `ContosoRiskMapper`. Contoso fills sensible defaults (large account loads, claims, sections) so even a tiny payload runs the full risk flow.
 
@@ -59,7 +59,7 @@ Routes to `RiskIngestHandler` → `ContosoRiskMapper`. Contoso fills sensible de
 - `result.productCode = "COMMERCIALPROPERTY"` (uppercased from `trade`)
 - `result.appliedEnrichments` includes `Property:GEO_CAT`, `Property:BUILDING_PROFILE` (product-derived), plus the universal triage signals.
 
-### 1.2 QuoteForge quote request — `ingest-quoteforge-quote-request.json`
+### 1.2 QuoteForge quote request - `ingest-quoteforge-quote-request.json`
 
 Routes to `RiskIngestHandler` → `QuoteForgeRiskMapper`.
 
@@ -73,7 +73,7 @@ Routes to `RiskIngestHandler` → `QuoteForgeRiskMapper`.
 - `IsPreferredPartner` is set to `true` whenever `brokerCode` is present.
 - Auto-clearance threshold is configured to `50000` and fuzzy-match tolerance to `3`.
 
-### 1.3 BindPoint policy bind — `ingest-bindpoint-policy-bind.json`
+### 1.3 BindPoint policy bind - `ingest-bindpoint-policy-bind.json`
 
 Routes to `RiskIngestHandler` → `BindPointRiskMapper`. Mapper builds an installment schedule from `installmentCount` and `boundPremium`.
 
@@ -86,9 +86,9 @@ Routes to `RiskIngestHandler` → `BindPointRiskMapper`. Mapper builds an instal
 - `transactionType = "PolicyBind"` → `policyStatus` becomes `Bound` when broker is delegated/preferred AND insured is acceptable; otherwise `Draft`.
 - `quote.expiryDate` and `policy.expiryDate` flow from `expiryDate`.
 
-### 1.4 Claim notice — `ingest-claim-notice-low-severity.json`, `ingest-claim-notice-high-severity.json`, `ingest-claim-notice-with-deductible.json`
+### 1.4 Claim notice - `ingest-claim-notice-low-severity.json`, `ingest-claim-notice-high-severity.json`, `ingest-claim-notice-with-deductible.json`
 
-Routes to `ClaimIngestHandler` (matched on `type` only — `source` can be any string).
+Routes to `ClaimIngestHandler` (matched on `type` only - `source` can be any string).
 
 **Mandatory `data` fields**: `claimReference`, `policyReference`, `claimantName`.
 
@@ -104,7 +104,7 @@ Routes to `ClaimIngestHandler` (matched on `type` only — `source` can be any s
 
 The `with-deductible` example produces `deductibleAmount=5000`, `indemnityAmount=25000`, `limitBreached=false`. Replace `perOccurrenceLimit` with `20000` and you'll see `indemnityAmount=20000` with `limitBreached=true`.
 
-### 1.5 Installment schedule — `ingest-installment-schedule-current.json`, `ingest-installment-schedule-delinquent.json`
+### 1.5 Installment schedule - `ingest-installment-schedule-current.json`, `ingest-installment-schedule-delinquent.json`
 
 Routes to `BillingIngestHandler`.
 
@@ -125,7 +125,7 @@ Each `installments` entry:
 
 **Business rules (when `installments[]` is provided)**
 
-- `paidToDate` and `missedPayments` from the body are **ignored** — the service derives them from `status`.
+- `paidToDate` and `missedPayments` from the body are **ignored** - the service derives them from `status`.
 - `totalAmount` is **derived** as the sum of non-`Cancelled` installments.
 - `nextDueDate` = first installment whose status is `Planned` / `Issued` / `Overdue`, ordered by `sequenceNumber` then `dueDate`.
 - `overdueInstallmentNumbers` is the list of `sequenceNumber` values whose status is `Overdue`.
@@ -135,7 +135,7 @@ The `current` example has 0 overdue → `BillingStatus = Current`, `DunningTrigg
 
 If you omit `installments[]` entirely the service falls back to the legacy behavior (uses the top-level `paidToDate` and `missedPayments`). Both shapes coexist.
 
-### 1.6 Compliance result — `ingest-compliance-result-clear.json`, `ingest-compliance-result-sanctions.json`, `ingest-compliance-result-edd.json`
+### 1.6 Compliance result - `ingest-compliance-result-clear.json`, `ingest-compliance-result-sanctions.json`, `ingest-compliance-result-edd.json`
 
 Routes to `ComplianceIngestHandler`.
 
@@ -155,7 +155,7 @@ Routes to `ComplianceIngestHandler`.
 
 ---
 
-## 2. `POST /api/v1/ingest/risks` — source-shape risk
+## 2. `POST /api/v1/ingest/risks` - source-shape risk
 
 Mandatory: `sourceSystem`, `messageType`, `payload`. Allowed `(sourceSystem, messageType)` pairs: `CONTOSO_UW`/`RiskSubmission`, `QUOTEFORGE`/`QuoteRequest`, `BINDPOINT`/`PolicyBindRequest`. Anything else throws `InvalidOperationException`.
 
@@ -163,7 +163,7 @@ Example: `ingest-risks-quoteforge.json`. Same QuoteForge payload as §1.2 but by
 
 ---
 
-## 3. `POST /api/v1/risks` — canonical risk submission
+## 3. `POST /api/v1/risks` - canonical risk submission
 
 The most expressive endpoint. It accepts the platform-neutral `CanonicalRiskRequest` directly. Use this when you want to drive a specific business outcome.
 
@@ -180,12 +180,12 @@ Everything else has a default. `entityId` defaults to `Guid.Empty`; supply your 
 
 ### Mandatory nested fields
 
-There aren't any — the inner objects (`submission`, `broker`, `insured`, `quote`, `policy`, `clearance`) all have parameterless defaults. In practice you should fill at least:
+There aren't any - the inner objects (`submission`, `broker`, `insured`, `quote`, `policy`, `clearance`) all have parameterless defaults. In practice you should fill at least:
 
-- `submission.underwritingYear`, `submission.brokerPremium` *or* `submission.technicalPremium` *or* the top-level `annualizedGrossPremium` — otherwise base premium is `0` and `quoteStatus` falls to `NotQuoted`.
-- `broker.brokerCode` + `isPreferredPartner` (or `hasDelegatedAuthority`) — otherwise `brokerDecision` becomes `UnknownBroker`/`ManualBrokerReview`, blocking auto-clear.
-- `insured.fullName`, `insured.yearsInBusiness >= 2` — otherwise `insuredDecision` becomes `ReferSeniorUnderwriter`/`UnknownInsured`.
-- `clearance.autoClearanceEnabled = true` plus `premiumThreshold` and `fuzzyMatchTolerance` — required for `AutoCleared`.
+- `submission.underwritingYear`, `submission.brokerPremium` *or* `submission.technicalPremium` *or* the top-level `annualizedGrossPremium` - otherwise base premium is `0` and `quoteStatus` falls to `NotQuoted`.
+- `broker.brokerCode` + `isPreferredPartner` (or `hasDelegatedAuthority`) - otherwise `brokerDecision` becomes `UnknownBroker`/`ManualBrokerReview`, blocking auto-clear.
+- `insured.fullName`, `insured.yearsInBusiness >= 2` - otherwise `insuredDecision` becomes `ReferSeniorUnderwriter`/`UnknownInsured`.
+- `clearance.autoClearanceEnabled = true` plus `premiumThreshold` and `fuzzyMatchTolerance` - required for `AutoCleared`.
 
 ### Coverage structure (sections / subcovers / perils)
 
@@ -235,7 +235,7 @@ The richer the shape, the more business rules fire. Canonical structure:
 | `subcover.deductibleType` not in `{Flat, PercentageOfLoss, PercentageOfSumInsured}` | Coverage warning. |
 | `peril.subLimit > subcover.sumInsured` | Coverage warning. |
 | Claim has `affectedPerilCode` AND that peril is in `subcover.exclusions` OR has `isCovered == false` (or no matching peril at all when the subcover has perils declared) | **Blocking** `Coverage:UNCOVERED_PERIL_CLAIM` → `quoteStatus = Blocked`, `insuredDecision = Decline`. |
-| `totalSectionPremium` differs from `basePremium` by > 1% | `premiumAllocationBalanced = false` (signal only — does not block). |
+| `totalSectionPremium` differs from `basePremium` by > 1% | `premiumAllocationBalanced = false` (signal only - does not block). |
 
 ### Scenarios
 
@@ -277,7 +277,7 @@ Examples (already in `docs/reference/examples/`): create from the templates in `
 
 **Mandatory body fields**: `policyReference`, `currentAnnualPremium`, `newAnnualPremium`, `inceptionDate`, `expiryDate`, `effectiveDate`.
 
-**Optional**: `sectionOperations[]` (new — see below).
+**Optional**: `sectionOperations[]` (new - see below).
 
 ### Section operations
 
@@ -290,7 +290,7 @@ Each `sectionOperations[]` entry:
 | `subcoverCode` | string? | Required for subcover-scoped operations. |
 | `sumInsuredDelta` | decimal | Aggregated into `result.sumInsuredDelta`. |
 | `deductibleDelta` | decimal | Aggregated into `result.deductibleDelta`. |
-| `premiumDelta` | decimal | Documentation-only — premium math comes from `currentAnnualPremium` → `newAnnualPremium`. |
+| `premiumDelta` | decimal | Documentation-only - premium math comes from `currentAnnualPremium` → `newAnnualPremium`. |
 | `reason` | string? | Free-text reason rendered into `operationsApplied[]`. |
 
 Example file: `policies-endorsement-with-section-operations.json`. With the standard 2026 calendar and `effectiveDate = 2026-07-01` it returns:
@@ -305,7 +305,7 @@ Endorsements with no `sectionOperations[]` keep the prior behavior (premium math
 
 ## 6. `GET /api/v1/products/{productCode}/rating`
 
-Pure GET — no JSON body. Mandatory query parameter `annualRevenue`. Optional `currencyCode` (default `USD`).
+Pure GET - no JSON body. Mandatory query parameter `annualRevenue`. Optional `currencyCode` (default `USD`).
 
 ```powershell
 Invoke-RestMethod "http://localhost:5000/api/v1/products/COMMERCIAL_PROPERTY/rating?annualRevenue=2200000"
@@ -331,7 +331,7 @@ Catalog values (`COMMERCIAL_PROPERTY`, `LIABILITY`, `CYBER`, `MOTOR`) are docume
 | `POST /api/v1/policies/cancellations` | `policyReference`, `annualPremium`, `inceptionDate`, `expiryDate`, `cancellationDate` |
 | `POST /api/v1/policies/endorsements` | `policyReference`, `currentAnnualPremium`, `newAnnualPremium`, `inceptionDate`, `expiryDate`, `effectiveDate` |
 
-Mandatory **`data` / `payload` fields** by `(source, type)` are listed in §1 above and again per source in `docs/guides/USAGE.md` §7.5–7.6.
+Mandatory **`data` / `payload` fields** by `(source, type)` are listed in §1 above and again per source in `docs/guides/USAGE.md` §7.5-7.6.
 
 ---
 
@@ -367,7 +367,7 @@ Invoke-RestMethod -Uri "$base/api/v1/ingest" -Method Post -ContentType applicati
   -InFile .\docs\examples\ingest-compliance-result-sanctions.json | Select-Object -ExpandProperty result | Format-List decision, blocksBind, finalStatus
 ```
 
-Each step's expected outcomes are described in §1–§5 above.
+Each step's expected outcomes are described in §1-§5 above.
 
 ---
 
@@ -375,12 +375,12 @@ Each step's expected outcomes are described in §1–§5 above.
 
 Three options, in increasing order of setup effort and expressiveness.
 
-### 9.1 Option A — Import the curated collection (recommended)
+### 9.1 Option A - Import the curated collection (recommended)
 
 Two files live under `docs/reference/postman/`:
 
-- `docs/reference/postman/InsuranceIntegration.postman_collection.json` — every endpoint plus the key business scenarios from §1–§5, organized in folders (`Health & catalog`, `Schemas`, `Ingest - Risk`, `Ingest - Lookup`, `Ingest - Claims`, `Ingest - Billing`, `Ingest - Compliance`, `Risk - Canonical`, `Policies`, `Snapshots`).
-- `docs/reference/postman/InsuranceIntegration.postman_environment.json` — sets `baseUrl` to `http://localhost:5000`.
+- `docs/reference/postman/InsuranceIntegration.postman_collection.json` - every endpoint plus the key business scenarios from §1-§5, organized in folders (`Health & catalog`, `Schemas`, `Ingest - Risk`, `Ingest - Lookup`, `Ingest - Claims`, `Ingest - Billing`, `Ingest - Compliance`, `Risk - Canonical`, `Policies`, `Snapshots`).
+- `docs/reference/postman/InsuranceIntegration.postman_environment.json` - sets `baseUrl` to `http://localhost:5000`.
 
 Steps:
 
@@ -395,19 +395,19 @@ What the collection does for you automatically (via a collection-level pre-reque
 - Generates a unique envelope `id` (`evt-<timestamp>`) for ingest requests, so re-sending creates new envelopes instead of hitting idempotency.
 - Stamps each request with the current UTC timestamp via `{{nowUtc}}`.
 
-To **deliberately** test idempotency, replace `{{envelopeId}}` in the request body with a fixed string (e.g. `"id": "evt-fixed-1"`) and send the same request twice — the second response will have an identical `result.entityId`.
+To **deliberately** test idempotency, replace `{{envelopeId}}` in the request body with a fixed string (e.g. `"id": "evt-fixed-1"`) and send the same request twice - the second response will have an identical `result.entityId`.
 
-### 9.2 Option B — Import the live OpenAPI document
+### 9.2 Option B - Import the live OpenAPI document
 
 If you'd rather generate every endpoint from the live API:
 
 1. Start the API in `Development` mode.
 2. In Postman: **File → Import → Link** and paste `http://localhost:5000/openapi/v1.json`.
-3. Postman creates a collection mirroring the OpenAPI document. You'll get all routes but no pre-filled request bodies — you'll fill those in manually (use the templates in §1–§5 or copy from `docs/reference/examples/*.json`).
+3. Postman creates a collection mirroring the OpenAPI document. You'll get all routes but no pre-filled request bodies - you'll fill those in manually (use the templates in §1-§5 or copy from `docs/reference/examples/*.json`).
 
 Trade-offs vs option A: always in sync with the latest endpoints, but no scenario-specific bodies, no pre-request scripts, and no business-rule annotations.
 
-### 9.3 Option C — Manual request from `docs/reference/examples/*.json`
+### 9.3 Option C - Manual request from `docs/reference/examples/*.json`
 
 For one-off testing without importing anything:
 
@@ -420,7 +420,7 @@ For one-off testing without importing anything:
 
 - **Idempotency on ingest**: only the `(source, id)` pair is keyed. If you reuse the same `id` you'll get the cached `IngestReceipt` back without the handler running again. The collection's pre-request script avoids this by default; remove the script (Collection → Pre-request Script tab) if you want idempotency to kick in across runs.
 - **Verify what was stored**: every successful `POST /api/v1/ingest` returns an `IngestReceipt` containing `source`, `envelopeId`, `receivedAtUtc`, and a `self` link. Either `GET` the `self` URL to retrieve the persisted receipt, or query the `IngestEntries` table directly with `WHERE Source='...' AND EnvelopeId='...'`.
-- **Trace a request end-to-end**: copy `X-Correlation-Id` from the response headers and grep your server console for that GUID — every log line emitted while handling the request is scoped with it.
+- **Trace a request end-to-end**: copy `X-Correlation-Id` from the response headers and grep your server console for that GUID - every log line emitted while handling the request is scoped with it.
 - **`X-Causation-Id`**: optional second header (also a GUID). Add it manually under any request's **Headers** tab when you want to model a downstream call caused by an upstream event; it joins the log scope but does not change behavior.
 - **Schema responses are large**: the `/api/v1/schemas/*` endpoints return JSON Schema documents. In Postman use **Pretty** view and the JSONPath filter (`$..properties.foo`) to navigate.
 - **Collection runner**: select the collection → **Run** → choose the *Risk - Canonical* folder (or *Ingest - Risk*) for a single-click smoke run that exercises auto-clear, manual-clearance, decline, and uncovered-peril scenarios in order.

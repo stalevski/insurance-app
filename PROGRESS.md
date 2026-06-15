@@ -15,21 +15,21 @@ Docker-capable VPS.
 
 ## Roadmap (phased)
 
-- [x] **Phase 0 — AI-agnostic context + continuity.** `AGENTS.md`, `.github/copilot-instructions.md`,
+- [x] **Phase 0 - AI-agnostic context + continuity.** `AGENTS.md`, `.github/copilot-instructions.md`,
   `.windsurf/rules/{architecture,testing}.md`, and this `PROGRESS.md`.
-- [x] **Phase 1 — Document bugs.** `docs/project/KNOWN_ISSUES.md` cataloguing the verified issues found during
+- [x] **Phase 1 - Document bugs.** `docs/project/KNOWN_ISSUES.md` cataloguing the verified issues found during
   analysis (documentation only; no code changes).
-- [x] **Phase 2 — Per-line-of-business risk models.** `LineOfBusiness` enum + optional typed detail
+- [x] **Phase 2 - Per-line-of-business risk models.** `LineOfBusiness` enum + optional typed detail
   objects (Property/Cyber/Motor/Liability) on `CanonicalRiskRequest` + `IRiskTypeProfile` strategy
   per LOB replacing the `ProductCode.Contains(...)` checks in `RiskFlowService`. 12 new tests, 4
   example JSON files.
-- [x] **Phase 3 — Blazor Server UI.** Interactive Server UI hosted inside
+- [x] **Phase 3 - Blazor Server UI.** Interactive Server UI hosted inside
   `InsuranceIntegration.Api` (single host). Dashboard, Ingest form (envelope templates from the
   source-system catalog), Quotes/Policies list + detail views over snapshots, Domain-events log
   with filters, per-aggregate **Mermaid lifecycle flow diagram** from the event log, and a
   read-only **DB browser**. UI calls services via an `IUiGateway` facade that opens a fresh DI
   scope per operation (no long-lived circuit-scoped `DbContext`).
-- [x] **Phase 4 — Self-contained packaging.** Dockerfile + short VPS deployment guide.
+- [x] **Phase 4 - Self-contained packaging.** Dockerfile + short VPS deployment guide.
   Dockerfile, `.dockerignore`, and `docs/guides/DEPLOYMENT.md` (2026-06-11). **Verified end-to-end
   on 2026-06-14** with Docker 29.5.3: `docker build -t insurance-integration .` completes the
   multi-stage restore→publish→runtime build (~46s), and `docker run -d -p 8080:8080 -v
@@ -61,10 +61,10 @@ Docker-capable VPS.
   10 new tests (2026-06-13).
 - [x] **Billing payment recording.** `POST /api/v1/billing/payments` applies a received payment to
   an installment schedule: it settles open installments (`Issued`/`Overdue` → `Paid`) in due order
-  — optionally starting from a targeted installment number — then recomputes the billing position
+  - optionally starting from a targeted installment number - then recomputes the billing position
   (outstanding balance, next due date, delinquency) via the existing `BillingFlowService`.
   Overpayment is surfaced as `UnappliedCredit`. Pure service (`IPaymentApplicationService` /
-  `PaymentApplicationService`, no new entities/migrations — billing is computation-only) behind a
+  `PaymentApplicationService`, no new entities/migrations - billing is computation-only) behind a
   thin endpoint. 8 new tests (2026-06-13).
 - [x] **Billing delinquency / dunning.** `POST /api/v1/billing/delinquency` assesses an installment
   schedule as of a date (defaults to now, optional grace period): open installments whose due date
@@ -79,7 +79,7 @@ Docker-capable VPS.
   illegal jumps and terminal-state moves, and requiring a reserve amount when reserving / a
   settlement amount when settling. Added `ClaimStatusValue`, the `Claim{Opened,Reserved,Settled,
   Declined,Closed}` domain-event types, and a pure `IClaimLifecycleService` /
-  `ClaimLifecycleService` (claims remain computation-only — persisting the event log awaits the
+  `ClaimLifecycleService` (claims remain computation-only - persisting the event log awaits the
   deferred claim snapshot). 19 new test cases (2026-06-13).
 - [x] **Claim reserves & payments.** `POST /api/v1/claims/financials` applies a reserve or payment
   operation to a claim's financial position: `SetReserve` (absolute), `AdjustReserve` (signed
@@ -114,35 +114,35 @@ Docker-capable VPS.
   `Logging` via `OutboxTransport.Normalize`. Failed deliveries throw so the dispatcher's existing
   retry/poison handling applies. Broker adapters (RabbitMQ / Azure Service Bus) still need their own
   packages and are out of scope here. 19 new tests (transport selection, envelope projection, file
-  and webhook publishers) — 241 total (2026-06-13).
-- [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published — new
-  `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU — atomic insert-first,
+  and webhook publishers) - 241 total (2026-06-13).
+- [x] **Bug-fix pass (was "fix in a later separate pass").** H1 (outbox never published - new
+  `IOutboxPublisher` + retry/poison handling), H2 (idempotency TOCTOU - atomic insert-first,
   first-writer-wins), H3 (negative renewal premium now throws instead of clamping to 0), and
   M2 (installment rounding residual goes to the last installment). 6 new regression tests;
   details moved to the "Fixed" section of `docs/project/KNOWN_ISSUES.md`.
 - [x] **M5 snapshot zero-premium fix.** The policy and quote snapshot projectors no longer guard
   premium updates with `> 0m` (which silently ignored a legitimate zero, e.g. a waived policy).
   They now apply the premium when the resolved premium is positive or the request explicitly
-  provided a premium input — the latter via a shared `SnapshotMerge.PremiumProvided(request)` signal
+  provided a premium input - the latter via a shared `SnapshotMerge.PremiumProvided(request)` signal
   mirroring `RiskFlowService.ResolveBasePremium`'s nullable inputs (`Submission.BrokerPremium`,
-  `Submission.TechnicalPremium`, `AnnualizedGrossPremium`) — so an explicit zero clears the stale
+  `Submission.TechnicalPremium`, `AnnualizedGrossPremium`) - so an explicit zero clears the stale
   snapshot value while an absent premium preserves it. 1 new regression test; details in the
   "Fixed" section of `docs/project/KNOWN_ISSUES.md` (2026-06-14).
 - [x] **DB browser environment gate (pre-prod hardening).** The read-only `/database` browser is
   now gated by a pure, unit-tested `DatabaseBrowserGate`: enabled only in the Development environment
   by default, overridable via the `DatabaseBrowser` config section (`DatabaseBrowser__Enabled=true`
   to force on, `false` to force off). A `DatabaseBrowserGateMiddleware` (runs right after the API-key
-  middleware) returns **404** for `/database` when disabled — 404 rather than 403 so the page's
-  existence is not revealed — and the nav link + page render conditionally on the same gate (defence
+  middleware) returns **404** for `/database` when disabled - 404 rather than 403 so the page's
+  existence is not revealed - and the nav link + page render conditionally on the same gate (defence
   in depth). Follows the existing `ApiKeyOptions`/`ApiKeyValidator` pattern. Closes "Next steps #2".
   15 new tests (2026-06-14).- [x] **README human-friendly rewrite + UI screenshots, and 1-based list pagers.** Added a
   plain-language intro to `README.md` (what the platform does, who it's for, a Mermaid pipeline
   diagram), a **"Visual tour"** section embedding seven captured UI screenshots under
   `docs/screenshots/` (dashboard, ingest, quotes, policies, policy detail, events, DB browser), and
-  a "Run it locally" quick-start — all preserving the existing technical depth. Screenshots are
+  a "Run it locally" quick-start - all preserving the existing technical depth. Screenshots are
   captured headlessly with Playwright at 1440×1000 (deviceScaleFactor 2) against the seeded
-  Development data. Also made the Quotes/Policies/Events list pagers 1-based ("Showing 1–9" not
-  "0–9"), matching the earlier Database-page fix. Added `scripts/start.ps1` / `scripts/stop.ps1`
+  Development data. Also made the Quotes/Policies/Events list pagers 1-based ("Showing 1-9" not
+  "0-9"), matching the earlier Database-page fix. Added `scripts/start.ps1` / `scripts/stop.ps1`
   dev helpers (start/stop the app, free port 5000) and matching VS Code "Start app" / "Stop app"
   tasks (`.vscode/tasks.json` un-ignored in `.gitignore` so it is shared). Docs + Razor UI + dev
   tooling only; no new tests (still 257) (2026-06-14).
@@ -157,23 +157,23 @@ Docker-capable VPS.
   only; no new tests (still 257) (2026-06-14).
 - [x] **README reframed to lead with QA-testing-ground purpose + test-gap audit.** Rewrote the
   `README.md` opening, "Who is it for?", and "Project goal", and added a top-level **Testing**
-  section, so the README leads with the project's primary purpose — a realistic system under test
-  with a REST API and a Blazor UI — instead of reading as a backend-only platform; the GitHub About
+  section, so the README leads with the project's primary purpose - a realistic system under test
+  with a REST API and a Blazor UI - instead of reading as a backend-only platform; the GitHub About
   was updated to match. Ran a full coverage audit (suite green at **257 tests**) and captured the
-  gaps — zero HTTP-endpoint tests, zero Blazor-UI tests, and six untested service modules — as the
+  gaps - zero HTTP-endpoint tests, zero Blazor-UI tests, and six untested service modules - as the
   new "Test coverage backlog" section below. Docs only; no code or test changes (still 257)
   (2026-06-15).
-- [x] **QA/SDET test suite — HTTP API integration tests + Blazor UI (bUnit) tests + expected-results
+- [x] **QA/SDET test suite - HTTP API integration tests + Blazor UI (bUnit) tests + expected-results
   builders, and a test-duplication refactor.** Added a new `tests/InsuranceIntegration.Api.IntegrationTests`
   project (net10.0) that stands the API up in-process with `WebApplicationFactory<Program>` over a
   unique in-memory SQLite database per fixture, plus **bUnit 2.7.2** for Blazor component rendering.
   **56 HTTP endpoint integration tests** cover 12 endpoint families (health, schemas, source-systems,
   products + rating, quote/policy reads, policy lifecycle, billing, claims, risks, ingest + replay,
-  and API-key security) across happy paths and the 400/404/401 error paths — closing **Test coverage
+  and API-key security) across happy paths and the 400/404/401 error paths - closing **Test coverage
   backlog #1 and #2** and exercising the API-key middleware through real requests (part of #3). **16
   bUnit UI tests** render the `Home`/`Quotes`/`Policies`/`Events` pages against a stub `IUiGateway`
   and assert rendered rows, the 1-based pager summary, empty states, aggregate links, and the Events
-  page filter forwarding — closing the bulk of **backlog #5** (PolicyDetail/Ingest/Database pages
+  page filter forwarding - closing the bulk of **backlog #5** (PolicyDetail/Ingest/Database pages
   remain). The **expected-results builders** (`ExpectedRatingResult` rating-math oracle + fluent
   request/envelope builders) and a **duplication refactor** (a shared `ApiTestBase` with
   `GetAsync`/`PostAsync` helpers, a `SeededApiTestBase`, and `HttpResponseAssertions` extension
@@ -189,18 +189,18 @@ Docker-capable VPS.
   `using var context` render ceremony repeated across all 16 UI tests and hosting the inherited
   `Ui` category) and a `UiAssertions` extension class (`ShouldShowEmptyState`/`ShouldLinkTo`) that
   folds the repeated empty-state and anchor asserts; `PageRenderer` was removed. Test-internal
-  refactor only — no behavior or count change; still 329 green (2026-06-15).
-- [x] **QA-architect coverage pass — closed the remaining UI-page, HTTP-pipeline, multi-source-ingest,
+  refactor only - no behavior or count change; still 329 green (2026-06-15).
+- [x] **QA-architect coverage pass - closed the remaining UI-page, HTTP-pipeline, multi-source-ingest,
   and service-module gaps.** Acting as QA architect on the suite, filled the holes left after the
   QA/SDET pass without over-engineering. **19 bUnit UI tests** finish the Blazor page matrix:
-  `PolicyDetail` (6 — not-found, snapshot render, originating-quote link + its omission, event-flow
-  empty state, event timeline), `QuoteDetail` (5 — not-found, snapshot, bind-rejection reason,
-  resulting-policy link, empty state), `Ingest` (4 — template list, template prefill, valid-envelope
-  receipt, invalid-JSON guard that skips the gateway), and `Database` (4 — disabled-gate message,
-  table list, row render, no-data state) — closing the rest of **backlog #5** (UI pages 4/7 → 7/7).
+  `PolicyDetail` (6 - not-found, snapshot render, originating-quote link + its omission, event-flow
+  empty state, event timeline), `QuoteDetail` (5 - not-found, snapshot, bind-rejection reason,
+  resulting-policy link, empty state), `Ingest` (4 - template list, template prefill, valid-envelope
+  receipt, invalid-JSON guard that skips the gateway), and `Database` (4 - disabled-gate message,
+  table list, row render, no-data state) - closing the rest of **backlog #5** (UI pages 4/7 → 7/7).
   **4 HTTP pipeline tests** (`PipelineEndpointsTests`) drive `CorrelationIdMiddleware` end to end
   (echo a supplied id, generate one when absent, regenerate a non-GUID) and the `/database` 404 gate
-  outside Development — closing **backlog #3**. **3 multi-source ingest tests**
+  outside Development - closing **backlog #3**. **3 multi-source ingest tests**
   (`MultiSourceIngestEndpointsTests`) prove `IngestDispatcher` routes `InstallmentSchedule` →
   `BillingIngestHandler`, `ClaimNotice` → `ClaimIngestHandler`, and `ComplianceResult` →
   `ComplianceIngestHandler` through real `POST /api/v1/ingest` calls (asserted via the receipt's
@@ -217,9 +217,9 @@ Docker-capable VPS.
 ## Current status
 
 - Build green (`dotnet build -c Release`); **all 360 tests pass** (QA-architect coverage pass added
-  +31 on 2026-06-15 — 19 bUnit UI page tests + 4 HTTP pipeline tests + 3 multi-source ingest tests +
-  4 ProductCatalog units + 1 seeder idempotency test; QA/SDET test suite — 56 HTTP API
-  integration tests + 16 bUnit UI tests — added +72 on 2026-06-15; DB browser environment gate added
+  +31 on 2026-06-15 - 19 bUnit UI page tests + 4 HTTP pipeline tests + 3 multi-source ingest tests +
+  4 ProductCatalog units + 1 seeder idempotency test; QA/SDET test suite - 56 HTTP API
+  integration tests + 16 bUnit UI tests - added +72 on 2026-06-15; DB browser environment gate added
   +15 and M5 snapshot zero-premium fix added +1 on 2026-06-14; configurable outbox transport
   added +19 and policy schedule PDF added +3 and
   API-key auth added +20 on
@@ -240,34 +240,34 @@ Docker-capable VPS.
 - Test framework: **NUnit 4** (+ `FakeTimeProvider`).
 - **Docs reorganized (2026-06-13):** all documentation grouped under `docs/{guides,reference,project}/`
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
-  normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
+  normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change -
   no code/build/test impact.
-- **Working on now:** **QA-architect coverage pass (2026-06-15)** — finished the Blazor UI page
+- **Working on now:** **QA-architect coverage pass (2026-06-15)** - finished the Blazor UI page
   matrix (PolicyDetail/QuoteDetail/Ingest/Database, +19 bUnit), added HTTP correlation-id +
   `/database` 404-gate tests (+4), multi-source ingest routing tests (+3), and ProductCatalog units +
   seeder idempotency (+5); **suite now 360 green**. Preceded by the **QA/SDET test suite
-  (2026-06-15)** — added the
+  (2026-06-15)** - added the
   `tests/InsuranceIntegration.Api.IntegrationTests` project: 56 HTTP endpoint integration tests
   (`WebApplicationFactory<Program>` + in-memory SQLite) across 12 endpoint families, 16 bUnit Blazor
   UI tests (Home/Quotes/Policies/Events), expected-results builders (`ExpectedRatingResult` + fluent
   request/envelope builders), and a duplication refactor (shared `ApiTestBase`/`SeededApiTestBase` +
-  `HttpResponseAssertions`). Suite now 329 green. Preceded by **Dark-mode UI polish (2026-06-14)** —
+  `HttpResponseAssertions`). Suite now 329 green. Preceded by **Dark-mode UI polish (2026-06-14)** -
   recaptured the seven Visual-tour
   screenshots (`docs/screenshots/01..07`) in dark mode and made the Mermaid lifecycle diagrams
   theme-aware (dark canvas matching `--panel-muted`, re-render on theme toggle) so they no longer
   show a white rectangle in dark mode. Preceded by the **README human-friendly rewrite + UI
-  screenshots** — `README.md` now opens with a plain-language explanation, a Mermaid pipeline
+  screenshots** - `README.md` now opens with a plain-language explanation, a Mermaid pipeline
   diagram, a "Run it locally" quick-start, and a **"Visual tour"** embedding the seven UI
   screenshots, while keeping all the existing technical sections. The Quotes/Policies/Events list
   pagers were also made 1-based to match the Database page. Earlier on 2026-06-14: the **DB browser environment gate**
-  — the read-only `/database` browser is now gated by `DatabaseBrowserGate` +
+  - the read-only `/database` browser is now gated by `DatabaseBrowserGate` +
   `DatabaseBrowserGateMiddleware` (off → 404 outside Development unless `DatabaseBrowser__Enabled=true`);
   the nav link and page render on the same gate. This closes the pre-production "Next steps #2"
   hardening item. Also on 2026-06-14: Phase 4 was
-  **verified end-to-end** (Docker daemon finally available — 29.5.3) — the image builds, the
+  **verified end-to-end** (Docker daemon finally available - 29.5.3) - the image builds, the
   container runs **healthy** on port 8080, host `/health` → 200 and the Blazor UI `/` → 200,
   Production hardening confirmed (`/swagger` 404, non-root UID 1654, SQLite on the `/data` volume);
-  and M5 (snapshot zero-premium) was fixed — the last documented High/Medium bug is now cleared. All
+  and M5 (snapshot zero-premium) was fixed - the last documented High/Medium bug is now cleared. All
   four roadmap phases are complete; remaining work is real-world VPS deployment (provision host + TLS
   reverse proxy per `docs/guides/DEPLOYMENT.md`) and the optional/backlog items below.
 
@@ -297,10 +297,10 @@ Docker-capable VPS.
 ## Decisions locked in
 
 - **Stay on .NET.** No language migration. UI is **Blazor Server** (single language, single host,
-  self-contained) — not React/Vue, to minimise toolchains.
+  self-contained) - not React/Vue, to minimise toolchains.
 - **Bugs:** document now (Phase 1), fix in a later separate pass.
 - **Risk models:** lightweight (additive typed detail objects + strategy), not a subclass hierarchy.
-- **DB browser:** read-only; **gated by environment** — available in Development, returns 404
+- **DB browser:** read-only; **gated by environment** - available in Development, returns 404
   elsewhere unless explicitly enabled via the `DatabaseBrowser:Enabled` flag
   (`DatabaseBrowser__Enabled=true`). Even when exposed, front it with proxy auth / an IP allowlist.
 - **Hosting target:** a Docker-capable Linux **VPS** (root access required for Docker; shared/cPanel
@@ -323,15 +323,15 @@ Docker-capable VPS.
    **Done (2026-06-14):** `DatabaseBrowserGate` + `DatabaseBrowserGateMiddleware` disable `/database`
    (404) outside Development unless `DatabaseBrowser__Enabled=true`. For deliberate exposure, still
    add proxy-level basic auth / an IP allowlist on `/database` (see `docs/guides/DEPLOYMENT.md`).
-3. Remaining known issues: all High and Medium items are fixed; only low/debatable ones remain —
+3. Remaining known issues: all High and Medium items are fixed; only low/debatable ones remain -
    L1 (Contoso mapper hard-codes insured/broker data), L2 (`Guid.NewGuid()` entity ids in
-   mappers/handlers), D1 (BindPoint installment due dates — confirm the intended convention), and
+   mappers/handlers), D1 (BindPoint installment due dates - confirm the intended convention), and
    D2 (38 pre-existing build warnings). See `docs/project/KNOWN_ISSUES.md`.
 4. UI polish (optional): add submission/quote/policy lifecycle action forms
    (cancel/endorse/renew/reinstate) that post to the existing `Endpoints/PolicyEndpoints.cs`
    routes; today those are reachable via Swagger only.
 5. Feature backlog: a full enumeration of candidate functionality (with add/defer/skip verdicts)
-   lives in `docs/project/FEATURE_PLAN.html` — open it in a browser to pick the next feature.
+   lives in `docs/project/FEATURE_PLAN.html` - open it in a browser to pick the next feature.
 6. ~~Test refactoring (tech debt): expected-results builder + review the test classes for code
    duplication.~~ **Done (2026-06-15):** the new `tests/InsuranceIntegration.Api.IntegrationTests`
    project adds `ExpectedRatingResult` (rating-math oracle) and fluent request/envelope builders, and
@@ -342,7 +342,7 @@ Docker-capable VPS.
 
 ## Test coverage backlog (gaps to fill, audited 2026-06-15)
 
-Current suite: **360 NUnit 4 tests, all green** — strong at the service / flow / mapper / snapshot /
+Current suite: **360 NUnit 4 tests, all green** - strong at the service / flow / mapper / snapshot /
 outbox / security layers (unit + in-memory-SQLite integration), and now with HTTP-endpoint and
 Blazor-UI coverage. Since QA is this project's primary purpose, the coverage gaps below are
 first-class backlog items. A 2026-06-15 audit found zero HTTP-endpoint tests and zero Blazor-UI
@@ -354,19 +354,19 @@ and the highest-value parts of 4. Listed most-valuable first:
 
 1. ✅ **Landed 2026-06-15** (56 tests, 12 endpoint families). **HTTP endpoint integration tests**
    (biggest gap). Stand up the API in-process with
-   `WebApplicationFactory<Program>` (the API uses top-level `Program.cs` — expose it with
+   `WebApplicationFactory<Program>` (the API uses top-level `Program.cs` - expose it with
    `public partial class Program { }`) and assert status codes, JSON bodies, and headers for the
    ~29 routes across `Endpoints/*.cs`. One happy-path test per route first, then the error paths.
-2. ✅ **Landed 2026-06-15** (400/404/401 paths covered). **HTTP error / validation paths** — 400
+2. ✅ **Landed 2026-06-15** (400/404/401 paths covered). **HTTP error / validation paths** - 400
    (missing/invalid fields), 404 (unknown policy / quote /
    envelope), and 401 (API-key enforcement on writes + the `/database` browser) per endpoint family.
-3. ✅ **Landed 2026-06-15** — `X-Api-Key` accept/reject (`SecurityEndpointsTests`), correlation-id
+3. ✅ **Landed 2026-06-15** - `X-Api-Key` accept/reject (`SecurityEndpointsTests`), correlation-id
    echo (echo a supplied id, generate when absent, regenerate a non-GUID), and the `/database` 404
    gate outside Development are all now exercised through real requests (`PipelineEndpointsTests`).
-   **Middleware pipeline at the HTTP layer** — correlation-id echo (`CorrelationIdMiddleware`),
+   **Middleware pipeline at the HTTP layer** - correlation-id echo (`CorrelationIdMiddleware`),
    `X-Api-Key` accept/reject (`ApiKeyAuthenticationMiddleware`), and the `/database` 404 gate
    (`DatabaseBrowserGateMiddleware`) exercised through real requests, not just their pure validators.
-4. ◐ **Partly covered 2026-06-15** — most of these are now exercised indirectly by the new endpoint
+4. ◐ **Partly covered 2026-06-15** - most of these are now exercised indirectly by the new endpoint
    integration tests (schemas, source-systems, products/rating, event log, seeder); **`ProductCatalog`
    now has direct unit tests and `DevelopmentDataSeeder` idempotency is covered through the
    integration host (2026-06-15)**, leaving `DomainEventLog`, `JsonSchemaService`,
@@ -378,17 +378,17 @@ and the highest-value parts of 4. Listed most-valuable first:
    (lookups + rating defaults), `Services/Seeding/DevelopmentDataSeeder` (idempotency / no-op when
    data already exists), and the `Services/Ui/*` facade (`UiGateway` aggregation + paging,
    `EventFlowDiagram` / lifecycle-stage Mermaid output).
-5. ✅ **Landed 2026-06-15** (all 7 pages — Home/Quotes/Policies/Events + PolicyDetail/QuoteDetail/
+5. ✅ **Landed 2026-06-15** (all 7 pages - Home/Quotes/Policies/Events + PolicyDetail/QuoteDetail/
    Ingest/Database; PolicyDetail/QuoteDetail/Ingest/Database added in the QA-architect pass).
-   **Blazor UI component tests** with **bUnit** — render `Home`, `Ingest`, `Quotes`, `Policies`,
+   **Blazor UI component tests** with **bUnit** - render `Home`, `Ingest`, `Quotes`, `Policies`,
    `PolicyDetail`, `QuoteDetail`, `Events`, `Database` against a stub `IUiGateway`; assert rendered
    rows, 1-based pager state, filter behaviour, detail not-found/render, and the template/receipt flow.
-6. **End-to-end UI smoke** with **Playwright** — drive quote → bind → policy → claim → billing
+6. **End-to-end UI smoke** with **Playwright** - drive quote → bind → policy → claim → billing
    through the running app and assert the UI + the `/database` browser reflect the change (mirrors
    the Playwright tooling already used for the screenshot capture).
-7. **Concurrency / race tests** — idempotency store first-writer-wins under parallel ingest, outbox
+7. **Concurrency / race tests** - idempotency store first-writer-wins under parallel ingest, outbox
    dispatch under contention, and snapshot rebuild while events are appended.
-8. **Unroutable ingest-type hardening (observed 2026-06-15)** — `POST /api/v1/ingest` with a message
+8. **Unroutable ingest-type hardening (observed 2026-06-15)** - `POST /api/v1/ingest` with a message
    `type` no handler claims surfaces the dispatcher's `InvalidOperationException` as an unshaped
    **500** (`IngestEndpoints` has no `try/catch`). A negative test was deliberately *not* added so
    the suite doesn't lock in undefined behavior; the small hardening task is to map it to a 400/422
@@ -398,7 +398,7 @@ and the highest-value parts of 4. Listed most-valuable first:
 > needed for the API tests); keep bUnit / Playwright additive so `dotnet test` stays fast and
 > dependency-light. Record the new test totals here as each slice lands.
 
-## Enterprise / multi-tenant backlog (candidate epic — design first, not yet scheduled)
+## Enterprise / multi-tenant backlog (candidate epic - design first, not yet scheduled)
 
 Captured from an enterprise expansion brief. These are **large, cross-cutting** changes; each needs
 its own design pass + KNOWN_ISSUES/FEATURE_PLAN entry before implementation. Listed roughly in
@@ -409,13 +409,13 @@ dependency order:
    HTTP header, and enforce isolation via EF Core **global query filters** in `IntegrationDbContext`
    so every read/update/snapshot query is tenant-scoped. Update `DevelopmentDataSeeder` to assign
    tenants. *Risk:* query filters interact with the existing `RowVersionInterceptor` and the
-   same-transaction event+snapshot invariant — needs careful testing. Migration adds a column to
+   same-transaction event+snapshot invariant - needs careful testing. Migration adds a column to
    `IngestEntries`, `DomainEvents`, `PolicySnapshots`, `QuoteSnapshots`.
 2. **Dynamic per-product JSON Schema validation.** Replace compile-time contract annotations with a
    config/DB-backed lookup keyed by `ProductCode` / line of business (Property, Cyber, Motor,
    Liability). Add a pre-ingest pipeline step that validates raw source envelopes against the
    runtime schema *before* mapping to canonical contracts. We already vendor a JSON Schema stack
-   (`IJsonSchemaService`) — evaluate reusing it before adding `JsonSchema.Net` (respect the
+   (`IJsonSchemaService`) - evaluate reusing it before adding `JsonSchema.Net` (respect the
    "no phantom dependencies" rule).
 3. **Aggregate version sequencing (stronger concurrency control).** Add an explicit
    `AggregateVersion` integer to `DomainEvents` and the snapshot documents, and enforce a
@@ -430,7 +430,7 @@ dependency order:
    configurable transport just shipped (`Logging` / `File` / `Webhook`).
 5. **System branding/rename (decision required, do NOT action the rest yet).** The enterprise brief
    proposed renaming the source-system placeholders. The first source-system placeholder has already
-   been actioned — it was renamed to **Contoso** (a deliberately-synthetic placeholder) because it
+   been actioned - it was renamed to **Contoso** (a deliberately-synthetic placeholder) because it
    was uncertain whether the original echoed a real system; this touched `SourceContracts`,
    `Mappers`, the source-system catalog (`CONTOSO_UW`), sample payloads, the Postman collection,
    docs, and the tests. The other two (`QuoteForge`, `BindPoint`) are **left as-is**; the brief's
@@ -441,7 +441,7 @@ dependency order:
 > `SourceContracts → Mappers → CanonicalContracts → Responses` separation; one public type per file
 > with namespace matching folder; inject `TimeProvider` (no `DateTime.UtcNow` in logic); `decimal`
 > for money; all mutating writes flow through `ApiKeyAuthenticationMiddleware` (`X-Api-Key`) and
-> integration recipes must supply that header; no new heavy dependencies (AutoMapper/MediatR) — use
+> integration recipes must supply that header; no new heavy dependencies (AutoMapper/MediatR) - use
 > plain C# orchestration + the existing configuration extensions.
 
 ## Open questions / to confirm with hosting provider

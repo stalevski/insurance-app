@@ -60,7 +60,7 @@ curl http://localhost:8080/health
    Caddy obtains and renews Let's Encrypt certificates automatically. Nginx + certbot works too.
 5. **Do not expose the app without a proxy/firewall.** The read-only DB browser at `/database`
    is now **gated**: it is off by default outside Development and returns `404` (see `PROGRESS.md`).
-   To deliberately expose it, set `DatabaseBrowser__Enabled=true` — and even then put auth in front
+   To deliberately expose it, set `DatabaseBrowser__Enabled=true` - and even then put auth in front
    at the proxy (e.g. basic auth or IP allowlist on `/database`).
 
 ## Updating

@@ -38,23 +38,23 @@ SourceContracts ──Mappers──> CanonicalContracts ──Flow services─�
                                      │                  └─> Outbox (reliable downstream emit)
 ```
 
-- **SourceContracts/** — source-facing DTOs (Contoso, QuoteForge, BindPoint, generic envelope).
-- **Mappers/** — translate source DTOs into canonical contracts (anti-corruption layer).
-- **CanonicalContracts/** — platform-owned normalized models used internally.
-- **Services/Flows/** — business logic / orchestration (Risk, Claim, Billing, Compliance).
-- **Responses/** — outbound processed models (e.g. `FinalRiskResponse`, `IngestReceipt`).
-- **Snapshots/** + **Services/Snapshots/** — consolidated read models per policy/quote key.
-- **Events/** + **Persistence/DomainEventEntity** — domain event log; snapshots are rebuildable.
-- **Services/Outbox/** — transactional outbox + hosted dispatcher.
-- **Endpoints/** — thin minimal-API endpoints; delegate to services, return typed `Results`.
-- **Persistence/** — `IntegrationDbContext`, entity types, `RowVersionInterceptor` (optimistic
+- **SourceContracts/** - source-facing DTOs (Contoso, QuoteForge, BindPoint, generic envelope).
+- **Mappers/** - translate source DTOs into canonical contracts (anti-corruption layer).
+- **CanonicalContracts/** - platform-owned normalized models used internally.
+- **Services/Flows/** - business logic / orchestration (Risk, Claim, Billing, Compliance).
+- **Responses/** - outbound processed models (e.g. `FinalRiskResponse`, `IngestReceipt`).
+- **Snapshots/** + **Services/Snapshots/** - consolidated read models per policy/quote key.
+- **Events/** + **Persistence/DomainEventEntity** - domain event log; snapshots are rebuildable.
+- **Services/Outbox/** - transactional outbox + hosted dispatcher.
+- **Endpoints/** - thin minimal-API endpoints; delegate to services, return typed `Results`.
+- **Persistence/** - `IntegrationDbContext`, entity types, `RowVersionInterceptor` (optimistic
   concurrency).
 
 ## Conventions (follow these)
 
 - **One public class/record per file**; file name matches the type.
 - **Namespaces match folder structure.**
-- **File-scoped namespaces** (`namespace X;`) — enforced as a warning.
+- **File-scoped namespaces** (`namespace X;`) - enforced as a warning.
 - **Using directives outside** the namespace.
 - Prefer **`var`**.
 - **Thin endpoints:** no business logic in `Endpoints/`; delegate to a service.
@@ -62,7 +62,7 @@ SourceContracts ──Mappers──> CanonicalContracts ──Flow services─�
   testing.
 - **Composition over inheritance.** Prefer small interfaces + DI registration in
   `Configuration/ServiceRegistration.cs`.
-- **Time:** never use `DateTime.UtcNow` directly in logic — inject `TimeProvider` and use
+- **Time:** never use `DateTime.UtcNow` directly in logic - inject `TimeProvider` and use
   `FakeTimeProvider` in tests. (Some legacy code still violates this; see `docs/project/KNOWN_ISSUES.md`.)
 - **Money:** use `decimal`; round deliberately and keep installment/premium totals reconciled.
 - **Migrations are generated, not hand-edited** (use `dotnet ef migrations add`).
@@ -94,17 +94,17 @@ dotnet run --project src/InsuranceIntegration.Api
 2. `dotnet build` succeeds (don't add new warnings).
 3. `dotnet test` is green; new behavior has NUnit tests (AAA style, `FakeTimeProvider` for time).
 4. Conventions above are respected; contract layers stay separate.
-5. **Documentation is updated in the same change** — do not leave it as a follow-up. Whenever
+5. **Documentation is updated in the same change** - do not leave it as a follow-up. Whenever
    behavior, endpoints, configuration, conventions, or project structure change, update the
    relevant Markdown/docs so they stay accurate, at minimum:
-   - `PROGRESS.md` — always, so the next device/agent has current context.
-   - `README.md` (and `docs/README.md`) — when features, run/usage, or the structure map change.
-   - `docs/guides/USAGE.md`, `docs/guides/DEPLOYMENT.md`, `docs/guides/TESTING.md` — when usage,
+   - `PROGRESS.md` - always, so the next device/agent has current context.
+   - `README.md` (and `docs/README.md`) - when features, run/usage, or the structure map change.
+   - `docs/guides/USAGE.md`, `docs/guides/DEPLOYMENT.md`, `docs/guides/TESTING.md` - when usage,
      deployment, or testing change.
-   - `docs/project/FEATURE_PLAN.html` — when a planned feature is implemented (flip its badge and
+   - `docs/project/FEATURE_PLAN.html` - when a planned feature is implemented (flip its badge and
      bump the counters).
-   - `docs/project/KNOWN_ISSUES.md` — when a known issue is introduced, fixed, or changes.
-   - `docs/reference/API_EXAMPLES.md` / `docs/reference/examples/*` — when request/response shapes
+   - `docs/project/KNOWN_ISSUES.md` - when a known issue is introduced, fixed, or changes.
+   - `docs/reference/API_EXAMPLES.md` / `docs/reference/examples/*` - when request/response shapes
      or example payloads change.
 
 ## Where things live (quick map)

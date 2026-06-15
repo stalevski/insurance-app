@@ -1,33 +1,33 @@
 # Insurance Integration Platform
 
-> **Primarily a QA testing ground.** A realistic, fully-owned insurance back office — REST API,
-> Blazor web UI, event-sourced core, and seeded sample data — built to be exercised by automated and
+> **Primarily a QA testing ground.** A realistic, fully-owned insurance back office - REST API,
+> Blazor web UI, event-sourced core, and seeded sample data - built to be exercised by automated and
 > manual tests, so QA has a non-trivial system under test instead of another to-do app.
 
 > Functionally it takes messy, source-specific insurance messages from many systems, turns them into
 > one clean internal format, runs the real insurance lifecycle on them (quote → bind → policy →
-> claims → billing), and hands clean results to downstream systems — with a built-in web UI to watch
+> claims → billing), and hands clean results to downstream systems - with a built-in web UI to watch
 > it all happen.
 
 > **Built AI-assisted, human-directed.** Planned, generated, reviewed, and tested with
-> AI tooling under my direction — the architecture, code review, and final decisions are mine.
+> AI tooling under my direction - the architecture, code review, and final decisions are mine.
 
 ## What is this, in plain language?
 
-Insurers, brokers, and MGAs run dozens of systems that all describe the same things — a quote, a
-policy, a claim — in their own slightly different shapes. Wiring every system directly to every other
+Insurers, brokers, and MGAs run dozens of systems that all describe the same things - a quote, a
+policy, a claim - in their own slightly different shapes. Wiring every system directly to every other
 system is where integration projects go to die.
 
 This project is the **translation-and-processing layer in the middle**. Think of it as a universal
 adapter for insurance data:
 
-1. **Ingest** — a source system POSTs a message in its own shape (e.g. Contoso Underwriting,
+1. **Ingest** - a source system POSTs a message in its own shape (e.g. Contoso Underwriting,
    QuoteForge, BindPoint).
-2. **Normalize** — the message is mapped into one **canonical** contract the platform owns, so the
+2. **Normalize** - the message is mapped into one **canonical** contract the platform owns, so the
    rest of the system never has to care where it came from.
-3. **Process** — lifecycle-aware logic runs the real insurance work: pricing, clearance / duplicate
+3. **Process** - lifecycle-aware logic runs the real insurance work: pricing, clearance / duplicate
    detection, bind rules, endorsements, renewals, cancellations, claims, and billing.
-4. **Emit & record** — every change becomes a **domain event** (an append-only history) plus an
+4. **Emit & record** - every change becomes a **domain event** (an append-only history) plus an
    up-to-date **read model**, and outbound messages go to downstream consumers.
 
 ```mermaid
@@ -39,8 +39,8 @@ flowchart LR
     C --> F["Outbox →<br/>downstream consumers"]
 ```
 
-**Who is it for?** QA / SDET engineers who want a realistic, fully-owned system under test — a REST
-API, a Blazor UI, deterministic seeded data, and a read-only DB browser to assert against — and
+**Who is it for?** QA / SDET engineers who want a realistic, fully-owned system under test - a REST
+API, a Blazor UI, deterministic seeded data, and a read-only DB browser to assert against - and
 engineers evaluating a clean, testable way to build an insurance integration layer, with
 modular-monolith and event-sourced-style patterns applied to a real domain rather than a to-do app.
 
@@ -50,7 +50,7 @@ modular-monolith and event-sourced-style patterns applied to a real domain rathe
   responses.
 - Event-sourced-style history: every state change is a replayable domain event, and read models can
   be rebuilt from scratch.
-- A real insurance lifecycle, not a CRUD demo — bind preconditions, endorsements, renewals with
+- A real insurance lifecycle, not a CRUD demo - bind preconditions, endorsements, renewals with
   loss-ratio pricing, claims transitions, installment billing and delinquency.
 - A built-in **Blazor Server UI** (no separate JS build) to ingest messages, browse snapshots, and
   watch the event flow as live diagrams.
@@ -86,23 +86,23 @@ captured from the live app at `http://localhost:5000`.
 
 ### Dashboard
 
-![Dashboard — counts and recent domain events](docs/screenshots/01-dashboard.png)
+![Dashboard - counts and recent domain events](docs/screenshots/01-dashboard.png)
 
 The landing page (`/`) summarises the whole system at a glance: how many quotes, bound quotes, and
 policies exist, how many domain events and ingest entries have been recorded, and how many outbox
-messages are still pending — followed by a live feed of the most recent domain events.
+messages are still pending - followed by a live feed of the most recent domain events.
 
 ### Ingest a source message
 
-![Ingest — a pre-filled source envelope ready to submit](docs/screenshots/02-ingest.png)
+![Ingest - a pre-filled source envelope ready to submit](docs/screenshots/02-ingest.png)
 
 The `/ingest` page lets you POST a source envelope without leaving the browser. Pick a source-system
 template (here, Contoso Underwriting Workbench) to pre-fill the editor with a valid message, tweak
-the JSON, and submit — the same path a real upstream system would take.
+the JSON, and submit - the same path a real upstream system would take.
 
 ### Quotes
 
-![Quotes — paged snapshot list with phase and product badges](docs/screenshots/03-quotes.png)
+![Quotes - paged snapshot list with phase and product badges](docs/screenshots/03-quotes.png)
 
 The `/quotes` page lists `QuoteSnapshot` read models across every product family (Property,
 Liability, Cyber, Motor) with colour-coded lifecycle-phase and bound/unbound badges. Each row links
@@ -110,34 +110,34 @@ to a detail page with the quote's lifecycle diagrams.
 
 ### Policies
 
-![Policies — bound-policy snapshots rebuilt from the event log](docs/screenshots/04-policies.png)
+![Policies - bound-policy snapshots rebuilt from the event log](docs/screenshots/04-policies.png)
 
-The `/policies` page shows `PolicySnapshot` read models — the policies bound from the quotes above —
+The `/policies` page shows `PolicySnapshot` read models - the policies bound from the quotes above -
 each linking back to its originating quote and through to a full lifecycle view.
 
-### Policy detail — lifecycle and actions
+### Policy detail - lifecycle and actions
 
-![Policy detail — lifecycle stage diagram, Mermaid flow, and lifecycle actions](docs/screenshots/05-policy-detail.png)
+![Policy detail - lifecycle stage diagram, Mermaid flow, and lifecycle actions](docs/screenshots/05-policy-detail.png)
 
 The policy detail page is the centrepiece. It shows where the policy sits on the canonical lifecycle,
 renders a **Mermaid diagram** built from the policy's own event stream, and exposes a **lifecycle
-actions** panel — cancel, endorse, renew, reinstate, lapse, or non-renew — driven straight from the
+actions** panel - cancel, endorse, renew, reinstate, lapse, or non-renew - driven straight from the
 UI with fields pre-filled from the snapshot.
 
 ### Domain events
 
-![Domain events — filterable append-only event log](docs/screenshots/06-events.png)
+![Domain events - filterable append-only event log](docs/screenshots/06-events.png)
 
 The `/events` page is a filterable view of the append-only domain-event log that backs every
 snapshot. Each aggregate links to a detail page that renders its lifecycle as a Mermaid flow diagram.
 
 ### Database browser
 
-![Database browser — read-only view of the SQLite tables](docs/screenshots/07-database-browser.png)
+![Database browser - read-only view of the SQLite tables](docs/screenshots/07-database-browser.png)
 
 The `/database` page is a read-only browser over the underlying SQLite tables (here, `DomainEvents`),
-so you can inspect exactly what the platform persisted — the inbox, the event log, and the snapshot
-read models — without a separate database tool.
+so you can inspect exactly what the platform persisted - the inbox, the event log, and the snapshot
+read models - without a separate database tool.
 
 ## Project goal
 
@@ -234,7 +234,7 @@ Ingest and discovery:
 Snapshot reads:
 
 - `GET /api/v1/policies` and `GET /api/v1/policies/{policyReference}` (consolidated `PolicySnapshot` per policy key)
-- `GET /api/v1/policies/{policyReference}/schedule.pdf` — rendered policy-schedule PDF (QuestPDF) built from the snapshot
+- `GET /api/v1/policies/{policyReference}/schedule.pdf` - rendered policy-schedule PDF (QuestPDF) built from the snapshot
 - `GET /api/v1/quotes` and `GET /api/v1/quotes/{quoteReference}` (consolidated `QuoteSnapshot` per quote key)
 
 Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
@@ -249,7 +249,7 @@ Lifecycle writes (snapshot mutation + DomainEvent in one EF transaction):
 Billing:
 
 - `POST /api/v1/billing/payments` (apply a payment to an installment schedule; settles installments `Issued → Paid` in due order and recomputes the billing position)
-- `POST /api/v1/billing/delinquency` (flag open installments past due — with optional grace period — as `Overdue` and recompute dunning / cancellation-for-non-payment recommendation)
+- `POST /api/v1/billing/delinquency` (flag open installments past due - with optional grace period - as `Overdue` and recompute dunning / cancellation-for-non-payment recommendation)
 
 Claims:
 
@@ -258,7 +258,7 @@ Claims:
 
 Replay / sanity:
 
-- `POST /api/v1/snapshots/policies/{policyReference}/rebuild` and `POST /api/v1/snapshots/quotes/{quoteReference}/rebuild` — replay the aggregate's `DomainEvents` through the projector
+- `POST /api/v1/snapshots/policies/{policyReference}/rebuild` and `POST /api/v1/snapshots/quotes/{quoteReference}/rebuild` - replay the aggregate's `DomainEvents` through the projector
 
 Schemas:
 
@@ -274,20 +274,20 @@ For request / response shapes and examples per endpoint see [docs/guides/USAGE.m
 An interactive Blazor Server UI is hosted inside the same API process (single host, no separate JS
 toolchain). Browse to the application root (`/`) when it is running. Pages:
 
-- **Dashboard** (`/`) — counts (quotes, bound quotes, policies, domain events, ingest entries,
+- **Dashboard** (`/`) - counts (quotes, bound quotes, policies, domain events, ingest entries,
   pending outbox) and a recent-events feed.
-- **Ingest** (`/ingest`) — submit a source envelope to `POST /api/v1/ingest`, with templates
+- **Ingest** (`/ingest`) - submit a source envelope to `POST /api/v1/ingest`, with templates
   pre-filled from the source-system catalog.
-- **Quotes / Policies** (`/quotes`, `/policies`) — paged list + detail views over the
+- **Quotes / Policies** (`/quotes`, `/policies`) - paged list + detail views over the
   `QuoteSnapshot` / `PolicySnapshot` read-models. Each detail page shows a **lifecycle stage**
   diagram (canonical phases with the current stage highlighted) so you can see where the risk
   sits, plus a **lifecycle flow** diagram built from its event stream. The policy detail page also
-  has a **lifecycle actions** panel — cancel, endorse, renew, reinstate, lapse, or non-renew the
+  has a **lifecycle actions** panel - cancel, endorse, renew, reinstate, lapse, or non-renew the
   policy directly from the UI (fields pre-filled from the snapshot), which previously required
   Swagger.
-- **Domain events** (`/events`) — filterable event log; each aggregate detail page renders a
+- **Domain events** (`/events`) - filterable event log; each aggregate detail page renders a
   **Mermaid lifecycle flow diagram** built from its event stream.
-- **Database browser** (`/database`) — read-only view of the SQLite tables.
+- **Database browser** (`/database`) - read-only view of the SQLite tables.
 
 In `Development`, the database is populated on first run with sample quotes and policies across
 every product (risk) family (Property, Liability, Cyber, Motor) by
@@ -326,9 +326,9 @@ header name (`X-Api-Key` by default) and whether the DB browser is protected are
 Domain events captured in the transactional outbox are delivered by the `OutboxDispatcher`
 background worker, whose transport is configurable via the `Outbox` section:
 
-- `Logging` (default) — writes a dispatch line per event; no external infrastructure required.
-- `File` — appends each event as a JSON line to `Outbox:FilePath` (`outbox-events.jsonl` by default).
-- `Webhook` — POSTs each event as JSON to `Outbox:WebhookUrl`.
+- `Logging` (default) - writes a dispatch line per event; no external infrastructure required.
+- `File` - appends each event as a JSON line to `Outbox:FilePath` (`outbox-events.jsonl` by default).
+- `Webhook` - POSTs each event as JSON to `Outbox:WebhookUrl`.
 
 ```powershell
 $env:Outbox__Transport = "File"
@@ -499,7 +499,7 @@ The current implementation delivers a coherent end-to-end policy lifecycle:
 - canonical risk processing flow (enrichments, premium, claim aggregation, matching, clearance, section-action logic)
 - per-business-key consolidated `PolicySnapshot` and `QuoteSnapshot` documents
 - domain event log with replay-capable payloads (`RiskEventPayload { canonicalRequest, finalResponse }`)
-- post-bind lifecycle: `cancel`, `endorse`, `renew` — each mutating the snapshot AND writing a `Policy*` event
+- post-bind lifecycle: `cancel`, `endorse`, `renew` - each mutating the snapshot AND writing a `Policy*` event
 - quote versioning with `Version` / `IssuedAtUtc` / `ValidUntilUtc` / `ValidityDays`
 - bind preconditions (no missing quote, not expired, not already bound, status in `{Quoted, Indicative}`); rejection surfaces `BindRejectionReason` and finalStatus `BindRejected`
 - renewal flow with loss-ratio + exposure-delta + override-load pricing model and prior-policy lineage on the renewal `QuoteSnapshot`
@@ -514,30 +514,30 @@ dotnet build .\InsuranceIntegration.sln
 
 ## Testing
 
-Testing is the point of this project — the app is a realistic system under test, not just a demo to read.
+Testing is the point of this project - the app is a realistic system under test, not just a demo to read.
 
 ```powershell
 dotnet test .\InsuranceIntegration.sln
 ```
 
-The suite is **360 NUnit 4 tests**, all green and running in a few seconds with no external dependencies: unit plus service- and persistence-level integration on in-memory SQLite (`InsuranceIntegration.Api.Tests`), and — added 2026-06-15 — **HTTP-endpoint integration tests** (the API hosted in-process with `WebApplicationFactory`) plus **Blazor-UI component tests** (bUnit) in `InsuranceIntegration.Api.IntegrationTests`. Coverage spans the service, flow, mapper, snapshot, outbox, and security layers, the HTTP API surface (including correlation-id echo and multi-source ingest routing), and all seven Blazor UI pages; the remaining gaps (Playwright end-to-end and a few direct service-module unit tests) are tracked as a backlog in [PROGRESS.md](PROGRESS.md). For the test stack, conventions, patterns, and manual end-to-end recipes see [docs/guides/TESTING.md](docs/guides/TESTING.md).
+The suite is **360 NUnit 4 tests**, all green and running in a few seconds with no external dependencies: unit plus service- and persistence-level integration on in-memory SQLite (`InsuranceIntegration.Api.Tests`), and - added 2026-06-15 - **HTTP-endpoint integration tests** (the API hosted in-process with `WebApplicationFactory`) plus **Blazor-UI component tests** (bUnit) in `InsuranceIntegration.Api.IntegrationTests`. Coverage spans the service, flow, mapper, snapshot, outbox, and security layers, the HTTP API surface (including correlation-id echo and multi-source ingest routing), and all seven Blazor UI pages; the remaining gaps (Playwright end-to-end and a few direct service-module unit tests) are tracked as a backlog in [PROGRESS.md](PROGRESS.md). For the test stack, conventions, patterns, and manual end-to-end recipes see [docs/guides/TESTING.md](docs/guides/TESTING.md).
 
 ## Documentation
 
-All project docs live under **[docs/](docs/README.md)** — see that index for the full map. Organized by purpose:
+All project docs live under **[docs/](docs/README.md)** - see that index for the full map. Organized by purpose:
 
 **Guides** (`docs/guides/`)
 
-- [docs/guides/USAGE.md](docs/guides/USAGE.md) — build, run, configuration, and per-endpoint request/response examples.
-- [docs/guides/TESTING.md](docs/guides/TESTING.md) — running the test suite, conventions, and manual end-to-end recipes.
-- [docs/guides/DEPLOYMENT.md](docs/guides/DEPLOYMENT.md) — Docker image build and VPS deployment guide.
+- [docs/guides/USAGE.md](docs/guides/USAGE.md) - build, run, configuration, and per-endpoint request/response examples.
+- [docs/guides/TESTING.md](docs/guides/TESTING.md) - running the test suite, conventions, and manual end-to-end recipes.
+- [docs/guides/DEPLOYMENT.md](docs/guides/DEPLOYMENT.md) - Docker image build and VPS deployment guide.
 
 **Reference** (`docs/reference/`)
 
-- [docs/reference/API_EXAMPLES.md](docs/reference/API_EXAMPLES.md) — manual-testing pack: mandatory fields, business rules, and per-scenario JSON payloads under `docs/reference/examples/`.
-- [docs/reference/postman/](docs/reference/postman) — curated Postman collection + environment ready to import (see `docs/reference/API_EXAMPLES.md` §9).
+- [docs/reference/API_EXAMPLES.md](docs/reference/API_EXAMPLES.md) - manual-testing pack: mandatory fields, business rules, and per-scenario JSON payloads under `docs/reference/examples/`.
+- [docs/reference/postman/](docs/reference/postman) - curated Postman collection + environment ready to import (see `docs/reference/API_EXAMPLES.md` §9).
 
 **Project** (`docs/project/`)
 
-- [docs/project/KNOWN_ISSUES.md](docs/project/KNOWN_ISSUES.md) — documented, intentionally-unfixed issues.
-- [docs/project/FEATURE_PLAN.html](docs/project/FEATURE_PLAN.html) — candidate-feature backlog with add/defer/skip verdicts (open in a browser).
+- [docs/project/KNOWN_ISSUES.md](docs/project/KNOWN_ISSUES.md) - documented, intentionally-unfixed issues.
+- [docs/project/FEATURE_PLAN.html](docs/project/FEATURE_PLAN.html) - candidate-feature backlog with add/defer/skip verdicts (open in a browser).

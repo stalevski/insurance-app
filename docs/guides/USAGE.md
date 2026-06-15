@@ -8,7 +8,7 @@ The service is a headless ASP.NET Core Web API (see `src/InsuranceIntegration.Ap
 
 - **.NET SDK 10.0** (matches `TargetFramework` in `src/InsuranceIntegration.Api/InsuranceIntegration.Api.csproj`)
 - Windows PowerShell or any shell capable of running `dotnet`
-- No external database required — SQLite is used by default and created on first run
+- No external database required - SQLite is used by default and created on first run
 
 Verify your SDK:
 
@@ -28,7 +28,7 @@ dotnet build .\InsuranceIntegration.sln
 dotnet run --project .\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj
 ```
 
-On startup the host logs the listening URL (by default something like `http://localhost:5000`). All subsequent examples assume `http://localhost:5000` — substitute your actual host/port.
+On startup the host logs the listening URL (by default something like `http://localhost:5000`). All subsequent examples assume `http://localhost:5000` - substitute your actual host/port.
 
 The app will:
 
@@ -81,9 +81,9 @@ The last three form a normalized relational write-model that runs alongside the 
 
 Mutating requests (`POST`/`PUT`/`PATCH`/`DELETE`) and the `/database` browser page can be gated behind an API key. The `ApiKeyAuthenticationMiddleware` runs immediately after correlation-id handling and short-circuits unauthorized requests with `401 Unauthorized`.
 
-- **Keys**: `ApiKey:Keys` (an array). When empty, enforcement is **disabled** — GET and write requests are all allowed. This keeps local development and the unit-test suite credential-free.
+- **Keys**: `ApiKey:Keys` (an array). When empty, enforcement is **disabled** - GET and write requests are all allowed. This keeps local development and the unit-test suite credential-free.
 - **Header name**: `ApiKey:HeaderName` (default `X-Api-Key`).
-- **Database browser**: `ApiKey:ProtectDatabaseBrowser` (default `true`) — when keys are configured, the `/database` page requires the key too.
+- **Database browser**: `ApiKey:ProtectDatabaseBrowser` (default `true`) - when keys are configured, the `/database` page requires the key too.
 
 ```powershell
 # enable enforcement with one key
@@ -131,8 +131,8 @@ Source: `src/InsuranceIntegration.Api/Endpoints/SchemaEndpoints.cs`.
 
 Every request passes through `CorrelationIdMiddleware`. It reads/generates two headers (`src/InsuranceIntegration.Api/Middleware/CorrelationIdMiddleware.cs`):
 
-- **`X-Correlation-Id`** — If the caller sends a valid GUID it is reused; otherwise a new UUIDv7 is generated. It is echoed back on the response and included in log scopes.
-- **`X-Causation-Id`** — Optional GUID. When present it is added to log scopes.
+- **`X-Correlation-Id`** - If the caller sends a valid GUID it is reused; otherwise a new UUIDv7 is generated. It is echoed back on the response and included in log scopes.
+- **`X-Causation-Id`** - Optional GUID. When present it is added to log scopes.
 
 Always pass `X-Correlation-Id` from upstream systems to make tracing possible.
 
@@ -144,9 +144,9 @@ Always pass `X-Correlation-Id` from upstream systems to make tracing possible.
 
 Canonical flows (risk, claim, billing, compliance) can enqueue events via `IOutboxWriter` into the `OutboxMessages` table. The `OutboxDispatcher` background service polls every 2 seconds, batches up to 50 pending rows, publishes each via the configured `IOutboxPublisher`, and marks them dispatched (`src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs`). The transport is selected by the `Outbox` configuration section:
 
-- `Logging` (default) — writes a dispatch line per event; requires no external infrastructure.
-- `File` — appends each event as a JSON line to `Outbox:FilePath` (`outbox-events.jsonl` by default).
-- `Webhook` — POSTs each event as JSON to `Outbox:WebhookUrl`.
+- `Logging` (default) - writes a dispatch line per event; requires no external infrastructure.
+- `File` - appends each event as a JSON line to `Outbox:FilePath` (`outbox-events.jsonl` by default).
+- `Webhook` - POSTs each event as JSON to `Outbox:WebhookUrl`.
 
 Unknown or blank transport values fall back to `Logging`. A failed delivery (non-success webhook response or a file-write error) leaves the message pending so the dispatcher retries on a later poll, up to the attempt cap. Message-broker adapters (e.g. RabbitMQ / Azure Service Bus) would plug in as additional `IOutboxPublisher` implementations.
 
@@ -178,18 +178,18 @@ Sources `src/InsuranceIntegration.Api/Services/Orchestration/RiskSubmissionOrche
 
 **Merge rules** (`SnapshotMerge.cs`):
 
-- Scalar string fields use last-write-wins **only if the new event has a value** — empty/null incoming values do not wipe existing data.
+- Scalar string fields use last-write-wins **only if the new event has a value** - empty/null incoming values do not wipe existing data.
 - Premium / coverage blocks are only overwritten when the new event actually carries that data (e.g. a billing-only event won't wipe coverage warnings).
-- `History` is append-only — every event that touches the snapshot adds an entry recording `source`, `envelopeId`, `messageType`, and `transactionType`.
+- `History` is append-only - every event that touches the snapshot adds an entry recording `source`, `envelopeId`, `messageType`, and `transactionType`.
 - `ExternalReferences` is a `Dictionary<sourceSystem, externalReference>` so you can see how each source identifies the same business entity.
 
-**Smaller-source case**: a Contoso-only ingest produces a thin `QuoteSnapshot` with insured / premium hint / quote status filled but no broker block, no bind data, no claims. As more events arrive (a QuoteForge quote with broker info, a BindPoint bind that creates the policy), the same snapshot is enriched in place. Same shape for everyone — just partially filled until more is known.
+**Smaller-source case**: a Contoso-only ingest produces a thin `QuoteSnapshot` with insured / premium hint / quote status filled but no broker block, no bind data, no claims. As more events arrive (a QuoteForge quote with broker info, a BindPoint bind that creates the policy), the same snapshot is enriched in place. Same shape for everyone - just partially filled until more is known.
 
 **Persistence**: snapshots live in `PolicySnapshots` / `QuoteSnapshots` tables. Each row stores a `SnapshotJson` column with the full document plus a few denormalized columns (`ProductCode`, `UnderwritingYear`, `CurrentPhase`, `LastUpdatedUtc`, `IsBound`) for filterable list queries. Idempotent ingest replays do not double-append history because the dispatcher short-circuits at the receipt layer before the projector ever runs.
 
 ### Domain events (cross-aggregate timeline)
 
-Alongside the snapshot writes, every business state change also appends a row to the `DomainEvents` table. This gives you a queryable cross-aggregate timeline that the snapshot's embedded `History[]` cannot — for example "every cancellation in the last week" or "every event for policy POL-7781 in arrival order".
+Alongside the snapshot writes, every business state change also appends a row to the `DomainEvents` table. This gives you a queryable cross-aggregate timeline that the snapshot's embedded `History[]` cannot - for example "every cancellation in the last week" or "every event for policy POL-7781 in arrival order".
 
 | Column | Notes |
 |---|---|
@@ -201,9 +201,9 @@ Alongside the snapshot writes, every business state change also appends a row to
 | `EnvelopeId` | the source envelope id when applicable; a synthetic id for internal events |
 | `OccurredAtUtc` | when the source event happened |
 | `RecordedAtUtc` | when this platform persisted the row |
-| `PayloadJson` | a `RiskEventPayload { canonicalRequest, finalResponse }` — enough to deterministically replay through the projector |
+| `PayloadJson` | a `RiskEventPayload { canonicalRequest, finalResponse }` - enough to deterministically replay through the projector |
 
-The event log is the **source of truth for replay**. `POST /api/v1/snapshots/policies/{ref}/rebuild` (and the equivalent for quotes) reads every event for an aggregate, runs the projector across them in memory, and returns the rebuilt snapshot — useful for sanity-comparing against the live row, recovering after schema changes, or testing new projector logic against historical data.
+The event log is the **source of truth for replay**. `POST /api/v1/snapshots/policies/{ref}/rebuild` (and the equivalent for quotes) reads every event for an aggregate, runs the projector across them in memory, and returns the rebuilt snapshot - useful for sanity-comparing against the live row, recovering after schema changes, or testing new projector logic against historical data.
 
 Three storage tiers, three replay scopes:
 
@@ -219,11 +219,11 @@ Sources: `src/InsuranceIntegration.Api/Services/Events/DomainEventLog.cs`, `src/
 
 Quotes are first-class versioned objects. The `QuoteSnapshot.Lifecycle` block carries:
 
-- `Version` — increments on each quote-issuance event (Contoso `RiskSubmission`, QuoteForge `QuoteRequest`, ...). Stays put on bind / cancel / endorse.
-- `IssuedAtUtc` — UTC of the most recent issuance.
-- `ValidUntilUtc` — `IssuedAtUtc + ValidityDays` (default 30).
-- `ValidityDays` — per-quote validity window.
-- `BindRejectionReason` — populated when a bind attempt was rejected, cleared on a successful bind.
+- `Version` - increments on each quote-issuance event (Contoso `RiskSubmission`, QuoteForge `QuoteRequest`, ...). Stays put on bind / cancel / endorse.
+- `IssuedAtUtc` - UTC of the most recent issuance.
+- `ValidUntilUtc` - `IssuedAtUtc + ValidityDays` (default 30).
+- `ValidityDays` - per-quote validity window.
+- `BindRejectionReason` - populated when a bind attempt was rejected, cleared on a successful bind.
 
 Before a `PolicyBind` produces a `Bound` policy, `BindPreconditionService` checks the existing quote and rejects when:
 
@@ -247,7 +247,7 @@ Summary:
 | `GET` | `/api/v1/source-systems` | Catalog of supported source systems and their example payload shapes |
 | `GET` | `/api/v1/products` | Product catalog used by rating and downstream flows |
 | `GET` | `/api/v1/products/{productCode}/rating` | On-demand rating calculation for a product |
-| `POST` | `/api/v1/ingest` | Generic envelope ingest — dispatched by `(Source, Type)` with idempotency |
+| `POST` | `/api/v1/ingest` | Generic envelope ingest - dispatched by `(Source, Type)` with idempotency |
 | `POST` | `/api/v1/ingest/risks` | Source-shape risk ingest (selects a source-specific mapper) |
 | `GET` | `/api/v1/ingest/{source}/{envelopeId}` | Retrieve the persisted `IngestReceipt` for a previously processed envelope |
 | `POST` | `/api/v1/risks` | Canonical risk submission (skips source mapping) |
@@ -257,7 +257,7 @@ Summary:
 | `POST` | `/api/v1/policies/reinstatements` | Restore a cancelled policy (lapse math + snapshot + `PolicyReinstated` event) |
 | `POST` | `/api/v1/policies/lapses` | Lapse an in-force policy for non-payment (pro-rata earned premium + outstanding shortfall + snapshot + `PolicyLapsed` event) |
 | `POST` | `/api/v1/policies/non-renewals` | Mark an in-force policy not-renewed at expiry (snapshot + `PolicyNonRenewed` event) |
-| `POST` | `/api/v1/billing/payments` | Apply a payment to an installment schedule — settles installments `Issued → Paid` in due order and recomputes outstanding balance / delinquency |
+| `POST` | `/api/v1/billing/payments` | Apply a payment to an installment schedule - settles installments `Issued → Paid` in due order and recomputes outstanding balance / delinquency |
 | `POST` | `/api/v1/billing/delinquency` | Flag open installments past due (with optional grace period) as `Overdue` and recompute dunning / non-payment-cancellation recommendation |
 | `POST` | `/api/v1/claims/transitions` | Validate a claim status transition (`Notified → Open → Reserved → Settled/Declined → Closed`); returns the resulting status and matching `Claim*` domain-event type |
 | `POST` | `/api/v1/claims/financials` | Set/adjust the case reserve or record an indemnity / expense payment; recomputes `incurred = paid + outstanding reserve` |
@@ -307,7 +307,7 @@ Returns the catalog of supported source systems, each with a small illustrative 
 Invoke-RestMethod http://localhost:5000/api/v1/source-systems
 ```
 
-**Response (200 OK)** — abbreviated, 12 entries total:
+**Response (200 OK)** - abbreviated, 12 entries total:
 
 ```json
 [
@@ -408,7 +408,7 @@ The generic ingest endpoint. Dispatches to a handler selected by `(Source, Type)
 | *any* | `InstallmentSchedule` | `BillingIngestHandler` | `InstallmentSchedulePayload` |
 | *any* | `ComplianceResult`, `FraudAssessment` | `ComplianceIngestHandler` | `ComplianceResultPayload` |
 
-Supported types come from each handler's `SupportedTypes` set, e.g. `src/InsuranceIntegration.Api/Services/Ingest/RiskIngestHandler.cs:9-14`. Any unmatched `(source, type)` combination causes an `InvalidOperationException` — "No ingest handler registered for source '<source>' and type '<type>'.".
+Supported types come from each handler's `SupportedTypes` set, e.g. `src/InsuranceIntegration.Api/Services/Ingest/RiskIngestHandler.cs:9-14`. Any unmatched `(source, type)` combination causes an `InvalidOperationException` - "No ingest handler registered for source '<source>' and type '<type>'.".
 
 **Request (Contoso risk submission)**
 
@@ -435,7 +435,7 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-**Response (200 OK)** — outer envelope is `IngestReceipt` with the handler's own output in `outcome` (for risks this is a `FinalRiskResponse`). The `self` link is what you can `GET` later to retrieve the same receipt; `(source, envelopeId)` together is the searchable key in the `IngestEntries` table:
+**Response (200 OK)** - outer envelope is `IngestReceipt` with the handler's own output in `outcome` (for risks this is a `FinalRiskResponse`). The `self` link is what you can `GET` later to retrieve the same receipt; `(source, envelopeId)` together is the searchable key in the `IngestEntries` table:
 
 ```json
 {
@@ -447,16 +447,16 @@ Invoke-RestMethod `
   "receivedAtUtc": "2026-04-26T01:30:00Z",
   "self": "/api/v1/ingest/CONTOSO_UW/evt-0001",
   "outcome": {
-    "entityId": "…",
+    "entityId": "...",
     "externalReference": "Q-100045",
     "productCode": "COMMERCIALPROPERTY",
     "sourceSystem": "CONTOSO_UW",
     "transactionType": "Submission",
-    "submissionStatus": "…",
-    "quoteStatus": "…",
-    "policyStatus": "…",
-    "clearanceDecision": "…",
-    "finalStatus": "…",
+    "submissionStatus": "...",
+    "quoteStatus": "...",
+    "policyStatus": "...",
+    "clearanceDecision": "...",
+    "finalStatus": "...",
     "...": "see FinalRiskResponse for the full field list"
   }
 }
@@ -495,19 +495,19 @@ Source-shape risk ingest for risk lifecycle only. Bypasses the generic dispatche
 }
 ```
 
-**Response (200 OK)** — a `FinalRiskResponse` (see §7.8).
+**Response (200 OK)** - a `FinalRiskResponse` (see §7.8).
 
-Allowed `(sourceSystem, messageType)` pairs match the risk entries in the dispatch matrix above. Unmatched pairs produce `InvalidOperationException` — "No risk mapper registered for source '<sourceSystem>' and message type '<messageType>'." (`src/InsuranceIntegration.Api/Mappers/Risks/RiskIngestMapper.cs`).
+Allowed `(sourceSystem, messageType)` pairs match the risk entries in the dispatch matrix above. Unmatched pairs produce `InvalidOperationException` - "No risk mapper registered for source '<sourceSystem>' and message type '<messageType>'." (`src/InsuranceIntegration.Api/Mappers/Risks/RiskIngestMapper.cs`).
 
 ---
 
 ### 7.7 `POST /api/v1/risks`
 
-Submits a canonical risk request directly — useful when the caller already owns the platform-neutral shape (`src/InsuranceIntegration.Api/Endpoints/RiskEndpoints.cs`).
+Submits a canonical risk request directly - useful when the caller already owns the platform-neutral shape (`src/InsuranceIntegration.Api/Endpoints/RiskEndpoints.cs`).
 
 For a complete end-to-end sample body, see `../README.md:85-203`.
 
-**Response (200 OK)** — a `FinalRiskResponse` (§7.8).
+**Response (200 OK)** - a `FinalRiskResponse` (§7.8).
 
 ---
 
@@ -706,7 +706,7 @@ Pricing model:
 }
 ```
 
-Returns 404 if the prior policy is unknown, 400 if it's already cancelled, already renewed, or the new dates are invalid. Once issued, the renewal quote can be bound through the standard `POST /api/v1/ingest` BindPoint flow — the bind preconditions on `validUntilUtc` and `quoteStatus` apply.
+Returns 404 if the prior policy is unknown, 400 if it's already cancelled, already renewed, or the new dates are invalid. Once issued, the renewal quote can be bound through the standard `POST /api/v1/ingest` BindPoint flow - the bind preconditions on `validUntilUtc` and `quoteStatus` apply.
 
 ---
 
@@ -777,7 +777,7 @@ Returns 404 if the policy is unknown, 400 if the policy is not currently `Cancel
 
 Consolidated views per business key, fed by every Risk-domain ingest. See [Domain snapshots](#domain-snapshots-consolidated-views-per-business-key) for the merge semantics. Endpoints live in `src/InsuranceIntegration.Api/Endpoints/PolicyReadEndpoints.cs` and `src/InsuranceIntegration.Api/Endpoints/QuoteReadEndpoints.cs`.
 
-**`GET /api/v1/policies/{policyReference}`** — returns the full `PolicySnapshot` (404 if no events have ever included this `policyReference`).
+**`GET /api/v1/policies/{policyReference}`** - returns the full `PolicySnapshot` (404 if no events have ever included this `policyReference`).
 
 ```powershell
 Invoke-RestMethod http://localhost:5000/api/v1/policies/POL-7781
@@ -806,13 +806,13 @@ Response shape (abbreviated):
 }
 ```
 
-**`GET /api/v1/policies?skip=0&take=100`** — paginated summary list (newest first). `take` is clamped to `[1..500]`; default 100. Each item has `policyReference`, `quoteReference`, `productCode`, `underwritingYear`, `currentPhase`, `lastUpdatedUtc`, and a `self` link to the full snapshot.
+**`GET /api/v1/policies?skip=0&take=100`** - paginated summary list (newest first). `take` is clamped to `[1..500]`; default 100. Each item has `policyReference`, `quoteReference`, `productCode`, `underwritingYear`, `currentPhase`, `lastUpdatedUtc`, and a `self` link to the full snapshot.
 
-**`GET /api/v1/quotes/{quoteReference}`** — same shape as policy snapshot but keyed by quote reference, with `lifecycle.isBound` and a top-level `policyReference` populated once a bind event arrives. `lifecycle.currentPhase` advances to `Bound` at the same time.
+**`GET /api/v1/quotes/{quoteReference}`** - same shape as policy snapshot but keyed by quote reference, with `lifecycle.isBound` and a top-level `policyReference` populated once a bind event arrives. `lifecycle.currentPhase` advances to `Bound` at the same time.
 
-**`GET /api/v1/quotes?skip=0&take=100`** — paginated summary list of quote snapshots.
+**`GET /api/v1/quotes?skip=0&take=100`** - paginated summary list of quote snapshots.
 
-**`GET /api/v1/policies/{policyReference}/schedule.pdf`** — renders a one-page policy schedule as a PDF (built from the `PolicySnapshot` with [QuestPDF](https://www.questpdf.com/)). Returns `application/pdf` as a file download, or 404 if the policy snapshot does not exist. The document covers policy identifiers, parties, the cover period, premium, coverage totals, and the transaction history.
+**`GET /api/v1/policies/{policyReference}/schedule.pdf`** - renders a one-page policy schedule as a PDF (built from the `PolicySnapshot` with [QuestPDF](https://www.questpdf.com/)). Returns `application/pdf` as a file download, or 404 if the policy snapshot does not exist. The document covers policy identifiers, parties, the cover period, premium, coverage totals, and the transaction history.
 
 ```powershell
 Invoke-WebRequest http://localhost:5000/api/v1/policies/POL-7781/schedule.pdf -OutFile schedule.pdf
@@ -883,7 +883,7 @@ The same `X-Correlation-Id` value appears in the response header and in the serv
 
 ### Exercise idempotency
 
-Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) — it returns the persisted `IngestReceipt` (see `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
+Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) - it returns the persisted `IngestReceipt` (see `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
 
 ### Observe the outbox
 
@@ -909,8 +909,8 @@ Invoke-RestMethod `
 
 ## 10. Troubleshooting
 
-- **`InvalidOperationException: No ingest handler registered...`** — the `(source, type)` combination is not supported. Consult the dispatch matrix in §7.5.
-- **`InvalidOperationException: No risk mapper registered...`** — same issue for `POST /api/v1/ingest/risks`. Check casing of `sourceSystem` and `messageType` (matching is case-insensitive but the values must be one of the configured pairs).
-- **`Unable to deserialize ... payload.`** — the `data` / `payload` object doesn't match the expected source-specific shape. Check the corresponding DTO under `src/InsuranceIntegration.Api/SourceContracts`.
-- **Swagger UI returns 404** — the app is running in a non-Development environment. Set `ASPNETCORE_ENVIRONMENT=Development` before running.
-- **Database file locked on Windows** — stop all running instances of the API, then delete `integration.db*` files from the working directory to reset.
+- **`InvalidOperationException: No ingest handler registered...`** - the `(source, type)` combination is not supported. Consult the dispatch matrix in §7.5.
+- **`InvalidOperationException: No risk mapper registered...`** - same issue for `POST /api/v1/ingest/risks`. Check casing of `sourceSystem` and `messageType` (matching is case-insensitive but the values must be one of the configured pairs).
+- **`Unable to deserialize ... payload.`** - the `data` / `payload` object doesn't match the expected source-specific shape. Check the corresponding DTO under `src/InsuranceIntegration.Api/SourceContracts`.
+- **Swagger UI returns 404** - the app is running in a non-Development environment. Set `ASPNETCORE_ENVIRONMENT=Development` before running.
+- **Database file locked on Windows** - stop all running instances of the API, then delete `integration.db*` files from the working directory to reset.

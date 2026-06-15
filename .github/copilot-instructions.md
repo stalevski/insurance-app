@@ -1,7 +1,7 @@
 # GitHub Copilot instructions
 
 This repository uses a portable, tool-agnostic context file: **[`AGENTS.md`](../AGENTS.md)** at the
-repository root. **Read it first** — it is the single source of truth for architecture, conventions,
+repository root. **Read it first** - it is the single source of truth for architecture, conventions,
 and build/test commands.
 
 Quick summary (see `AGENTS.md` for full detail):

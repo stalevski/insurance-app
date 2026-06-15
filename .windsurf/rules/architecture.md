@@ -5,7 +5,7 @@ description: Core architecture and conventions for the insurance integration pla
 
 # Architecture & conventions (always on)
 
-The portable source of truth is `AGENTS.md` at the repo root — read it for full detail. Key points:
+The portable source of truth is `AGENTS.md` at the repo root - read it for full detail. Key points:
 
 - **.NET 10** modular monolith; ASP.NET Core minimal APIs; EF Core + **SQLite** (`integration.db`,
   auto-migrated on startup).
@@ -15,7 +15,7 @@ The portable source of truth is `AGENTS.md` at the repo root — read it for ful
 - **Conventions:**
   - One public class/record per file; file name matches type; namespaces match folders.
   - File-scoped namespaces; usings outside the namespace; prefer `var`.
-  - Thin endpoints in `Endpoints/` — business logic goes in `Services/Flows/`.
+  - Thin endpoints in `Endpoints/` - business logic goes in `Services/Flows/`.
   - Composition over inheritance; small interfaces registered in
     `Configuration/ServiceRegistration.cs`.
   - Inject `TimeProvider`; never use `DateTime.UtcNow` directly in logic.

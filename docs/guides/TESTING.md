@@ -6,17 +6,17 @@ How to run, extend, and manually exercise the test suite for **InsuranceIntegrat
 
 The solution has **two test projects**:
 
-- `tests/InsuranceIntegration.Api.Tests` — unit + service/persistence integration tests (the bulk of the suite).
-- `tests/InsuranceIntegration.Api.IntegrationTests` — **HTTP-endpoint integration tests** (the API hosted in-process) and **Blazor-UI component tests** (added 2026-06-15).
+- `tests/InsuranceIntegration.Api.Tests` - unit + service/persistence integration tests (the bulk of the suite).
+- `tests/InsuranceIntegration.Api.IntegrationTests` - **HTTP-endpoint integration tests** (the API hosted in-process) and **Blazor-UI component tests** (added 2026-06-15).
 
 - **Framework**: [NUnit 4](https://docs.nunit.org/) across both projects (constraint model: `Assert.That(...)`)
 - **Test runner**: `dotnet test` via `Microsoft.NET.Test.Sdk` + `NUnit3TestAdapter`
 - **Coverage**: `coverlet.collector` is available for producing Cobertura reports
-- **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory — `DataSource=:memory:` in the unit project; a unique shared-cache in-memory database per `WebApplicationFactory` fixture in the integration project. No external DB required.
+- **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory - `DataSource=:memory:` in the unit project; a unique shared-cache in-memory database per `WebApplicationFactory` fixture in the integration project. No external DB required.
 - **HTTP-endpoint tests**: `Microsoft.AspNetCore.Mvc.Testing` hosts the API in-process via `WebApplicationFactory<Program>` (`Infrastructure/InsuranceApiFactory.cs`) so tests issue real `HttpClient` requests against the running pipeline (routing, middleware, API-key auth, JSON serialization).
-- **Blazor-UI tests**: [bUnit](https://bunit.dev/) renders Razor components against a stub `IUiGateway` (`Ui/UiGatewayStub.cs`) — no browser required.
+- **Blazor-UI tests**: [bUnit](https://bunit.dev/) renders Razor components against a stub `IUiGateway` (`Ui/UiGatewayStub.cs`) - no browser required.
 - **Test-output logging**: the integration host pipes **Warning+** log output to the running NUnit test's output (`Infrastructure/TestContextLoggerProvider.cs`), so a server-side exception behind a failing request surfaces in that test's report; green runs stay quiet (Info-level SQL is filtered out).
-- **Categories**: integration fixtures are tagged with NUnit `[Category]` — `Api`, `Ui`, and `Smoke` — so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and the `Ui` category on `UiPageTestBase`, each inherited by their derived fixtures.
+- **Categories**: integration fixtures are tagged with NUnit `[Category]` - `Api`, `Ui`, and `Smoke` - so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and the `Ui` category on `UiPageTestBase`, each inherited by their derived fixtures.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
 - **Total tests**: **360** (261 unit/service + 99 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
@@ -67,7 +67,7 @@ dotnet test $proj --filter "Category=Api"
 # All Blazor-UI tests (35)
 dotnet test $proj --filter "Category=Ui"
 
-# Fast sanity subset — health probe + dashboard render (5)
+# Fast sanity subset - health probe + dashboard render (5)
 dotnet test $proj --filter "Category=Smoke"
 ```
 
@@ -198,7 +198,7 @@ tests/InsuranceIntegration.Api.IntegrationTests/
 
 - One test class per system-under-test, marked `public sealed class`.
 - Test method names describe behavior: `Method_ExpectedBehavior_WhenCondition`, e.g. `Process_AutoClearsWhenEligibilityRulesAreSatisfied` (`tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:30`).
-- Use `[Test]` attributes; no fixture-level setup attributes are used — prefer constructor initialization + `IDisposable.Dispose` for teardown, e.g. `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs:10-27`.
+- Use `[Test]` attributes; no fixture-level setup attributes are used - prefer constructor initialization + `IDisposable.Dispose` for teardown, e.g. `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs:10-27`.
 - Use `Assert.That(actual, Is.EqualTo(expected))` NUnit constraint-model assertions (not classic `Assert.AreEqual`).
 - Shared request builders live alongside the tests that use them (e.g. `TestRiskRequestFactory` in `tests/InsuranceIntegration.Api.Tests/Flows/TestRiskRequestFactory.cs`). Favor named optional parameters so each test tweaks only what it cares about.
 - Stubs and fakes sit next to the tests (e.g. `StubIngestHandler.cs`, `StubSourceRiskMapper.cs`). No mocking framework is in use.
@@ -220,7 +220,7 @@ Assert.That(result.TechnicalPremium, Is.EqualTo(750m));
 
 ### 5.2 Canonical flow test using the shared factory
 
-Use `TestRiskRequestFactory.Create(...)` to build a `CanonicalRiskRequest` with deterministic defaults, then override only the fields your scenario needs — see `tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:17-27`.
+Use `TestRiskRequestFactory.Create(...)` to build a `CanonicalRiskRequest` with deterministic defaults, then override only the fields your scenario needs - see `tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:17-27`.
 
 ```csharp
 var service = CreateService();
@@ -291,7 +291,7 @@ public sealed class MyPersistenceTests : IDisposable
 
 Key details:
 
-- Hold the `SqliteConnection` open for the lifetime of the fixture — SQLite throws away the in-memory database when the last connection closes.
+- Hold the `SqliteConnection` open for the lifetime of the fixture - SQLite throws away the in-memory database when the last connection closes.
 - Each `[Test]` creates its own short-lived `IntegrationDbContext` against the shared options.
 - Use `context.Database.EnsureCreated()` rather than migrations to keep schema setup per-fixture fast.
 
@@ -345,13 +345,13 @@ public sealed class QuotesPageTests : UiPageTestBase
 }
 ```
 
-- `UiPageTestBase` creates a **fresh `BunitContext` per test** (loose JSInterop) in `[SetUp]` and disposes it in `[TearDown]` — NUnit reuses one fixture instance per class, so sharing a context would leak service registrations between tests. It also declares the `[Category("Ui")]` inherited by every page fixture.
+- `UiPageTestBase` creates a **fresh `BunitContext` per test** (loose JSInterop) in `[SetUp]` and disposes it in `[TearDown]` - NUnit reuses one fixture instance per class, so sharing a context would leak service registrations between tests. It also declares the `[Category("Ui")]` inherited by every page fixture.
 - Reuse the shared bUnit assertions in `UiAssertions`: `cut.ShouldShowEmptyState("No quotes yet.")` (empty-state copy + no data table) and `anchor.ShouldLinkTo(href, text)`.
-- The `Events` page name collides with the `InsuranceIntegration.Api.Events` namespace — alias it: `using EventsPage = InsuranceIntegration.Api.Components.Pages.Events;`.
+- The `Events` page name collides with the `InsuranceIntegration.Api.Events` namespace - alias it: `using EventsPage = InsuranceIntegration.Api.Components.Pages.Events;`.
 - Drive `<select>` filters with `element.Change(value)` and assert the stub captured the forwarded argument (see `Ui/EventsPageTests.cs`).
 - For **detail pages** that take a route parameter, use the parameterized overload: `Render<PolicyDetail>(stub, p => p.Add(x => x.PolicyReference, "POL-PROP-01"))` (see `Ui/PolicyDetailPageTests.cs`).
 - For a page that injects a service besides `IUiGateway` (e.g. `Database` injects `DatabaseBrowserGate`), register it first with `RegisterService(new DatabaseBrowserGate(new DatabaseBrowserOptions { Enabled = true }, isDevelopmentEnvironment: false))` (see `Ui/DatabasePageTests.cs`).
-- A `<textarea @bind>` exposes its content via the **`value` attribute**, not `TextContent` — read it with `element.GetAttribute("value")` (see `Ui/IngestPageTests.cs`).
+- A `<textarea @bind>` exposes its content via the **`value` attribute**, not `TextContent` - read it with `element.GetAttribute("value")` (see `Ui/IngestPageTests.cs`).
 
 ## 6. Matching tests to production code
 
@@ -443,7 +443,7 @@ $again = Invoke-RestMethod `
 $response.outcome.entityId -eq $again.outcome.entityId
 ```
 
-Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` — this matches the behavior asserted by `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
+Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` - this matches the behavior asserted by `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
 
 ### 7.4 Canonical risk submission
 
@@ -461,7 +461,7 @@ Inspect `clearanceDecision`, `quoteStatus`, `policyStatus`, and `finalStatus` on
 
 ### 7.5 Policy lifecycle (cancel / endorse / renew)
 
-These endpoints all require the policy to already exist in `PolicySnapshots` — run §7.2 (Contoso) and a BindPoint envelope first to seed `POL-7781`. Each endpoint returns a `PolicyLifecycleResult` (cancel / endorse) or a `RenewalResult` and writes a row to `DomainEvents` in the same EF transaction as the snapshot mutation.
+These endpoints all require the policy to already exist in `PolicySnapshots` - run §7.2 (Contoso) and a BindPoint envelope first to seed `POL-7781`. Each endpoint returns a `PolicyLifecycleResult` (cancel / endorse) or a `RenewalResult` and writes a row to `DomainEvents` in the same EF transaction as the snapshot mutation.
 
 #### 7.5.1 Cancellation
 
@@ -589,8 +589,8 @@ The same value is attached to the request's log scope on the server side.
 
 ## 8. Troubleshooting test failures
 
-- **`SqliteException: SQLite Error 1: 'no such table: ...'`** — the test forgot to call `context.Database.EnsureCreated()`, or the `SqliteConnection` was closed before the test ran. See §5.4 for the correct pattern.
-- **`InvalidOperationException: No risk mapper registered for source 'X' and message type 'Y'.`** — a new mapper was added but not registered in `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`. Register it and rerun.
-- **Flaky time-sensitive tests** — inject `TimeProvider` via the constructor (as `src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs` does). Use `TimeProvider.System` in tests or a controllable fake if you need to pin `now`.
-- **`dotnet test` says "No test is available in ..."** — confirm the test class is `public` and methods are annotated with `[Test]`. `internal` classes are not discovered.
-- **Coverage file missing** — the `--collect` argument must be quoted exactly as `"XPlat Code Coverage"`; otherwise PowerShell splits it into multiple tokens.
+- **`SqliteException: SQLite Error 1: 'no such table: ...'`** - the test forgot to call `context.Database.EnsureCreated()`, or the `SqliteConnection` was closed before the test ran. See §5.4 for the correct pattern.
+- **`InvalidOperationException: No risk mapper registered for source 'X' and message type 'Y'.`** - a new mapper was added but not registered in `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs`. Register it and rerun.
+- **Flaky time-sensitive tests** - inject `TimeProvider` via the constructor (as `src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs` does). Use `TimeProvider.System` in tests or a controllable fake if you need to pin `now`.
+- **`dotnet test` says "No test is available in ..."** - confirm the test class is `public` and methods are annotated with `[Test]`. `internal` classes are not discovered.
+- **Coverage file missing** - the `--collect` argument must be quoted exactly as `"XPlat Code Coverage"`; otherwise PowerShell splits it into multiple tokens.
