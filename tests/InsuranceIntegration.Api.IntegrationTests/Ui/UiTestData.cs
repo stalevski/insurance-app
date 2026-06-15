@@ -1,7 +1,11 @@
 using InsuranceIntegration.Api.Events;
 using InsuranceIntegration.Api.Persistence;
+using InsuranceIntegration.Api.Responses.Ingest;
+using InsuranceIntegration.Api.Services.Catalog;
 using InsuranceIntegration.Api.Services.Snapshots;
 using InsuranceIntegration.Api.Services.Ui;
+using InsuranceIntegration.Api.Snapshots.Policies;
+using InsuranceIntegration.Api.Snapshots.Quotes;
 
 namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 
@@ -81,5 +85,139 @@ internal static class UiTestData
             AggregateKey = aggregateKey,
             Source = source,
             OccurredAtUtc = Timestamp,
+        };
+
+    public static PolicySnapshot PolicyDetail(
+        string reference = "POL-PROP-01",
+        string? quoteReference = "QF-PROP-01",
+        string productCode = "COMMERCIAL_PROPERTY",
+        string currentPhase = "Bound") =>
+        new()
+        {
+            PolicyReference = reference,
+            QuoteReference = quoteReference,
+            ProductCode = productCode,
+            UnderwritingYear = 2026,
+            CurrencyCode = "USD",
+            Insured = new PolicyParty { Code = "INS-01", Name = "Northwind Storage Ltd" },
+            Broker = new PolicyParty { Code = "BRK-044", Name = "Summit Risk Partners" },
+            Lifecycle = new PolicyLifecycle
+            {
+                SubmissionStatus = "Received",
+                QuoteStatus = "Bound",
+                PolicyStatus = "Active",
+                ClearanceDecision = "Cleared",
+                AutoCleared = true,
+                FinalStatus = "Bound",
+                CurrentPhase = currentPhase,
+            },
+            Premium = new PolicyPremium { Base = 11_800m, Adjusted = 11_800m },
+            Coverage = new PolicyCoverage
+            {
+                SectionCount = 3,
+                TotalSumInsured = 1_500_000m,
+                TotalSectionPremium = 11_800m,
+                PremiumAllocationBalanced = true,
+            },
+            Dates = new PolicyDates
+            {
+                InceptionDate = new DateOnly(2026, 1, 1),
+                ExpiryDate = new DateOnly(2026, 12, 31),
+                BoundDate = new DateOnly(2026, 1, 1),
+            },
+            LastUpdatedUtc = Timestamp,
+        };
+
+    public static QuoteSnapshot QuoteDetail(
+        string reference = "QF-PROP-01",
+        string? policyReference = "POL-PROP-01",
+        string productCode = "COMMERCIAL_PROPERTY",
+        string currentPhase = "Quoted",
+        string? bindRejectionReason = null) =>
+        new()
+        {
+            QuoteReference = reference,
+            PolicyReference = policyReference,
+            ProductCode = productCode,
+            UnderwritingYear = 2026,
+            CurrencyCode = "USD",
+            Insured = new PolicyParty { Code = "INS-01", Name = "Northwind Storage Ltd" },
+            Broker = new PolicyParty { Code = "BRK-044", Name = "Summit Risk Partners" },
+            Lifecycle = new QuoteLifecycle
+            {
+                SubmissionStatus = "Received",
+                QuoteStatus = "Quoted",
+                ClearanceDecision = "Cleared",
+                AutoCleared = true,
+                FinalStatus = "Quoted",
+                CurrentPhase = currentPhase,
+                IsBound = false,
+                Version = 1,
+                IssuedAtUtc = Timestamp,
+                ValidUntilUtc = Timestamp.AddDays(30),
+                ValidityDays = 30,
+                BindRejectionReason = bindRejectionReason,
+            },
+            Premium = new PolicyPremium { Base = 11_800m, Adjusted = 11_800m },
+            Coverage = new PolicyCoverage
+            {
+                SectionCount = 3,
+                TotalSumInsured = 1_500_000m,
+                TotalSectionPremium = 11_800m,
+                PremiumAllocationBalanced = true,
+            },
+            EffectiveDate = new DateOnly(2026, 1, 1),
+            ExpiryDate = new DateOnly(2026, 12, 31),
+            LastUpdatedUtc = Timestamp,
+        };
+
+    public static TablePage Table(
+        string tableName = "Quotes",
+        IReadOnlyList<string>? columns = null,
+        IReadOnlyList<IReadOnlyList<string?>>? rows = null,
+        int? totalRows = null,
+        int skip = 0,
+        int take = 50)
+    {
+        columns ??= ["QuoteReference", "ProductCode"];
+        rows ??= [["QF-PROP-01", "COMMERCIAL_PROPERTY"], ["QF-LIAB-01", "LIABILITY"]];
+        return new TablePage
+        {
+            TableName = tableName,
+            Columns = columns,
+            Rows = rows,
+            TotalRows = totalRows ?? rows.Count,
+            Skip = skip,
+            Take = take,
+        };
+    }
+
+    public static SourceSystemCatalogItem SourceSystem(
+        string systemCode = "QUOTEFORGE",
+        string displayName = "QuoteForge",
+        string messageType = "QuoteRequest",
+        object? examplePayload = null) =>
+        new()
+        {
+            SystemCode = systemCode,
+            DisplayName = displayName,
+            BusinessPurpose = "Inbound quote requests from the QuoteForge underwriting workbench.",
+            MessageType = messageType,
+            ExamplePayload = examplePayload ?? new { quoteReference = "QT-1" },
+        };
+
+    public static IngestReceipt Receipt(
+        string source = "QUOTEFORGE",
+        string envelopeId = "ui-abc123",
+        string messageType = "QuoteRequest",
+        string processedBy = "QuoteForgeIngestHandler") =>
+        new()
+        {
+            Source = source,
+            EnvelopeId = envelopeId,
+            MessageType = messageType,
+            ProcessedBy = processedBy,
+            ReceivedAtUtc = Timestamp,
+            Self = $"/api/v1/ingest/{source}/{envelopeId}",
         };
 }

@@ -54,7 +54,7 @@ modular-monolith and event-sourced-style patterns applied to a real domain rathe
   loss-ratio pricing, claims transitions, installment billing and delinquency.
 - A built-in **Blazor Server UI** (no separate JS build) to ingest messages, browse snapshots, and
   watch the event flow as live diagrams.
-- Built on **.NET 10**, EF Core + SQLite, with a full NUnit 4 test suite (**329 tests**).
+- Built on **.NET 10**, EF Core + SQLite, with a full NUnit 4 test suite (**360 tests**).
 - **Built to be tested**: deterministic seeded data, a read-only `/database` browser for state
   assertions, Swagger + a ready-to-import Postman collection, and idempotent ingest make it a
   realistic system under test for API and UI automation.
@@ -520,7 +520,7 @@ Testing is the point of this project — the app is a realistic system under tes
 dotnet test .\InsuranceIntegration.sln
 ```
 
-The suite is **329 NUnit 4 tests**, all green and running in a few seconds with no external dependencies: unit plus service- and persistence-level integration on in-memory SQLite (`InsuranceIntegration.Api.Tests`), and — added 2026-06-15 — **HTTP-endpoint integration tests** (the API hosted in-process with `WebApplicationFactory`) plus **Blazor-UI component tests** (bUnit) in `InsuranceIntegration.Api.IntegrationTests`. Coverage spans the service, flow, mapper, snapshot, outbox, and security layers, the HTTP API surface, and the core UI pages; the remaining gaps (Playwright end-to-end, a few service modules and UI pages) are tracked as a backlog in [PROGRESS.md](PROGRESS.md). For the test stack, conventions, patterns, and manual end-to-end recipes see [docs/guides/TESTING.md](docs/guides/TESTING.md).
+The suite is **360 NUnit 4 tests**, all green and running in a few seconds with no external dependencies: unit plus service- and persistence-level integration on in-memory SQLite (`InsuranceIntegration.Api.Tests`), and — added 2026-06-15 — **HTTP-endpoint integration tests** (the API hosted in-process with `WebApplicationFactory`) plus **Blazor-UI component tests** (bUnit) in `InsuranceIntegration.Api.IntegrationTests`. Coverage spans the service, flow, mapper, snapshot, outbox, and security layers, the HTTP API surface (including correlation-id echo and multi-source ingest routing), and all seven Blazor UI pages; the remaining gaps (Playwright end-to-end and a few direct service-module unit tests) are tracked as a backlog in [PROGRESS.md](PROGRESS.md). For the test stack, conventions, patterns, and manual end-to-end recipes see [docs/guides/TESTING.md](docs/guides/TESTING.md).
 
 ## Documentation
 

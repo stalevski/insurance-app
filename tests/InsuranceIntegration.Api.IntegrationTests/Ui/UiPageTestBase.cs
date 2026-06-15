@@ -44,6 +44,28 @@ public abstract class UiPageTestBase : IDisposable
         return _context.Render<TPage>();
     }
 
+    /// <summary>
+    /// Registers <paramref name="gateway"/> and renders <typeparamref name="TPage"/> with the
+    /// supplied parameters — used by the detail pages, which take a route parameter
+    /// (<c>PolicyReference</c> / <c>QuoteReference</c>).
+    /// </summary>
+    protected IRenderedComponent<TPage> Render<TPage>(
+        IUiGateway gateway,
+        Action<ComponentParameterCollectionBuilder<TPage>> parameters)
+        where TPage : IComponent
+    {
+        _context!.Services.AddSingleton(gateway);
+        return _context.Render(parameters);
+    }
+
+    /// <summary>
+    /// Registers an additional service the page under test resolves directly via
+    /// <c>@inject</c> (for example the <c>Database</c> page's browser gate).
+    /// </summary>
+    protected void RegisterService<TService>(TService instance)
+        where TService : class =>
+        _context!.Services.AddSingleton(instance);
+
     public void Dispose()
     {
         Dispose(true);

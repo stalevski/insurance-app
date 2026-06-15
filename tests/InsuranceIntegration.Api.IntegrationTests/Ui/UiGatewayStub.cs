@@ -12,11 +12,11 @@ using InsuranceIntegration.Api.SourceContracts.Ingest;
 namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 
 /// <summary>
-/// Hand-written <see cref="IUiGateway"/> test double for the bUnit page tests. The Blazor pages only
-/// read through four of the gateway methods, so those return configurable canned data while the
-/// remaining members throw — a page that starts depending on them will fail loudly rather than
-/// silently rendering empty state. The last <see cref="ListEventsAsync"/> filter arguments are
-/// captured so the events page filter wiring can be asserted.
+/// Hand-written <see cref="IUiGateway"/> test double for the bUnit page tests. Every method a page
+/// renders through returns configurable canned data (set via the init-only properties) and captures
+/// the arguments worth asserting on. The members no page reads — the lifecycle transaction calls and
+/// <see cref="GetProductsAsync"/> — still throw, so a page that starts depending on them fails loudly
+/// rather than silently rendering empty state.
 /// </summary>
 internal sealed class UiGatewayStub : IUiGateway
 {
@@ -28,9 +28,37 @@ internal sealed class UiGatewayStub : IUiGateway
 
     public IReadOnlyList<DomainEventEntity> Events { get; init; } = [];
 
+    public QuoteSnapshot? QuoteDetail { get; init; }
+
+    public PolicySnapshot? PolicyDetail { get; init; }
+
+    public IReadOnlyList<DomainEventEntity> AggregateEvents { get; init; } = [];
+
+    public IReadOnlyList<SourceSystemCatalogItem> SourceSystems { get; init; } = [];
+
+    public IReadOnlyList<string> Tables { get; init; } = [];
+
+    public TablePage TablePageResult { get; init; } = new();
+
+    public IngestReceipt? DispatchReceipt { get; init; }
+
     public string? LastEventsAggregateKind { get; private set; }
 
     public string? LastEventsEventType { get; private set; }
+
+    public string? LastFindQuoteReference { get; private set; }
+
+    public string? LastFindPolicyReference { get; private set; }
+
+    public string? LastAggregateEventsKind { get; private set; }
+
+    public string? LastAggregateEventsKey { get; private set; }
+
+    public SourceIngestEnvelope? LastDispatchedEnvelope { get; private set; }
+
+    public string? LastQueriedTable { get; private set; }
+
+    public int LastQueriedSkip { get; private set; }
 
     public Task<DashboardSummary> GetDashboardAsync(CancellationToken ct = default) =>
         Task.FromResult(Dashboard);
@@ -48,29 +76,56 @@ internal sealed class UiGatewayStub : IUiGateway
         return Task.FromResult(Events);
     }
 
-    public Task<QuoteSnapshot?> FindQuoteAsync(string quoteReference, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public Task<QuoteSnapshot?> FindQuoteAsync(string quoteReference, CancellationToken ct = default)
+    {
+        LastFindQuoteReference = quoteReference;
+        return Task.FromResult(QuoteDetail);
+    }
 
-    public Task<PolicySnapshot?> FindPolicyAsync(string policyReference, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public Task<PolicySnapshot?> FindPolicyAsync(string policyReference, CancellationToken ct = default)
+    {
+        LastFindPolicyReference = policyReference;
+        return Task.FromResult(PolicyDetail);
+    }
 
-    public Task<IReadOnlyList<DomainEventEntity>> GetAggregateEventsAsync(string aggregateKind, string aggregateKey, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public Task<IReadOnlyList<DomainEventEntity>> GetAggregateEventsAsync(string aggregateKind, string aggregateKey, CancellationToken ct = default)
+    {
+        LastAggregateEventsKind = aggregateKind;
+        LastAggregateEventsKey = aggregateKey;
+        return Task.FromResult(AggregateEvents);
+    }
 
     public Task<IReadOnlyList<ProductDefinition>> GetProductsAsync(CancellationToken ct = default) =>
         throw new NotImplementedException();
 
     public Task<IReadOnlyList<SourceSystemCatalogItem>> GetSourceSystemsAsync(CancellationToken ct = default) =>
-        throw new NotImplementedException();
+        Task.FromResult(SourceSystems);
 
-    public Task<IngestReceipt> DispatchAsync(SourceIngestEnvelope envelope, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public Task<IngestReceipt> DispatchAsync(SourceIngestEnvelope envelope, CancellationToken ct = default)
+    {
+        LastDispatchedEnvelope = envelope;
+        var receipt = DispatchReceipt ?? new IngestReceipt
+        {
+            Source = envelope.Source,
+            EnvelopeId = envelope.Id,
+            MessageType = envelope.Type,
+            ProcessedBy = "StubHandler",
+            CorrelationId = envelope.CorrelationId,
+            ReceivedAtUtc = envelope.OccurredAtUtc,
+            Self = $"/api/v1/ingest/{envelope.Source}/{envelope.Id}",
+        };
+        return Task.FromResult(receipt);
+    }
 
     public Task<IReadOnlyList<string>> ListTablesAsync(CancellationToken ct = default) =>
-        throw new NotImplementedException();
+        Task.FromResult(Tables);
 
-    public Task<TablePage> QueryTableAsync(string tableName, int skip, int take, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public Task<TablePage> QueryTableAsync(string tableName, int skip, int take, CancellationToken ct = default)
+    {
+        LastQueriedTable = tableName;
+        LastQueriedSkip = skip;
+        return Task.FromResult(TablePageResult);
+    }
 
     public Task<PolicyLifecycleResult> CancelPolicyAsync(CancellationRequest request, CancellationToken ct = default) =>
         throw new NotImplementedException();

@@ -19,7 +19,7 @@ The solution has **two test projects**:
 - **Categories**: integration fixtures are tagged with NUnit `[Category]` — `Api`, `Ui`, and `Smoke` — so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and the `Ui` category on `UiPageTestBase`, each inherited by their derived fixtures.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
-- **Total tests**: **329** (257 unit/service + 72 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
+- **Total tests**: **360** (261 unit/service + 99 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
 
 ## 2. Run the tests
 
@@ -61,10 +61,10 @@ The integration tests carry NUnit categories so you can run focused subsets:
 ```powershell
 $proj = ".\tests\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj"
 
-# All HTTP-endpoint tests (56)
+# All HTTP-endpoint tests (64)
 dotnet test $proj --filter "Category=Api"
 
-# All Blazor-UI tests (16)
+# All Blazor-UI tests (35)
 dotnet test $proj --filter "Category=Ui"
 
 # Fast sanity subset — health probe + dashboard render (5)
@@ -132,6 +132,8 @@ tests/InsuranceIntegration.Api.Tests/
     EndorsementSectionOperationsTests.cs    # section/subcover add-remove operations
   Pricing/
     RatingServiceTests.cs
+  Products/
+    ProductCatalogTests.cs                  # product-code lookups + case-insensitive resolve
   Risks/
     RiskProfileTests.cs                     # risk-profile derivation rules
   Snapshots/
@@ -161,6 +163,9 @@ tests/InsuranceIntegration.Api.IntegrationTests/
     RiskEndpointsTests.cs
     IngestEndpointsTests.cs                 # ingest + idempotent replay
     SecurityEndpointsTests.cs               # X-Api-Key accept/reject (401/200)
+    PipelineEndpointsTests.cs               # correlation-id echo + /database 404 gate
+    MultiSourceIngestEndpointsTests.cs      # billing/claim/compliance ingest routing
+    DevelopmentDataSeederTests.cs           # seeder idempotency (re-seed -> same counts)
   Builders/
     CanonicalRiskRequestBuilder.cs
     QuoteForgeEnvelopeBuilder.cs
@@ -173,14 +178,18 @@ tests/InsuranceIntegration.Api.IntegrationTests/
     HttpJsonExtensions.cs                   # ReadAsAsync<T> / ReadAsJsonAsync
     HttpResponseAssertions.cs               # ShouldHaveStatus / ShouldReturnJsonAsync / ShouldReturnAsync<T>
   Ui/                                       # Blazor component tests (bUnit)
-    UiPageTestBase.cs                       # per-test BunitContext + Render<TPage>(stub) helper
-    UiGatewayStub.cs                        # stub IUiGateway returning canned data
-    UiTestData.cs                           # quote/policy/event factories
+    UiPageTestBase.cs                       # per-test BunitContext + Render<TPage>(stub[, params]) + RegisterService<T>
+    UiGatewayStub.cs                        # stub IUiGateway returning canned data (lists, details, ingest, tables)
+    UiTestData.cs                           # quote/policy/event + detail/table/source-system/receipt factories
     UiAssertions.cs                         # ShouldShowEmptyState / ShouldLinkTo bUnit assertions
     DashboardPageTests.cs
     QuotesPageTests.cs
     PoliciesPageTests.cs
     EventsPageTests.cs
+    PolicyDetailPageTests.cs                # not-found / snapshot / quote link / event flow
+    QuoteDetailPageTests.cs                 # not-found / snapshot / bind-rejection / policy link
+    IngestPageTests.cs                      # template list + prefill / receipt / invalid-JSON guard
+    DatabasePageTests.cs                    # disabled gate / table list / rows / no-data
   GlobalUsings.cs
   InsuranceIntegration.Api.IntegrationTests.csproj
 ```
@@ -340,6 +349,9 @@ public sealed class QuotesPageTests : UiPageTestBase
 - Reuse the shared bUnit assertions in `UiAssertions`: `cut.ShouldShowEmptyState("No quotes yet.")` (empty-state copy + no data table) and `anchor.ShouldLinkTo(href, text)`.
 - The `Events` page name collides with the `InsuranceIntegration.Api.Events` namespace — alias it: `using EventsPage = InsuranceIntegration.Api.Components.Pages.Events;`.
 - Drive `<select>` filters with `element.Change(value)` and assert the stub captured the forwarded argument (see `Ui/EventsPageTests.cs`).
+- For **detail pages** that take a route parameter, use the parameterized overload: `Render<PolicyDetail>(stub, p => p.Add(x => x.PolicyReference, "POL-PROP-01"))` (see `Ui/PolicyDetailPageTests.cs`).
+- For a page that injects a service besides `IUiGateway` (e.g. `Database` injects `DatabaseBrowserGate`), register it first with `RegisterService(new DatabaseBrowserGate(new DatabaseBrowserOptions { Enabled = true }, isDevelopmentEnvironment: false))` (see `Ui/DatabasePageTests.cs`).
+- A `<textarea @bind>` exposes its content via the **`value` attribute**, not `TextContent` — read it with `element.GetAttribute("value")` (see `Ui/IngestPageTests.cs`).
 
 ## 6. Matching tests to production code
 
@@ -366,6 +378,10 @@ Use this table when debugging a failure or extending a feature:
 | DomainEvents row writes / idempotent replay | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
 | HTTP endpoint status codes / JSON bodies | `tests/InsuranceIntegration.Api.IntegrationTests/Api/*EndpointsTests.cs` |
 | API-key enforcement at the HTTP layer | `tests/InsuranceIntegration.Api.IntegrationTests/Api/SecurityEndpointsTests.cs` |
+| HTTP middleware (correlation-id echo, /database 404 gate) | `tests/InsuranceIntegration.Api.IntegrationTests/Api/PipelineEndpointsTests.cs` |
+| Multi-source ingest routing (billing/claim/compliance) | `tests/InsuranceIntegration.Api.IntegrationTests/Api/MultiSourceIngestEndpointsTests.cs` |
+| Development data seeder idempotency | `tests/InsuranceIntegration.Api.IntegrationTests/Api/DevelopmentDataSeederTests.cs` |
+| Product catalog lookups / rating defaults | `tests/InsuranceIntegration.Api.Tests/Products/ProductCatalogTests.cs` |
 | Blazor page rendering / pager / filters | `tests/InsuranceIntegration.Api.IntegrationTests/Ui/*PageTests.cs` |
 
 ## 7. Manual end-to-end testing

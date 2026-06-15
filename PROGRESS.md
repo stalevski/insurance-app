@@ -190,9 +190,35 @@ Docker-capable VPS.
   `Ui` category) and a `UiAssertions` extension class (`ShouldShowEmptyState`/`ShouldLinkTo`) that
   folds the repeated empty-state and anchor asserts; `PageRenderer` was removed. Test-internal
   refactor only — no behavior or count change; still 329 green (2026-06-15).
+- [x] **QA-architect coverage pass — closed the remaining UI-page, HTTP-pipeline, multi-source-ingest,
+  and service-module gaps.** Acting as QA architect on the suite, filled the holes left after the
+  QA/SDET pass without over-engineering. **19 bUnit UI tests** finish the Blazor page matrix:
+  `PolicyDetail` (6 — not-found, snapshot render, originating-quote link + its omission, event-flow
+  empty state, event timeline), `QuoteDetail` (5 — not-found, snapshot, bind-rejection reason,
+  resulting-policy link, empty state), `Ingest` (4 — template list, template prefill, valid-envelope
+  receipt, invalid-JSON guard that skips the gateway), and `Database` (4 — disabled-gate message,
+  table list, row render, no-data state) — closing the rest of **backlog #5** (UI pages 4/7 → 7/7).
+  **4 HTTP pipeline tests** (`PipelineEndpointsTests`) drive `CorrelationIdMiddleware` end to end
+  (echo a supplied id, generate one when absent, regenerate a non-GUID) and the `/database` 404 gate
+  outside Development — closing **backlog #3**. **3 multi-source ingest tests**
+  (`MultiSourceIngestEndpointsTests`) prove `IngestDispatcher` routes `InstallmentSchedule` →
+  `BillingIngestHandler`, `ClaimNotice` → `ClaimIngestHandler`, and `ComplianceResult` →
+  `ComplianceIngestHandler` through real `POST /api/v1/ingest` calls (asserted via the receipt's
+  `processedBy`). **4 `ProductCatalog` unit tests** (known codes, display-name lookup, case-insensitive
+  resolve, null for unknown) and **1 `DevelopmentDataSeeder` idempotency integration test** (re-seeding
+  keeps 32 quotes / 8 policies) land the best parts of **backlog #4**. Supporting kit: a parameterized
+  `Render<TPage>(stub, params)` overload + `RegisterService<T>` hook on `UiPageTestBase`, a
+  `UiGatewayStub` that now returns configurable canned data for the detail/ingest/database pages
+  (lifecycle mutators still throw), and new `UiTestData` policy/quote-detail, table-page,
+  source-system, and receipt factories. **+31 tests → suite now 360, all green**; no new analyzer
+  warnings. Deliberately deferred (over-engineering guardrail): Playwright E2E (#6) and concurrency
+  tests (#7) stay out of `dotnet test`, and an unroutable ingest `type` is left as a noted 500-hardening
+  observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 329 tests pass** (QA/SDET test suite — 56 HTTP API
+- Build green (`dotnet build -c Release`); **all 360 tests pass** (QA-architect coverage pass added
+  +31 on 2026-06-15 — 19 bUnit UI page tests + 4 HTTP pipeline tests + 3 multi-source ingest tests +
+  4 ProductCatalog units + 1 seeder idempotency test; QA/SDET test suite — 56 HTTP API
   integration tests + 16 bUnit UI tests — added +72 on 2026-06-15; DB browser environment gate added
   +15 and M5 snapshot zero-premium fix added +1 on 2026-06-14; configurable outbox transport
   added +19 and policy schedule PDF added +3 and
@@ -216,7 +242,11 @@ Docker-capable VPS.
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
   normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
   no code/build/test impact.
-- **Working on now:** **QA/SDET test suite (2026-06-15)** — added the
+- **Working on now:** **QA-architect coverage pass (2026-06-15)** — finished the Blazor UI page
+  matrix (PolicyDetail/QuoteDetail/Ingest/Database, +19 bUnit), added HTTP correlation-id +
+  `/database` 404-gate tests (+4), multi-source ingest routing tests (+3), and ProductCatalog units +
+  seeder idempotency (+5); **suite now 360 green**. Preceded by the **QA/SDET test suite
+  (2026-06-15)** — added the
   `tests/InsuranceIntegration.Api.IntegrationTests` project: 56 HTTP endpoint integration tests
   (`WebApplicationFactory<Program>` + in-memory SQLite) across 12 endpoint families, 16 bUnit Blazor
   UI tests (Home/Quotes/Policies/Events), expected-results builders (`ExpectedRatingResult` + fluent
@@ -312,13 +342,15 @@ Docker-capable VPS.
 
 ## Test coverage backlog (gaps to fill, audited 2026-06-15)
 
-Current suite: **329 NUnit 4 tests, all green** — strong at the service / flow / mapper / snapshot /
+Current suite: **360 NUnit 4 tests, all green** — strong at the service / flow / mapper / snapshot /
 outbox / security layers (unit + in-memory-SQLite integration), and now with HTTP-endpoint and
 Blazor-UI coverage. Since QA is this project's primary purpose, the coverage gaps below are
 first-class backlog items. A 2026-06-15 audit found zero HTTP-endpoint tests and zero Blazor-UI
 tests; the **2026-06-15 QA/SDET pass then added 56 HTTP integration tests and 16 bUnit UI tests**,
-landing items 1, 2 and 5 below and part of 3 (remaining sub-items noted inline). Listed
-most-valuable first:
+landing items 1, 2 and 5 below and part of 3 (remaining sub-items noted inline). A follow-up
+**QA-architect pass the same day added 31 more** (19 UI page tests, 4 HTTP pipeline tests, 3
+multi-source ingest tests, 4 ProductCatalog units, 1 seeder idempotency test), closing items 3 and 5
+and the highest-value parts of 4. Listed most-valuable first:
 
 1. ✅ **Landed 2026-06-15** (56 tests, 12 endpoint families). **HTTP endpoint integration tests**
    (biggest gap). Stand up the API in-process with
@@ -328,29 +360,39 @@ most-valuable first:
 2. ✅ **Landed 2026-06-15** (400/404/401 paths covered). **HTTP error / validation paths** — 400
    (missing/invalid fields), 404 (unknown policy / quote /
    envelope), and 401 (API-key enforcement on writes + the `/database` browser) per endpoint family.
-3. ◐ **Partly landed 2026-06-15** — `X-Api-Key` accept/reject is now tested through real requests
-   (`SecurityEndpointsTests`); correlation-id echo and the `/database` 404 gate remain.
+3. ✅ **Landed 2026-06-15** — `X-Api-Key` accept/reject (`SecurityEndpointsTests`), correlation-id
+   echo (echo a supplied id, generate when absent, regenerate a non-GUID), and the `/database` 404
+   gate outside Development are all now exercised through real requests (`PipelineEndpointsTests`).
    **Middleware pipeline at the HTTP layer** — correlation-id echo (`CorrelationIdMiddleware`),
    `X-Api-Key` accept/reject (`ApiKeyAuthenticationMiddleware`), and the `/database` 404 gate
    (`DatabaseBrowserGateMiddleware`) exercised through real requests, not just their pure validators.
 4. ◐ **Partly covered 2026-06-15** — most of these are now exercised indirectly by the new endpoint
-   integration tests (schemas, source-systems, products/rating, event log, seeder); direct unit
-   tests + the `Services/Ui/*` facade remain a nice-to-have. **Untested service modules** (no direct
+   integration tests (schemas, source-systems, products/rating, event log, seeder); **`ProductCatalog`
+   now has direct unit tests and `DevelopmentDataSeeder` idempotency is covered through the
+   integration host (2026-06-15)**, leaving `DomainEventLog`, `JsonSchemaService`,
+   `SourceSystemCatalogService`, and the `Services/Ui/*` facade as the remaining direct-unit
+   nice-to-haves. **Untested service modules** (no direct
    unit tests today): `Services/Events/DomainEventLog`
    (filtering + ordering + same-transaction writes), `Services/Schemas/JsonSchemaService` (schema
    shape per contract), `Services/Catalog/SourceSystemCatalogService`, `Services/Products/ProductCatalog`
    (lookups + rating defaults), `Services/Seeding/DevelopmentDataSeeder` (idempotency / no-op when
    data already exists), and the `Services/Ui/*` facade (`UiGateway` aggregation + paging,
    `EventFlowDiagram` / lifecycle-stage Mermaid output).
-5. ✅ **Landed 2026-06-15** (Home/Quotes/Policies/Events; PolicyDetail/Ingest/Database still open).
+5. ✅ **Landed 2026-06-15** (all 7 pages — Home/Quotes/Policies/Events + PolicyDetail/QuoteDetail/
+   Ingest/Database; PolicyDetail/QuoteDetail/Ingest/Database added in the QA-architect pass).
    **Blazor UI component tests** with **bUnit** — render `Home`, `Ingest`, `Quotes`, `Policies`,
-   `PolicyDetail`, `Events`, `Database` against a stub `IUiGateway`; assert rendered rows, 1-based
-   pager state, filter behaviour, and the lifecycle-actions panel.
+   `PolicyDetail`, `QuoteDetail`, `Events`, `Database` against a stub `IUiGateway`; assert rendered
+   rows, 1-based pager state, filter behaviour, detail not-found/render, and the template/receipt flow.
 6. **End-to-end UI smoke** with **Playwright** — drive quote → bind → policy → claim → billing
    through the running app and assert the UI + the `/database` browser reflect the change (mirrors
    the Playwright tooling already used for the screenshot capture).
 7. **Concurrency / race tests** — idempotency store first-writer-wins under parallel ingest, outbox
    dispatch under contention, and snapshot rebuild while events are appended.
+8. **Unroutable ingest-type hardening (observed 2026-06-15)** — `POST /api/v1/ingest` with a message
+   `type` no handler claims surfaces the dispatcher's `InvalidOperationException` as an unshaped
+   **500** (`IngestEndpoints` has no `try/catch`). A negative test was deliberately *not* added so
+   the suite doesn't lock in undefined behavior; the small hardening task is to map it to a 400/422
+   problem response and then assert that.
 
 > Approach note: prefer the existing in-memory-SQLite + `WebApplicationFactory` stack (no Docker
 > needed for the API tests); keep bUnit / Playwright additive so `dotnet test` stays fast and
