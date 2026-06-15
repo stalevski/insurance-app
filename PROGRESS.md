@@ -163,9 +163,27 @@ Docker-capable VPS.
   gaps — zero HTTP-endpoint tests, zero Blazor-UI tests, and six untested service modules — as the
   new "Test coverage backlog" section below. Docs only; no code or test changes (still 257)
   (2026-06-15).
+- [x] **QA/SDET test suite — HTTP API integration tests + Blazor UI (bUnit) tests + expected-results
+  builders, and a test-duplication refactor.** Added a new `tests/InsuranceIntegration.Api.IntegrationTests`
+  project (net10.0) that stands the API up in-process with `WebApplicationFactory<Program>` over a
+  unique in-memory SQLite database per fixture, plus **bUnit 2.7.2** for Blazor component rendering.
+  **56 HTTP endpoint integration tests** cover 12 endpoint families (health, schemas, source-systems,
+  products + rating, quote/policy reads, policy lifecycle, billing, claims, risks, ingest + replay,
+  and API-key security) across happy paths and the 400/404/401 error paths — closing **Test coverage
+  backlog #1 and #2** and exercising the API-key middleware through real requests (part of #3). **16
+  bUnit UI tests** render the `Home`/`Quotes`/`Policies`/`Events` pages against a stub `IUiGateway`
+  and assert rendered rows, the 1-based pager summary, empty states, aggregate links, and the Events
+  page filter forwarding — closing the bulk of **backlog #5** (PolicyDetail/Ingest/Database pages
+  remain). The **expected-results builders** (`ExpectedRatingResult` rating-math oracle + fluent
+  request/envelope builders) and a **duplication refactor** (a shared `ApiTestBase` with
+  `GetAsync`/`PostAsync` helpers, a `SeededApiTestBase`, and `HttpResponseAssertions` extension
+  methods replacing ~45 inline status-code asserts and the per-class `PostAsync<T>` /
+  `GetFirstPolicyReference` copies) together close **Next steps #6**. **+72 tests → suite now 329,
+  all green** (2026-06-15).
 ## Current status
 
-- Build green (`dotnet build -c Release`); **all 257 tests pass** (DB browser environment gate added
+- Build green (`dotnet build -c Release`); **all 329 tests pass** (QA/SDET test suite — 56 HTTP API
+  integration tests + 16 bUnit UI tests — added +72 on 2026-06-15; DB browser environment gate added
   +15 and M5 snapshot zero-premium fix added +1 on 2026-06-14; configurable outbox transport
   added +19 and policy schedule PDF added +3 and
   API-key auth added +20 on
@@ -188,7 +206,13 @@ Docker-capable VPS.
   with a new `docs/README.md` index as the entry point; source-path breadcrumbs in the guides
   normalized to repository-root-relative form (`src/...`, `tests/...`). Documentation-only change —
   no code/build/test impact.
-- **Working on now:** **Dark-mode UI polish (2026-06-14)** — recaptured the seven Visual-tour
+- **Working on now:** **QA/SDET test suite (2026-06-15)** — added the
+  `tests/InsuranceIntegration.Api.IntegrationTests` project: 56 HTTP endpoint integration tests
+  (`WebApplicationFactory<Program>` + in-memory SQLite) across 12 endpoint families, 16 bUnit Blazor
+  UI tests (Home/Quotes/Policies/Events), expected-results builders (`ExpectedRatingResult` + fluent
+  request/envelope builders), and a duplication refactor (shared `ApiTestBase`/`SeededApiTestBase` +
+  `HttpResponseAssertions`). Suite now 329 green. Preceded by **Dark-mode UI polish (2026-06-14)** —
+  recaptured the seven Visual-tour
   screenshots (`docs/screenshots/01..07`) in dark mode and made the Mermaid lifecycle diagrams
   theme-aware (dark canvas matching `--panel-muted`, re-render on theme toggle) so they no longer
   show a white rectangle in dark mode. Preceded by the **README human-friendly rewrite + UI
@@ -268,37 +292,48 @@ Docker-capable VPS.
    routes; today those are reachable via Swagger only.
 5. Feature backlog: a full enumeration of candidate functionality (with add/defer/skip verdicts)
    lives in `docs/project/FEATURE_PLAN.html` — open it in a browser to pick the next feature.
-6. Test refactoring (tech debt): the test suite likely needs an **expected-results builder** to
-   construct the expected canonical/response objects (and request fixtures) instead of hand-building
-   them inline in each test. Related: **review the test classes for code duplication** — repeated
-   arrange/setup (e.g. building requests, `FakeTimeProvider` wiring, in-memory SQLite/`DbContext`
-   setup, common assertions) should be extracted into private helper methods within a test class, or
-   a shared **base test class** / fixtures where the duplication spans multiple classes.
+6. ~~Test refactoring (tech debt): expected-results builder + review the test classes for code
+   duplication.~~ **Done (2026-06-15):** the new `tests/InsuranceIntegration.Api.IntegrationTests`
+   project adds `ExpectedRatingResult` (rating-math oracle) and fluent request/envelope builders, and
+   the duplication was extracted into a shared `ApiTestBase` (`GetAsync`/`PostAsync`),
+   `SeededApiTestBase` (`GetFirstSeededPolicyReferenceAsync`), and `HttpResponseAssertions` extension
+   methods (`ShouldHaveStatus`/`ShouldReturnJsonAsync`/`ShouldReturnAsync<T>`), replacing ~45 inline
+   status-code asserts and the per-class `PostAsync<T>` / `GetFirstPolicyReference` copies.
 
 ## Test coverage backlog (gaps to fill, audited 2026-06-15)
 
-Current suite: **257 NUnit 4 tests, all green** — strong at the service / flow / mapper / snapshot /
-outbox / security layers (unit + in-memory-SQLite integration). Since QA is this project's primary
-purpose, the coverage gaps below are first-class backlog items. A 2026-06-15 audit found **zero
-HTTP-endpoint tests and zero Blazor-UI tests**, plus six service modules with no direct unit tests.
-Listed most-valuable first:
+Current suite: **329 NUnit 4 tests, all green** — strong at the service / flow / mapper / snapshot /
+outbox / security layers (unit + in-memory-SQLite integration), and now with HTTP-endpoint and
+Blazor-UI coverage. Since QA is this project's primary purpose, the coverage gaps below are
+first-class backlog items. A 2026-06-15 audit found zero HTTP-endpoint tests and zero Blazor-UI
+tests; the **2026-06-15 QA/SDET pass then added 56 HTTP integration tests and 16 bUnit UI tests**,
+landing items 1, 2 and 5 below and part of 3 (remaining sub-items noted inline). Listed
+most-valuable first:
 
-1. **HTTP endpoint integration tests** (biggest gap). Stand up the API in-process with
+1. ✅ **Landed 2026-06-15** (56 tests, 12 endpoint families). **HTTP endpoint integration tests**
+   (biggest gap). Stand up the API in-process with
    `WebApplicationFactory<Program>` (the API uses top-level `Program.cs` — expose it with
    `public partial class Program { }`) and assert status codes, JSON bodies, and headers for the
    ~29 routes across `Endpoints/*.cs`. One happy-path test per route first, then the error paths.
-2. **HTTP error / validation paths** — 400 (missing/invalid fields), 404 (unknown policy / quote /
+2. ✅ **Landed 2026-06-15** (400/404/401 paths covered). **HTTP error / validation paths** — 400
+   (missing/invalid fields), 404 (unknown policy / quote /
    envelope), and 401 (API-key enforcement on writes + the `/database` browser) per endpoint family.
-3. **Middleware pipeline at the HTTP layer** — correlation-id echo (`CorrelationIdMiddleware`),
+3. ◐ **Partly landed 2026-06-15** — `X-Api-Key` accept/reject is now tested through real requests
+   (`SecurityEndpointsTests`); correlation-id echo and the `/database` 404 gate remain.
+   **Middleware pipeline at the HTTP layer** — correlation-id echo (`CorrelationIdMiddleware`),
    `X-Api-Key` accept/reject (`ApiKeyAuthenticationMiddleware`), and the `/database` 404 gate
    (`DatabaseBrowserGateMiddleware`) exercised through real requests, not just their pure validators.
-4. **Untested service modules** (no direct unit tests today): `Services/Events/DomainEventLog`
+4. ◐ **Partly covered 2026-06-15** — most of these are now exercised indirectly by the new endpoint
+   integration tests (schemas, source-systems, products/rating, event log, seeder); direct unit
+   tests + the `Services/Ui/*` facade remain a nice-to-have. **Untested service modules** (no direct
+   unit tests today): `Services/Events/DomainEventLog`
    (filtering + ordering + same-transaction writes), `Services/Schemas/JsonSchemaService` (schema
    shape per contract), `Services/Catalog/SourceSystemCatalogService`, `Services/Products/ProductCatalog`
    (lookups + rating defaults), `Services/Seeding/DevelopmentDataSeeder` (idempotency / no-op when
    data already exists), and the `Services/Ui/*` facade (`UiGateway` aggregation + paging,
    `EventFlowDiagram` / lifecycle-stage Mermaid output).
-5. **Blazor UI component tests** with **bUnit** — render `Home`, `Ingest`, `Quotes`, `Policies`,
+5. ✅ **Landed 2026-06-15** (Home/Quotes/Policies/Events; PolicyDetail/Ingest/Database still open).
+   **Blazor UI component tests** with **bUnit** — render `Home`, `Ingest`, `Quotes`, `Policies`,
    `PolicyDetail`, `Events`, `Database` against a stub `IUiGateway`; assert rendered rows, 1-based
    pager state, filter behaviour, and the lifecycle-actions panel.
 6. **End-to-end UI smoke** with **Playwright** — drive quote → bind → policy → claim → billing
