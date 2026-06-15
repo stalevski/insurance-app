@@ -7,6 +7,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// bUnit coverage for the policies list page (<c>/policies</c>): one row per snapshot, the link back
 /// to the originating quote (with a placeholder when absent), and the empty state.
 /// </summary>
+[Category("Ui")]
 public sealed class PoliciesPageTests
 {
     [Test]

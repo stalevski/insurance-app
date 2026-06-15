@@ -3,6 +3,7 @@ using InsuranceIntegration.Api.IntegrationTests.Infrastructure;
 namespace InsuranceIntegration.Api.IntegrationTests.Api;
 
 /// <summary>Smoke coverage for the unauthenticated health probe.</summary>
+[Category("Smoke")]
 public sealed class HealthEndpointsTests : ApiTestBase
 {
     [Test]

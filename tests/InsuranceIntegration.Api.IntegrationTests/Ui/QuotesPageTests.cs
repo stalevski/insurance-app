@@ -7,6 +7,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// bUnit coverage for the quotes list page (<c>/quotes</c>): one row per snapshot, the bound/unbound
 /// badge, the paging summary, and the empty state.
 /// </summary>
+[Category("Ui")]
 public sealed class QuotesPageTests
 {
     [Test]

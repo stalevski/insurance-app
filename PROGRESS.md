@@ -179,7 +179,11 @@ Docker-capable VPS.
   `GetAsync`/`PostAsync` helpers, a `SeededApiTestBase`, and `HttpResponseAssertions` extension
   methods replacing ~45 inline status-code asserts and the per-class `PostAsync<T>` /
   `GetFirstPolicyReference` copies) together close **Next steps #6**. **+72 tests → suite now 329,
-  all green** (2026-06-15).
+  all green** (2026-06-15). Follow-up the same day: tagged the integration fixtures with NUnit
+  `[Category]` (`Api`/`Ui`/`Smoke`, the `Api` category inherited from `ApiTestBase`) so
+  `dotnet test --filter "Category=..."` runs focused subsets, and added a Warning+ test-output
+  logger (`Infrastructure/TestContextLoggerProvider.cs`) that routes host warnings/errors to the
+  failing test's output for diagnosable integration-test failures (no new tests; still 329).
 ## Current status
 
 - Build green (`dotnet build -c Release`); **all 329 tests pass** (QA/SDET test suite — 56 HTTP API

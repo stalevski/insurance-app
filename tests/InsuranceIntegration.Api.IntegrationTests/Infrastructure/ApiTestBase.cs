@@ -7,6 +7,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Infrastructure;
 /// instantiates the fixture once, so a single host and <see cref="HttpClient"/> are reused by every
 /// test in the derived class and torn down afterwards.
 /// </summary>
+[Category("Api")]
 public abstract class ApiTestBase : IDisposable
 {
     private bool _disposed;

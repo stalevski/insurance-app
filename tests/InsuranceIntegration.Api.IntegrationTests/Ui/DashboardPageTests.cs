@@ -10,6 +10,8 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// gateway's <see cref="DashboardSummary"/> and a recent-events table that collapses to an empty
 /// state when no events have been recorded.
 /// </summary>
+[Category("Ui")]
+[Category("Smoke")]
 public sealed class DashboardPageTests
 {
     [Test]

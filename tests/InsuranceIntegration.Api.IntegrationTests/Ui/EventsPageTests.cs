@@ -8,6 +8,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// bUnit coverage for the domain-event log page (<c>/events</c>): one row per event, the empty state,
 /// and that the aggregate/event-type filters forward the selected values to the gateway.
 /// </summary>
+[Category("Ui")]
 public sealed class EventsPageTests
 {
     [Test]

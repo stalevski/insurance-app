@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace InsuranceIntegration.Api.IntegrationTests.Infrastructure;
 
@@ -49,6 +50,15 @@ public sealed class InsuranceApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        // Surface host warnings/errors (for example a server-side exception behind a 500) to the
+        // running test's output so failures are diagnosable, without the Info-level SQL noise.
+        builder.ConfigureLogging(logging =>
+        {
+            logging.ClearProviders();
+            logging.AddProvider(new TestContextLoggerProvider());
+            logging.SetMinimumLevel(LogLevel.Warning);
+        });
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {

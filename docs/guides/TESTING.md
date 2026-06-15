@@ -15,6 +15,8 @@ The solution has **two test projects**:
 - **Persistence in tests**: EF Core 10 + `Microsoft.Data.Sqlite` in-memory — `DataSource=:memory:` in the unit project; a unique shared-cache in-memory database per `WebApplicationFactory` fixture in the integration project. No external DB required.
 - **HTTP-endpoint tests**: `Microsoft.AspNetCore.Mvc.Testing` hosts the API in-process via `WebApplicationFactory<Program>` (`Infrastructure/InsuranceApiFactory.cs`) so tests issue real `HttpClient` requests against the running pipeline (routing, middleware, API-key auth, JSON serialization).
 - **Blazor-UI tests**: [bUnit](https://bunit.dev/) renders Razor components against a stub `IUiGateway` (`Ui/UiGatewayStub.cs`) — no browser required.
+- **Test-output logging**: the integration host pipes **Warning+** log output to the running NUnit test's output (`Infrastructure/TestContextLoggerProvider.cs`), so a server-side exception behind a failing request surfaces in that test's report; green runs stay quiet (Info-level SQL is filtered out).
+- **Categories**: integration fixtures are tagged with NUnit `[Category]` — `Api`, `Ui`, and `Smoke` — so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and is inherited by every HTTP fixture.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
 - **Total tests**: **329** (257 unit/service + 72 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
@@ -51,6 +53,25 @@ dotnet test --filter "FullyQualifiedName~RiskFlowServiceTests.Process_AutoClears
 # Whole namespace
 dotnet test --filter "FullyQualifiedName~InsuranceIntegration.Api.Tests.Mappers"
 ```
+
+### Filter by category
+
+The integration tests carry NUnit categories so you can run focused subsets:
+
+```powershell
+$proj = ".\tests\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj"
+
+# All HTTP-endpoint tests (56)
+dotnet test $proj --filter "Category=Api"
+
+# All Blazor-UI tests (16)
+dotnet test $proj --filter "Category=Ui"
+
+# Fast sanity subset — health probe + dashboard render (5)
+dotnet test $proj --filter "Category=Smoke"
+```
+
+Combine with OR (`|`) or exclude with `!=`, e.g. `--filter "Category=Api|Category=Ui"` or `--filter "Category!=Smoke"`.
 
 ### Produce a coverage report
 
