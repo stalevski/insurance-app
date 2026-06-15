@@ -5,6 +5,9 @@
 > policy → claims → billing), and hands clean results to downstream systems — with a built-in web UI
 > to watch it all happen.
 
+> **Built AI-assisted, human-directed.** Planned, generated, reviewed, and tested with
+> AI tooling under my direction — the architecture, code review, and final decisions are mine.
+
 ## What is this, in plain language?
 
 Insurers, brokers, and MGAs run dozens of systems that all describe the same things — a quote, a
