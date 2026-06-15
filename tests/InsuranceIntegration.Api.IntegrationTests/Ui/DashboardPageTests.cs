@@ -10,9 +10,8 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// gateway's <see cref="DashboardSummary"/> and a recent-events table that collapses to an empty
 /// state when no events have been recorded.
 /// </summary>
-[Category("Ui")]
 [Category("Smoke")]
-public sealed class DashboardPageTests
+public sealed class DashboardPageTests : UiPageTestBase
 {
     [Test]
     public void Dashboard_RendersTheSixMetricCardsInOrder()
@@ -30,8 +29,7 @@ public sealed class DashboardPageTests
             },
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Home>();
+        var cut = Render<Home>(stub);
 
         var metrics = cut.FindAll(".card .metric");
         Assert.That(metrics, Has.Count.EqualTo(6));
@@ -61,8 +59,7 @@ public sealed class DashboardPageTests
             },
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Home>();
+        var cut = Render<Home>(stub);
 
         var rows = cut.FindAll("tbody tr");
         Assert.That(rows, Has.Count.EqualTo(2));
@@ -88,15 +85,10 @@ public sealed class DashboardPageTests
             },
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Home>();
+        var cut = Render<Home>(stub);
 
         var link = cut.Find("tbody a");
-        Assert.Multiple(() =>
-        {
-            Assert.That(link.GetAttribute("href"), Is.EqualTo("quotes/QF-PROP-01"));
-            Assert.That(link.TextContent.Trim(), Is.EqualTo("QF-PROP-01"));
-        });
+        link.ShouldLinkTo("quotes/QF-PROP-01", "QF-PROP-01");
     }
 
     [Test]
@@ -104,13 +96,8 @@ public sealed class DashboardPageTests
     {
         var stub = new UiGatewayStub { Dashboard = new DashboardSummary() };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Home>();
+        var cut = Render<Home>(stub);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(cut.Markup, Does.Contain("No events recorded yet."));
-            Assert.That(cut.FindAll("table"), Is.Empty, "The recent-events table should be absent when there are no events.");
-        });
+        cut.ShouldShowEmptyState("No events recorded yet.");
     }
 }

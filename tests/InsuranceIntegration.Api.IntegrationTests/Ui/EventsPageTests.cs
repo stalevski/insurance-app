@@ -8,8 +8,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// bUnit coverage for the domain-event log page (<c>/events</c>): one row per event, the empty state,
 /// and that the aggregate/event-type filters forward the selected values to the gateway.
 /// </summary>
-[Category("Ui")]
-public sealed class EventsPageTests
+public sealed class EventsPageTests : UiPageTestBase
 {
     [Test]
     public void Events_RendersARowPerEvent()
@@ -23,8 +22,7 @@ public sealed class EventsPageTests
             ],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<EventsPage>();
+        var cut = Render<EventsPage>(stub);
 
         var rows = cut.FindAll("tbody tr");
         Assert.That(rows, Has.Count.EqualTo(2));
@@ -42,8 +40,7 @@ public sealed class EventsPageTests
     {
         var stub = new UiGatewayStub { Events = [] };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<EventsPage>();
+        var cut = Render<EventsPage>(stub);
 
         Assert.Multiple(() =>
         {
@@ -57,8 +54,7 @@ public sealed class EventsPageTests
     {
         var stub = new UiGatewayStub { Events = [UiTestData.Event()] };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<EventsPage>();
+        var cut = Render<EventsPage>(stub);
 
         cut.Find("#kind").Change(DomainEventAggregateKind.Policy);
 
@@ -74,8 +70,7 @@ public sealed class EventsPageTests
     {
         var stub = new UiGatewayStub { Events = [UiTestData.Event()] };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<EventsPage>();
+        var cut = Render<EventsPage>(stub);
 
         cut.Find("#type").Change(DomainEventType.PolicyCancelled);
 

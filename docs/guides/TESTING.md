@@ -16,7 +16,7 @@ The solution has **two test projects**:
 - **HTTP-endpoint tests**: `Microsoft.AspNetCore.Mvc.Testing` hosts the API in-process via `WebApplicationFactory<Program>` (`Infrastructure/InsuranceApiFactory.cs`) so tests issue real `HttpClient` requests against the running pipeline (routing, middleware, API-key auth, JSON serialization).
 - **Blazor-UI tests**: [bUnit](https://bunit.dev/) renders Razor components against a stub `IUiGateway` (`Ui/UiGatewayStub.cs`) — no browser required.
 - **Test-output logging**: the integration host pipes **Warning+** log output to the running NUnit test's output (`Infrastructure/TestContextLoggerProvider.cs`), so a server-side exception behind a failing request surfaces in that test's report; green runs stay quiet (Info-level SQL is filtered out).
-- **Categories**: integration fixtures are tagged with NUnit `[Category]` — `Api`, `Ui`, and `Smoke` — so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and is inherited by every HTTP fixture.
+- **Categories**: integration fixtures are tagged with NUnit `[Category]` — `Api`, `Ui`, and `Smoke` — so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and the `Ui` category on `UiPageTestBase`, each inherited by their derived fixtures.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
 - **Total tests**: **329** (257 unit/service + 72 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
@@ -173,9 +173,10 @@ tests/InsuranceIntegration.Api.IntegrationTests/
     HttpJsonExtensions.cs                   # ReadAsAsync<T> / ReadAsJsonAsync
     HttpResponseAssertions.cs               # ShouldHaveStatus / ShouldReturnJsonAsync / ShouldReturnAsync<T>
   Ui/                                       # Blazor component tests (bUnit)
+    UiPageTestBase.cs                       # per-test BunitContext + Render<TPage>(stub) helper
     UiGatewayStub.cs                        # stub IUiGateway returning canned data
     UiTestData.cs                           # quote/policy/event factories
-    PageRenderer.cs                         # per-test BunitContext factory (loose JSInterop)
+    UiAssertions.cs                         # ShouldShowEmptyState / ShouldLinkTo bUnit assertions
     DashboardPageTests.cs
     QuotesPageTests.cs
     PoliciesPageTests.cs
@@ -318,22 +319,25 @@ public sealed class ProductEndpointsTests : ApiTestBase
 
 ### 5.8 Blazor-UI component test (bUnit)
 
-Lives in `tests/InsuranceIntegration.Api.IntegrationTests/Ui`. Render a page against `UiGatewayStub` (a hand-written `IUiGateway` stub) using the `PageRenderer.ContextFor(stub)` helper. Model after `QuotesPageTests`:
+Lives in `tests/InsuranceIntegration.Api.IntegrationTests/Ui`. Derive the fixture from `UiPageTestBase` and render a page against `UiGatewayStub` (a hand-written `IUiGateway` stub) via the inherited `Render<TPage>(stub)` helper. Model after `QuotesPageTests`:
 
 ```csharp
-[Test]
-public void Quotes_RendersARowPerQuote()
+public sealed class QuotesPageTests : UiPageTestBase
 {
-    var stub = new UiGatewayStub { Quotes = [UiTestData.Quote()] };
-    using var context = PageRenderer.ContextFor(stub);
+    [Test]
+    public void Quotes_RendersARowPerQuote()
+    {
+        var stub = new UiGatewayStub { Quotes = [UiTestData.Quote()] };
 
-    var cut = context.Render<Quotes>();
+        var cut = Render<Quotes>(stub);
 
-    Assert.That(cut.FindAll("tbody tr"), Has.Count.EqualTo(1));
+        Assert.That(cut.FindAll("tbody tr"), Has.Count.EqualTo(1));
+    }
 }
 ```
 
-- Use a **fresh `BunitContext` per test** (loose JSInterop) — NUnit reuses one fixture instance per class, so sharing a context would leak service registrations between tests.
+- `UiPageTestBase` creates a **fresh `BunitContext` per test** (loose JSInterop) in `[SetUp]` and disposes it in `[TearDown]` — NUnit reuses one fixture instance per class, so sharing a context would leak service registrations between tests. It also declares the `[Category("Ui")]` inherited by every page fixture.
+- Reuse the shared bUnit assertions in `UiAssertions`: `cut.ShouldShowEmptyState("No quotes yet.")` (empty-state copy + no data table) and `anchor.ShouldLinkTo(href, text)`.
 - The `Events` page name collides with the `InsuranceIntegration.Api.Events` namespace — alias it: `using EventsPage = InsuranceIntegration.Api.Components.Pages.Events;`.
 - Drive `<select>` filters with `element.Change(value)` and assert the stub captured the forwarded argument (see `Ui/EventsPageTests.cs`).
 

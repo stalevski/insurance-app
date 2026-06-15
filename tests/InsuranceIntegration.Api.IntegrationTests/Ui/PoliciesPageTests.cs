@@ -7,8 +7,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// bUnit coverage for the policies list page (<c>/policies</c>): one row per snapshot, the link back
 /// to the originating quote (with a placeholder when absent), and the empty state.
 /// </summary>
-[Category("Ui")]
-public sealed class PoliciesPageTests
+public sealed class PoliciesPageTests : UiPageTestBase
 {
     [Test]
     public void Policies_RendersARowPerPolicy()
@@ -22,18 +21,13 @@ public sealed class PoliciesPageTests
             ],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Policies>();
+        var cut = Render<Policies>(stub);
 
         var rows = cut.FindAll("tbody tr");
         Assert.That(rows, Has.Count.EqualTo(2));
 
         var policyLink = cut.Find("tbody tr td:first-child a");
-        Assert.Multiple(() =>
-        {
-            Assert.That(policyLink.GetAttribute("href"), Is.EqualTo("policies/POL-PROP-01"));
-            Assert.That(policyLink.TextContent.Trim(), Is.EqualTo("POL-PROP-01"));
-        });
+        policyLink.ShouldLinkTo("policies/POL-PROP-01", "POL-PROP-01");
     }
 
     [Test]
@@ -44,8 +38,7 @@ public sealed class PoliciesPageTests
             Policies = [UiTestData.Policy(reference: "POL-PROP-01", quoteReference: "QF-PROP-01")],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Policies>();
+        var cut = Render<Policies>(stub);
 
         var quoteLink = cut.Find("tbody tr td:nth-child(2) a");
         Assert.That(quoteLink.GetAttribute("href"), Is.EqualTo("quotes/QF-PROP-01"));
@@ -59,8 +52,7 @@ public sealed class PoliciesPageTests
             Policies = [UiTestData.Policy(reference: "POL-PROP-01", quoteReference: null)],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Policies>();
+        var cut = Render<Policies>(stub);
 
         var quoteCell = cut.Find("tbody tr td:nth-child(2)");
         Assert.Multiple(() =>
@@ -75,13 +67,8 @@ public sealed class PoliciesPageTests
     {
         var stub = new UiGatewayStub { Policies = [] };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Policies>();
+        var cut = Render<Policies>(stub);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(cut.Markup, Does.Contain("No policies yet."));
-            Assert.That(cut.FindAll("table"), Is.Empty);
-        });
+        cut.ShouldShowEmptyState("No policies yet.");
     }
 }

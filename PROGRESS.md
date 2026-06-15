@@ -183,7 +183,13 @@ Docker-capable VPS.
   `[Category]` (`Api`/`Ui`/`Smoke`, the `Api` category inherited from `ApiTestBase`) so
   `dotnet test --filter "Category=..."` runs focused subsets, and added a Warning+ test-output
   logger (`Infrastructure/TestContextLoggerProvider.cs`) that routes host warnings/errors to the
-  failing test's output for diagnosable integration-test failures (no new tests; still 329).
+  failing test's output for diagnosable integration-test failures (no new tests; still 329). A
+  further UI-side duplication pass extracted a `UiPageTestBase` (owns a fresh per-test
+  `BunitContext` plus a `Render<TPage>(stub)` helper, replacing the `PageRenderer.ContextFor` +
+  `using var context` render ceremony repeated across all 16 UI tests and hosting the inherited
+  `Ui` category) and a `UiAssertions` extension class (`ShouldShowEmptyState`/`ShouldLinkTo`) that
+  folds the repeated empty-state and anchor asserts; `PageRenderer` was removed. Test-internal
+  refactor only — no behavior or count change; still 329 green (2026-06-15).
 ## Current status
 
 - Build green (`dotnet build -c Release`); **all 329 tests pass** (QA/SDET test suite — 56 HTTP API

@@ -7,8 +7,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Ui;
 /// bUnit coverage for the quotes list page (<c>/quotes</c>): one row per snapshot, the bound/unbound
 /// badge, the paging summary, and the empty state.
 /// </summary>
-[Category("Ui")]
-public sealed class QuotesPageTests
+public sealed class QuotesPageTests : UiPageTestBase
 {
     [Test]
     public void Quotes_RendersARowPerQuote()
@@ -22,17 +21,15 @@ public sealed class QuotesPageTests
             ],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Quotes>();
+        var cut = Render<Quotes>(stub);
 
         var rows = cut.FindAll("tbody tr");
         Assert.That(rows, Has.Count.EqualTo(2));
 
         var firstLink = cut.Find("tbody tr a");
+        firstLink.ShouldLinkTo("quotes/QF-PROP-01", "QF-PROP-01");
         Assert.Multiple(() =>
         {
-            Assert.That(firstLink.GetAttribute("href"), Is.EqualTo("quotes/QF-PROP-01"));
-            Assert.That(firstLink.TextContent.Trim(), Is.EqualTo("QF-PROP-01"));
             Assert.That(cut.Markup, Does.Contain("COMMERCIAL_PROPERTY"));
             Assert.That(cut.Markup, Does.Contain("LIABILITY"));
         });
@@ -50,8 +47,7 @@ public sealed class QuotesPageTests
             ],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Quotes>();
+        var cut = Render<Quotes>(stub);
 
         Assert.Multiple(() =>
         {
@@ -72,8 +68,7 @@ public sealed class QuotesPageTests
             ],
         };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Quotes>();
+        var cut = Render<Quotes>(stub);
 
         Assert.That(cut.Find(".pager .muted").TextContent.Trim(), Is.EqualTo("Showing 1\u20132"));
     }
@@ -83,13 +78,8 @@ public sealed class QuotesPageTests
     {
         var stub = new UiGatewayStub { Quotes = [] };
 
-        using var context = PageRenderer.ContextFor(stub);
-        var cut = context.Render<Quotes>();
+        var cut = Render<Quotes>(stub);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(cut.Markup, Does.Contain("No quotes yet."));
-            Assert.That(cut.FindAll("table"), Is.Empty);
-        });
+        cut.ShouldShowEmptyState("No quotes yet.");
     }
 }
