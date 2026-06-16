@@ -1,3 +1,4 @@
+using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Security;
 using InsuranceIntegration.Api.Services.Outbox;
 using InsuranceIntegration.Api.Services.Seeding;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -70,6 +72,17 @@ public sealed class InsuranceApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            // The integration connection string is captured eagerly in AddApiServices (see
+            // ServiceRegistration), before this factory's ConfigureAppConfiguration override is
+            // visible, so the DbContext is re-registered here to bind this factory's isolated
+            // in-memory database. Without this the host falls back to a shared file database
+            // ("Data Source=integration.db") and tests leak data into one another.
+            services.RemoveAll<DbContextOptions<IntegrationDbContext>>();
+            services.RemoveAll<DbContextOptions>();
+            services.AddDbContext<IntegrationDbContext>((sp, options) =>
+                options.UseSqlite(_connectionString)
+                       .AddInterceptors(sp.GetRequiredService<RowVersionInterceptor>()));
+
             // Remove the polling outbox dispatcher so background writes never contend with the
             // request-scoped writes under test on the shared in-memory connection. Outbox dispatch
             // behaviour is covered separately by the unit-level OutboxDispatcher tests.
@@ -98,7 +111,7 @@ public sealed class InsuranceApiFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>
-    /// Runs the development data seeder against this factory's database, populating the 32 quote and
+    /// Runs the development data seeder against this factory's database, populating the 28 quote and
     /// 8 policy read models used by the read-side endpoint and UI tests.
     /// </summary>
     public async Task SeedDevelopmentDataAsync()

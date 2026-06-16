@@ -1,0 +1,40 @@
+{
+  "name": "insurance-app-qa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Black-box QA automation (Playwright) for the InsuranceIntegration API + Blazor app.",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test --project=insurance-app-api",
+    "test:ui": "playwright test --project=insurance-app-ui-chromium --project=insurance-app-ui-firefox --project=insurance-app-ui-webkit",
+    "test:a11y": "playwright test --project=insurance-app-a11y",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:critical": "playwright test --grep @critical",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "lint": "eslint .",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "doctor": "node --version && npm --version && npx playwright --version && npx tsc --noEmit && echo Doctor: OK"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.0",
+    "@types/node": "^25.9.3",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.10.4",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1"
+  }
+}

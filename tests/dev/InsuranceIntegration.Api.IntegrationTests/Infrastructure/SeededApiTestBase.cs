@@ -2,7 +2,7 @@ namespace InsuranceIntegration.Api.IntegrationTests.Infrastructure;
 
 /// <summary>
 /// Base fixture for read-side tests that need the development data present. The seeder runs once,
-/// before any test in the derived class, populating the 32 quote and 8 policy read models.
+/// before any test in the derived class, populating the 28 quote and 8 policy read models.
 /// </summary>
 public abstract class SeededApiTestBase : ApiTestBase
 {

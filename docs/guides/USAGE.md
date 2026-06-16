@@ -883,7 +883,7 @@ The same `X-Correlation-Id` value appears in the response header and in the serv
 
 ### Exercise idempotency
 
-Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) - it returns the persisted `IngestReceipt` (see `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
+Send the same envelope twice with the same `id` + `source`; the `processedBy`, `outcome`, and `receivedAtUtc` fields will be identical, and the server logs will not show a second pass through the handler. You can also confirm by calling `GET /api/v1/ingest/{source}/{envelopeId}` (the `self` URL from the receipt) - it returns the persisted `IngestReceipt` (see `tests/dev/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs` and `EfCoreIdempotencyStoreTests.cs` for the assertions).
 
 ### Observe the outbox
 

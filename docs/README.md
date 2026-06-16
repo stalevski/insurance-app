@@ -32,5 +32,5 @@ Project documentation, organized by purpose. Start here to find what you need.
 ## Conventions used in these docs
 
 - Inline source references use **repository-root-relative** paths (e.g. `src/InsuranceIntegration.Api/Program.cs`,
-  `tests/InsuranceIntegration.Api.Tests/...`) so they stay accurate regardless of where a doc lives.
+  `tests/dev/InsuranceIntegration.Api.Tests/...`) so they stay accurate regardless of where a doc lives.
 - Cross-document links use repository-root-relative paths under `docs/` (e.g. `docs/guides/USAGE.md`).

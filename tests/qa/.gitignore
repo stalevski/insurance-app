@@ -1,0 +1,20 @@
+node_modules/
+playwright-report/
+test-results/
+blob-report/
+coverage/
+.env
+*.log
+.DS_Store
+Thumbs.db
+dist/
+
+# Dedicated, disposable QA database created by the Playwright webServer
+.tmp/
+
+# Build & lint caches
+*.tsbuildinfo
+.eslintcache
+
+# Playwright auth state files (regenerated per run via setup projects)
+playwright/.auth/

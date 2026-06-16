@@ -5,8 +5,8 @@ using InsuranceIntegration.Api.Services.Snapshots;
 namespace InsuranceIntegration.Api.IntegrationTests.Api;
 
 /// <summary>
-/// Read coverage for the quote snapshot endpoints against the seeded data set (32 quotes across the
-/// four product families, references <c>QF-{PROP,LIAB,CYB,MOT}-01..08</c>).
+/// Read coverage for the quote snapshot endpoints against the seeded data set (28 quotes across the
+/// four product families, references <c>QF-{PROP,LIAB,CYB,MOT}-01..07</c>).
 /// </summary>
 public sealed class QuoteReadEndpointsTests : SeededApiTestBase
 {
@@ -19,8 +19,8 @@ public sealed class QuoteReadEndpointsTests : SeededApiTestBase
         var items = body.GetProperty("items");
         Assert.Multiple(() =>
         {
-            Assert.That(body.GetProperty("count").GetInt32(), Is.EqualTo(32));
-            Assert.That(items.GetArrayLength(), Is.EqualTo(32));
+            Assert.That(body.GetProperty("count").GetInt32(), Is.EqualTo(28));
+            Assert.That(items.GetArrayLength(), Is.EqualTo(28));
         });
     }
 

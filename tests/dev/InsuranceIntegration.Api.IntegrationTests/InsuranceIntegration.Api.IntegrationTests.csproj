@@ -29,6 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj" />
+    <ProjectReference Include="..\..\..\src\InsuranceIntegration.Api\InsuranceIntegration.Api.csproj" />
   </ItemGroup>
 </Project>

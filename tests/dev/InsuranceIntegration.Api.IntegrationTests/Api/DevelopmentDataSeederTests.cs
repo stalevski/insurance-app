@@ -25,7 +25,7 @@ public sealed class DevelopmentDataSeederTests : ApiTestBase
         {
             Assert.That(
                 quoteBody.GetProperty("count").GetInt32(),
-                Is.EqualTo(32),
+                Is.EqualTo(28),
                 "Seeding twice must not duplicate quotes.");
             Assert.That(
                 policyBody.GetProperty("count").GetInt32(),

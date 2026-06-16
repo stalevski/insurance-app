@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node", "@playwright/test"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@config": ["./test-targets.config.ts"],
+      "@core/*": ["./src/core/*"],
+      "@clients/*": ["./src/clients/*"],
+      "@pages/*": ["./src/pages/*"],
+      "@helpers/*": ["./src/helpers/*"],
+      "@fixtures/*": ["./src/fixtures/*"],
+      "@insurance-app-fixtures": ["./src/fixtures/insurance-app/index.ts"],
+      "@models/*": ["./src/models/*"],
+      "@builders/*": ["./src/builders/*"]
+    }
+  },
+  "include": ["playwright.config.ts", "test-targets.config.ts", "src/**/*.ts", "specs/**/*.ts"]
+}

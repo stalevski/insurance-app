@@ -2,12 +2,25 @@
 
 How to run, extend, and manually exercise the test suite for **InsuranceIntegration.Api**.
 
-## 1. Test stack
+## 0. Two test tiers: `dev` (white-box) and `qa` (black-box)
 
-The solution has **two test projects**:
+Tests are split into two independently-runnable tiers under `tests/`:
 
-- `tests/InsuranceIntegration.Api.Tests` - unit + service/persistence integration tests (the bulk of the suite).
-- `tests/InsuranceIntegration.Api.IntegrationTests` - **HTTP-endpoint integration tests** (the API hosted in-process) and **Blazor-UI component tests** (added 2026-06-15).
+| Tier | Location | Stack | Style | What it proves |
+|---|---|---|---|---|
+| **Dev** | `tests/dev/` | .NET 10 + NUnit 4 | **White-box**, in-process | Internal units, services, persistence, HTTP pipeline, and Blazor component render branches — with controlled/stubbed inputs. |
+| **QA** | `tests/qa/` | TypeScript + Playwright | **Black-box**, against the running app | The deployed API + UI as a user/integrator sees them: real HTTP, real browser (Chromium/Firefox/WebKit), real seeded data, plus accessibility. |
+
+The two tiers are **complementary, not duplicative** — the dev tier asserts internal decomposition and edge-case render branches the black-box tier cannot reach (e.g. empty states, null props, exception types), while the QA tier catches real wiring, cross-browser, and accessibility issues the in-process stubs hide. See [§9 Two-tier coverage map & reduction review](#9-two-tier-coverage-map--reduction-review).
+
+This guide documents the **dev tier** in §1–§8. The **QA tier** has its own self-contained tooling and README at `tests/qa/README.md`; §9 summarizes how the two relate.
+
+## 1. Dev-tier test stack
+
+The dev tier (`tests/dev/`) has **two test projects**:
+
+- `tests/dev/InsuranceIntegration.Api.Tests` - unit + service/persistence integration tests (the bulk of the suite).
+- `tests/dev/InsuranceIntegration.Api.IntegrationTests` - **HTTP-endpoint integration tests** (the API hosted in-process) and **Blazor-UI component tests** (added 2026-06-15).
 
 - **Framework**: [NUnit 4](https://docs.nunit.org/) across both projects (constraint model: `Assert.That(...)`)
 - **Test runner**: `dotnet test` via `Microsoft.NET.Test.Sdk` + `NUnit3TestAdapter`
@@ -19,11 +32,11 @@ The solution has **two test projects**:
 - **Categories**: integration fixtures are tagged with NUnit `[Category]` - `Api`, `Ui`, and `Smoke` - so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and the `Ui` category on `UiPageTestBase`, each inherited by their derived fixtures.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
-- **Total tests**: **360** (261 unit/service + 99 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally.
+- **Total dev-tier tests**: **360** (261 unit/service + 99 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally. (The QA tier adds 91 Playwright tests — see [§9](#9-two-tier-coverage-map--reduction-review).)
 
 ## 2. Run the tests
 
-### Run the full suite
+### Run the full dev-tier suite
 
 ```powershell
 dotnet test .\InsuranceIntegration.sln
@@ -33,10 +46,10 @@ dotnet test .\InsuranceIntegration.sln
 
 ```powershell
 # Unit + service/persistence tests
-dotnet test .\tests\InsuranceIntegration.Api.Tests\InsuranceIntegration.Api.Tests.csproj
+dotnet test .\tests\dev\InsuranceIntegration.Api.Tests\InsuranceIntegration.Api.Tests.csproj
 
 # HTTP-endpoint + Blazor-UI integration tests
-dotnet test .\tests\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj
+dotnet test .\tests\dev\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj
 ```
 
 ### Run a single fixture or test
@@ -59,7 +72,7 @@ dotnet test --filter "FullyQualifiedName~InsuranceIntegration.Api.Tests.Mappers"
 The integration tests carry NUnit categories so you can run focused subsets:
 
 ```powershell
-$proj = ".\tests\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj"
+$proj = ".\tests\dev\InsuranceIntegration.Api.IntegrationTests\InsuranceIntegration.Api.IntegrationTests.csproj"
 
 # All HTTP-endpoint tests (64)
 dotnet test $proj --filter "Category=Api"
@@ -76,7 +89,7 @@ Combine with OR (`|`) or exclude with `!=`, e.g. `--filter "Category=Api|Categor
 ### Produce a coverage report
 
 ```powershell
-dotnet test .\tests\InsuranceIntegration.Api.Tests\InsuranceIntegration.Api.Tests.csproj `
+dotnet test .\tests\dev\InsuranceIntegration.Api.Tests\InsuranceIntegration.Api.Tests.csproj `
   --collect:"XPlat Code Coverage"
 ```
 
@@ -91,7 +104,7 @@ dotnet test --logger "console;verbosity=detailed"
 ## 3. Test project layout
 
 ```text
-tests/InsuranceIntegration.Api.Tests/
+tests/dev/InsuranceIntegration.Api.Tests/
   Clearance/
     EfCoreSubmissionRegistryTests.cs        # in-memory SQLite + EF Core
     SubmissionClearanceServiceTests.cs
@@ -149,7 +162,7 @@ Folders mirror the production layout under `src/InsuranceIntegration.Api/Service
 The HTTP-endpoint and Blazor-UI tests live in a second project:
 
 ```text
-tests/InsuranceIntegration.Api.IntegrationTests/
+tests/dev/InsuranceIntegration.Api.IntegrationTests/
   Api/                                      # HTTP-endpoint tests (WebApplicationFactory<Program>)
     HealthEndpointsTests.cs
     SchemaEndpointsTests.cs
@@ -197,10 +210,10 @@ tests/InsuranceIntegration.Api.IntegrationTests/
 ## 4. Conventions
 
 - One test class per system-under-test, marked `public sealed class`.
-- Test method names describe behavior: `Method_ExpectedBehavior_WhenCondition`, e.g. `Process_AutoClearsWhenEligibilityRulesAreSatisfied` (`tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:30`).
-- Use `[Test]` attributes; no fixture-level setup attributes are used - prefer constructor initialization + `IDisposable.Dispose` for teardown, e.g. `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs:10-27`.
+- Test method names describe behavior: `Method_ExpectedBehavior_WhenCondition`, e.g. `Process_AutoClearsWhenEligibilityRulesAreSatisfied` (`tests/dev/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:30`).
+- Use `[Test]` attributes; no fixture-level setup attributes are used - prefer constructor initialization + `IDisposable.Dispose` for teardown, e.g. `tests/dev/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs:10-27`.
 - Use `Assert.That(actual, Is.EqualTo(expected))` NUnit constraint-model assertions (not classic `Assert.AreEqual`).
-- Shared request builders live alongside the tests that use them (e.g. `TestRiskRequestFactory` in `tests/InsuranceIntegration.Api.Tests/Flows/TestRiskRequestFactory.cs`). Favor named optional parameters so each test tweaks only what it cares about.
+- Shared request builders live alongside the tests that use them (e.g. `TestRiskRequestFactory` in `tests/dev/InsuranceIntegration.Api.Tests/Flows/TestRiskRequestFactory.cs`). Favor named optional parameters so each test tweaks only what it cares about.
 - Stubs and fakes sit next to the tests (e.g. `StubIngestHandler.cs`, `StubSourceRiskMapper.cs`). No mocking framework is in use.
 
 ## 5. Adding tests
@@ -209,7 +222,7 @@ Pick the pattern that matches what you are testing.
 
 ### 5.1 Pure service with simple dependencies
 
-Model after `tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs`. Instantiate the service directly with its real collaborators when they are trivial:
+Model after `tests/dev/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs`. Instantiate the service directly with its real collaborators when they are trivial:
 
 ```csharp
 var service = new RatingService(new ProductCatalog());
@@ -220,7 +233,7 @@ Assert.That(result.TechnicalPremium, Is.EqualTo(750m));
 
 ### 5.2 Canonical flow test using the shared factory
 
-Use `TestRiskRequestFactory.Create(...)` to build a `CanonicalRiskRequest` with deterministic defaults, then override only the fields your scenario needs - see `tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:17-27`.
+Use `TestRiskRequestFactory.Create(...)` to build a `CanonicalRiskRequest` with deterministic defaults, then override only the fields your scenario needs - see `tests/dev/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs:17-27`.
 
 ```csharp
 var service = CreateService();
@@ -237,7 +250,7 @@ Assert.That(result.AdjustedPremium, Is.GreaterThan(result.BasePremium));
 
 ### 5.3 Source mapper test
 
-Model after `tests/InsuranceIntegration.Api.Tests/Mappers/Risks/QuoteForgeRiskMapperTests.cs`:
+Model after `tests/dev/InsuranceIntegration.Api.Tests/Mappers/Risks/QuoteForgeRiskMapperTests.cs`:
 
 ```csharp
 var time = new FakeTimeProvider(new DateTimeOffset(2026, 1, 15, 8, 30, 0, TimeSpan.Zero));
@@ -257,7 +270,7 @@ var canonical = mapper.Map(request);
 
 ### 5.4 Persistence test with in-memory SQLite
 
-Use this pattern for any test that needs the real `IntegrationDbContext`. Based on `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs` and `tests/InsuranceIntegration.Api.Tests/Clearance/EfCoreSubmissionRegistryTests.cs`:
+Use this pattern for any test that needs the real `IntegrationDbContext`. Based on `tests/dev/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs` and `tests/dev/InsuranceIntegration.Api.Tests/Clearance/EfCoreSubmissionRegistryTests.cs`:
 
 ```csharp
 public sealed class MyPersistenceTests : IDisposable
@@ -297,15 +310,15 @@ Key details:
 
 ### 5.5 Ingest dispatcher / idempotency test
 
-Follow `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. Create a custom `IIngestHandler` implementation to assert on invocation counts, and pair the dispatcher with `InMemoryIdempotencyStore` to avoid EF Core setup when you only care about dispatch semantics.
+Follow `tests/dev/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. Create a custom `IIngestHandler` implementation to assert on invocation counts, and pair the dispatcher with `InMemoryIdempotencyStore` to avoid EF Core setup when you only care about dispatch semantics.
 
 ### 5.6 Adding a test double
 
-Stubs live in the same folder as the tests that need them. Keep the file `internal`-scoped to the test project, e.g. `tests/InsuranceIntegration.Api.Tests/Ingest/StubIngestHandler.cs`. Prefer simple, readable stubs over reflection-heavy mock frameworks.
+Stubs live in the same folder as the tests that need them. Keep the file `internal`-scoped to the test project, e.g. `tests/dev/InsuranceIntegration.Api.Tests/Ingest/StubIngestHandler.cs`. Prefer simple, readable stubs over reflection-heavy mock frameworks.
 
 ### 5.7 HTTP-endpoint integration test
 
-Lives in `tests/InsuranceIntegration.Api.IntegrationTests/Api`. Derive from `ApiTestBase` (empty database) or `SeededApiTestBase` (development data seeded once per fixture); both expose `GetAsync`/`PostAsync` helpers over an in-process `HttpClient`, and `HttpResponseAssertions` gives fluent status/JSON checks. Model after `ProductEndpointsTests`:
+Lives in `tests/dev/InsuranceIntegration.Api.IntegrationTests/Api`. Derive from `ApiTestBase` (empty database) or `SeededApiTestBase` (development data seeded once per fixture); both expose `GetAsync`/`PostAsync` helpers over an in-process `HttpClient`, and `HttpResponseAssertions` gives fluent status/JSON checks. Model after `ProductEndpointsTests`:
 
 ```csharp
 public sealed class ProductEndpointsTests : ApiTestBase
@@ -328,7 +341,7 @@ public sealed class ProductEndpointsTests : ApiTestBase
 
 ### 5.8 Blazor-UI component test (bUnit)
 
-Lives in `tests/InsuranceIntegration.Api.IntegrationTests/Ui`. Derive the fixture from `UiPageTestBase` and render a page against `UiGatewayStub` (a hand-written `IUiGateway` stub) via the inherited `Render<TPage>(stub)` helper. Model after `QuotesPageTests`:
+Lives in `tests/dev/InsuranceIntegration.Api.IntegrationTests/Ui`. Derive the fixture from `UiPageTestBase` and render a page against `UiGatewayStub` (a hand-written `IUiGateway` stub) via the inherited `Render<TPage>(stub)` helper. Model after `QuotesPageTests`:
 
 ```csharp
 public sealed class QuotesPageTests : UiPageTestBase
@@ -361,28 +374,28 @@ Use this table when debugging a failure or extending a feature:
 |---|---|
 | Endpoint routing or wiring | `src/InsuranceIntegration.Api/Endpoints`, `src/InsuranceIntegration.Api/Program.cs` |
 | Dependency registration | `src/InsuranceIntegration.Api/Configuration/ServiceRegistration.cs` |
-| Risk flow behavior | `tests/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs`, `.../RiskFlowTransactionTypeTests.cs`, `.../RiskFlowCoverageTests.cs` |
-| Bind preconditions (expired / wrong-status / already-bound quote) | `tests/InsuranceIntegration.Api.Tests/Flows/BindPreconditionServiceTests.cs` |
-| Source mappers | `tests/InsuranceIntegration.Api.Tests/Mappers/Risks/*` |
-| Ingest dispatch + idempotency | `tests/InsuranceIntegration.Api.Tests/Ingest/*` |
-| Risk orchestration (relational write model + outbox enqueue) | `tests/InsuranceIntegration.Api.Tests/Orchestration/RiskSubmissionOrchestratorTests.cs` |
-| Clearance / fuzzy matching | `tests/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
-| Outbox background dispatch | `tests/InsuranceIntegration.Api.Tests/Outbox/*` |
-| Cancellation / endorsement math (pure) | `tests/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
-| Cancellation / endorsement end-to-end (snapshot + DomainEvents) | `tests/InsuranceIntegration.Api.Tests/Policies/PolicyLifecycleServiceTests.cs` |
-| Renewal pricing + lineage | `tests/InsuranceIntegration.Api.Tests/Policies/PolicyRenewalServiceTests.cs` |
-| Rating / catalog math | `tests/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
-| Correlation ID scoping | `tests/InsuranceIntegration.Api.Tests/Correlation/*` |
-| Policy / Quote snapshot projection | `tests/InsuranceIntegration.Api.Tests/Snapshots/PolicySnapshotProjectorTests.cs`, `.../SnapshotPipelineTests.cs` |
-| Snapshot rebuild from DomainEvents | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotRebuildServiceTests.cs` |
-| DomainEvents row writes / idempotent replay | `tests/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
-| HTTP endpoint status codes / JSON bodies | `tests/InsuranceIntegration.Api.IntegrationTests/Api/*EndpointsTests.cs` |
-| API-key enforcement at the HTTP layer | `tests/InsuranceIntegration.Api.IntegrationTests/Api/SecurityEndpointsTests.cs` |
-| HTTP middleware (correlation-id echo, /database 404 gate) | `tests/InsuranceIntegration.Api.IntegrationTests/Api/PipelineEndpointsTests.cs` |
-| Multi-source ingest routing (billing/claim/compliance) | `tests/InsuranceIntegration.Api.IntegrationTests/Api/MultiSourceIngestEndpointsTests.cs` |
-| Development data seeder idempotency | `tests/InsuranceIntegration.Api.IntegrationTests/Api/DevelopmentDataSeederTests.cs` |
-| Product catalog lookups / rating defaults | `tests/InsuranceIntegration.Api.Tests/Products/ProductCatalogTests.cs` |
-| Blazor page rendering / pager / filters | `tests/InsuranceIntegration.Api.IntegrationTests/Ui/*PageTests.cs` |
+| Risk flow behavior | `tests/dev/InsuranceIntegration.Api.Tests/Flows/RiskFlowServiceTests.cs`, `.../RiskFlowTransactionTypeTests.cs`, `.../RiskFlowCoverageTests.cs` |
+| Bind preconditions (expired / wrong-status / already-bound quote) | `tests/dev/InsuranceIntegration.Api.Tests/Flows/BindPreconditionServiceTests.cs` |
+| Source mappers | `tests/dev/InsuranceIntegration.Api.Tests/Mappers/Risks/*` |
+| Ingest dispatch + idempotency | `tests/dev/InsuranceIntegration.Api.Tests/Ingest/*` |
+| Risk orchestration (relational write model + outbox enqueue) | `tests/dev/InsuranceIntegration.Api.Tests/Orchestration/RiskSubmissionOrchestratorTests.cs` |
+| Clearance / fuzzy matching | `tests/dev/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
+| Outbox background dispatch | `tests/dev/InsuranceIntegration.Api.Tests/Outbox/*` |
+| Cancellation / endorsement math (pure) | `tests/dev/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
+| Cancellation / endorsement end-to-end (snapshot + DomainEvents) | `tests/dev/InsuranceIntegration.Api.Tests/Policies/PolicyLifecycleServiceTests.cs` |
+| Renewal pricing + lineage | `tests/dev/InsuranceIntegration.Api.Tests/Policies/PolicyRenewalServiceTests.cs` |
+| Rating / catalog math | `tests/dev/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
+| Correlation ID scoping | `tests/dev/InsuranceIntegration.Api.Tests/Correlation/*` |
+| Policy / Quote snapshot projection | `tests/dev/InsuranceIntegration.Api.Tests/Snapshots/PolicySnapshotProjectorTests.cs`, `.../SnapshotPipelineTests.cs` |
+| Snapshot rebuild from DomainEvents | `tests/dev/InsuranceIntegration.Api.Tests/Snapshots/SnapshotRebuildServiceTests.cs` |
+| DomainEvents row writes / idempotent replay | `tests/dev/InsuranceIntegration.Api.Tests/Snapshots/SnapshotPipelineTests.cs` (asserts event log + history) |
+| HTTP endpoint status codes / JSON bodies | `tests/dev/InsuranceIntegration.Api.IntegrationTests/Api/*EndpointsTests.cs` |
+| API-key enforcement at the HTTP layer | `tests/dev/InsuranceIntegration.Api.IntegrationTests/Api/SecurityEndpointsTests.cs` |
+| HTTP middleware (correlation-id echo, /database 404 gate) | `tests/dev/InsuranceIntegration.Api.IntegrationTests/Api/PipelineEndpointsTests.cs` |
+| Multi-source ingest routing (billing/claim/compliance) | `tests/dev/InsuranceIntegration.Api.IntegrationTests/Api/MultiSourceIngestEndpointsTests.cs` |
+| Development data seeder idempotency | `tests/dev/InsuranceIntegration.Api.IntegrationTests/Api/DevelopmentDataSeederTests.cs` |
+| Product catalog lookups / rating defaults | `tests/dev/InsuranceIntegration.Api.Tests/Products/ProductCatalogTests.cs` |
+| Blazor page rendering / pager / filters | `tests/dev/InsuranceIntegration.Api.IntegrationTests/Ui/*PageTests.cs` |
 
 ## 7. Manual end-to-end testing
 
@@ -443,7 +456,7 @@ $again = Invoke-RestMethod `
 $response.outcome.entityId -eq $again.outcome.entityId
 ```
 
-Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` - this matches the behavior asserted by `tests/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
+Expect `True`. Under the hood, `EfCoreIdempotencyStore` returns the stored `IngestReceipt` - this matches the behavior asserted by `tests/dev/InsuranceIntegration.Api.Tests/Ingest/IdempotencyDispatchTests.cs`. You can also fetch the persisted receipt directly: `GET /api/v1/ingest/CONTOSO_UW/<envelopeId>` returns 200 with the same shape, or 404 if no entry exists for that key.
 
 ### 7.4 Canonical risk submission
 
@@ -572,7 +585,7 @@ You can also confirm rows move from `DispatchedAtUtc IS NULL` to a set timestamp
 sqlite3 .\integration.db "SELECT EventId, EventType, DispatchedAtUtc FROM OutboxMessages ORDER BY OccurredAtUtc DESC LIMIT 10;"
 ```
 
-The automated equivalent lives in `tests/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs`.
+The automated equivalent lives in `tests/dev/InsuranceIntegration.Api.Tests/Outbox/OutboxDispatcherTests.cs`.
 
 ### 7.7 Correlation tracing
 
@@ -594,3 +607,79 @@ The same value is attached to the request's log scope on the server side.
 - **Flaky time-sensitive tests** - inject `TimeProvider` via the constructor (as `src/InsuranceIntegration.Api/Services/Outbox/OutboxDispatcher.cs` does). Use `TimeProvider.System` in tests or a controllable fake if you need to pin `now`.
 - **`dotnet test` says "No test is available in ..."** - confirm the test class is `public` and methods are annotated with `[Test]`. `internal` classes are not discovered.
 - **Coverage file missing** - the `--collect` argument must be quoted exactly as `"XPlat Code Coverage"`; otherwise PowerShell splits it into multiple tokens.
+
+## 9. Two-tier coverage map & reduction review
+
+The suite is deliberately split into a **dev tier** (white-box, in-process, .NET/NUnit under `tests/dev/`) and a **QA tier** (black-box, against the running app, TypeScript/Playwright under `tests/qa/`). This section documents the QA tier and records the **2026 test-reduction review** that checked whether the two tiers overlap enough to safely cut tests.
+
+### 9.1 QA tier (Playwright black-box) — `tests/qa/`
+
+A self-contained Node/TypeScript project; it has its own `package.json`, `tsconfig.json`, `playwright.config.ts`, and README. It exercises the **deployed app** end to end — real HTTP, a real browser, real seeded data — and is the closest automated proxy for a user or downstream integrator.
+
+```text
+tests/qa/
+  playwright.config.ts          # projects: api, ui-chromium, ui-firefox, ui-webkit, a11y
+  test-targets.config.ts        # base URLs (INSURANCE_APP_BASE_URL, default http://localhost:5000)
+  src/
+    core/api/base-api.client.ts # BaseApiClient (get/post/put/patch/delete/expectOk)
+    core/ui/base.page.ts        # BasePage (visit/expectVisible/click/textContents)
+    clients/insurance-app/      # InsuranceApiClient — typed wrapper over every endpoint
+    pages/insurance-app/        # page objects (nav, home, quotes, quote-detail, policies, ingest, events)
+    builders/
+      objects/                  # QuoteForgeEnvelopeBuilder (fluent, immutable, unique ids)
+      expected/                 # expectedRating — TS port of RatingService (results oracle)
+      requests/                 # PagedQueryBuilder (skip/take/page → query string)
+    models/api/                 # *.dto.ts response contracts
+    fixtures/insurance-app/     # test = base.extend<{ api, nav, pages... }>
+    helpers/                    # unique-id, a11y (assertNoSeriousA11yViolations)
+  specs/insurance-app/
+    api/                        # *.api.spec.ts — health, products, source-systems, quotes,
+                                #   policies, ingest, schemas, rating (32 tests)
+    ui/                         # *.spec.ts — navigation, dashboard, quotes, policies, ingest
+                                #   (18 tests × 3 browsers = 54)
+    a11y/                       # *.a11y.spec.ts — axe WCAG 2.0/2.1 A+AA on 5 routes (5 tests)
+```
+
+**Total QA-tier tests: 91** (32 API + 54 UI across three browsers + 5 a11y).
+
+Run it from `tests/qa/` (the `webServer` block auto-starts the API on `http://localhost:5000` against an isolated SQLite DB in `tests/qa/.tmp/`, so QA runs never touch the dev database):
+
+```powershell
+Set-Location .\tests\qa
+npm install            # first time only
+npx playwright install # first time only — browser binaries
+
+npm test               # full suite (api + ui×3 + a11y)
+npm run test:api       # API project only
+npm run test:ui        # UI projects (all three browsers)
+npm run test:a11y      # accessibility project only
+npm run test:smoke     # @smoke-tagged subset
+npm run report         # open the last HTML report
+```
+
+QA-tier conventions: one `BaseApiClient`/`BasePage` per concern; fluent immutable builders in three tiers (**objects**, **expected results**, **requests**); `*.dto.ts` response contracts; `data-test` as the Playwright `testIdAttribute`; `@smoke`/`@critical` tags; resilient assertions (floors such as `>= 28` quotes rather than exact counts, unique envelope ids, superset catalog checks) so the black-box specs tolerate seed growth. Full details live in `tests/qa/README.md`.
+
+> The a11y project earns its keep: it caught a genuine WCAG AA contrast defect in the app's status badges (`wwwroot/app.css`), which was fixed rather than suppressed — the QA value loop working as intended.
+
+### 9.2 Coverage map — who proves what
+
+| Surface | Dev tier (white-box) | QA tier (black-box) |
+|---|---|---|
+| Rating math | `RatingServiceTests` (premium **decomposition**: min-premium applied, load amount, exception type) | `rating.api.spec.ts` (endpoint premium vs independent oracle) |
+| Product catalog | `ProductCatalogTests` (case-insensitive lookup, null-for-unknown) | `products.api.spec.ts` (catalog list contract) |
+| Quote/policy read | `QuoteReadEndpointsTests`, `PolicyReadEndpointsTests` (in-process JSON shape) | `quotes/policies.api.spec.ts` (live paging, detail snapshot) |
+| Ingest | unit dispatch + `IngestEndpointsTests` (idempotent replay) | `ingest.api.spec.ts` (live envelope → receipt → projection) |
+| Pages (render branches) | bUnit `*PageTests` (**empty states, not-found, null props, rejection notes** with controlled data) | `ui/*.spec.ts` (real browser, real data, **3 engines**, navigation) |
+| Accessibility | — | `a11y/surfaces.a11y.spec.ts` (axe WCAG) |
+| Cross-browser | — | Chromium + Firefox + WebKit |
+
+### 9.3 Reduction review (2026) — conclusion: keep both tiers
+
+The review asked whether adding the QA tier made dev-tier tests redundant enough to delete. Candidate-by-candidate verification (reading each test, not just its name) found the apparent overlap is mostly **complementary coverage**, so no wholesale deletion was made:
+
+- **bUnit UI tests are *not* redundant with Playwright UI specs.** The bUnit fixtures drive a stubbed `IUiGateway`, so they cover render branches the black-box specs cannot reach against a seeded database — empty states (no quotes/policies/events), not-found alerts, bind-rejection notes, and null/omitted-field handling. Playwright covers the happy paths end-to-end across three browsers plus a11y. Deleting the bUnit suite would drop the edge-case branch coverage.
+- **The six `PolicyLifecycleEndpointsTests` "unknown policy → 404" cases each guard a *distinct* endpoint's wiring** (cancel/endorse/renew/reinstate/lapse/non-renew). They look like one repeated assertion but each protects a different route against silently returning 200 for a missing policy.
+- **`RatingServiceTests` and `ProductCatalogTests` assert internals the HTTP/QA tests can't see** (premium decomposition, exception types, case-insensitive resolution). The QA rating oracle validates the *endpoint result*; the unit tests pin the *math breakdown*.
+
+**Net safe deletions: 0.** The maintenance win came from *architecture*, not deletion: the two tiers are cleanly separated (`tests/dev` vs `tests/qa`), each with a single responsibility, so a change touches exactly one tier. Optional future consolidations (require sign-off, each trades coverage for fewer tests): collapsing the bUnit happy-path render assertions now that Playwright covers them (loses fast in-process render pinning), or running rendering-insensitive UI specs on a single browser instead of three (loses cross-engine coverage). Neither was applied, because the conservative, coverage-preserving choice is to keep them.
+

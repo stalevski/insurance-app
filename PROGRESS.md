@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-15_
+_Last updated: 2026-06-16_
 
 ## Vision
 
@@ -216,6 +216,13 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **Two-tier test split + Playwright QA suite (2026-06-16).** The .NET tests moved to `tests/dev/`
+  (white-box: 360 NUnit tests) and a new **black-box QA tier** lives in `tests/qa/` - **Playwright +
+  TypeScript** (91 tests: real HTTP API checks, UI flows across Chromium/Firefox/WebKit, and axe
+  accessibility), self-contained with its own `package.json`/`tsconfig`/`playwright.config`. Also
+  fixed a real **WCAG AA badge-contrast** bug in `wwwroot/app.css` (caught by the a11y suite) and an
+  integration-test **DB-isolation** flake (per-factory connection override; corrected seed counts
+  32 -> 28). See `docs/guides/TESTING.md` §0 + §9.
 - Build green (`dotnet build -c Release`); **all 360 tests pass** (QA-architect coverage pass added
   +31 on 2026-06-15 - 19 bUnit UI page tests + 4 HTTP pipeline tests + 3 multi-source ingest tests +
   4 ProductCatalog units + 1 seeder idempotency test; QA/SDET test suite - 56 HTTP API
@@ -383,9 +390,10 @@ and the highest-value parts of 4. Listed most-valuable first:
    **Blazor UI component tests** with **bUnit** - render `Home`, `Ingest`, `Quotes`, `Policies`,
    `PolicyDetail`, `QuoteDetail`, `Events`, `Database` against a stub `IUiGateway`; assert rendered
    rows, 1-based pager state, filter behaviour, detail not-found/render, and the template/receipt flow.
-6. **End-to-end UI smoke** with **Playwright** - drive quote → bind → policy → claim → billing
-   through the running app and assert the UI + the `/database` browser reflect the change (mirrors
-   the Playwright tooling already used for the screenshot capture).
+6. ✅ **Landed 2026-06-16** - the **black-box QA tier** (`tests/qa/`, Playwright + TypeScript)
+   drives the running app end-to-end across Chromium/Firefox/WebKit and adds real HTTP API checks
+   plus axe accessibility assertions (91 tests green). **End-to-end UI smoke** with **Playwright** -
+   drive quote → bind → policy through the running app and assert the UI reflects the change.
 7. **Concurrency / race tests** - idempotency store first-writer-wins under parallel ingest, outbox
    dispatch under contention, and snapshot rebuild while events are appended.
 8. **Unroutable ingest-type hardening (observed 2026-06-15)** - `POST /api/v1/ingest` with a message

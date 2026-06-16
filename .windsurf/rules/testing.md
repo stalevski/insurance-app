@@ -11,7 +11,7 @@ description: Test conventions for the insurance integration platform
 - **Time:** use `FakeTimeProvider` (`Microsoft.Extensions.TimeProvider.Testing`) - never wall-clock
   time. Code under test should accept an injected `TimeProvider`.
 - Prefer testing **flow/services** directly (they hold the business logic) over endpoints.
-- **HTTP-endpoint + Blazor-UI tests** live in `tests/InsuranceIntegration.Api.IntegrationTests`:
+- **HTTP-endpoint + Blazor-UI tests** live in `tests/dev/InsuranceIntegration.Api.IntegrationTests`:
   use `WebApplicationFactory<Program>` via `ApiTestBase`/`SeededApiTestBase` for the API, and
   **bUnit** with a stub `IUiGateway` for Razor pages. See `docs/guides/TESTING.md` §5.7-5.8.
   Tag new integration fixtures with `[Category("Api")]` / `[Category("Ui")]` (the `Api` category is

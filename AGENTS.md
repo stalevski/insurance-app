@@ -23,7 +23,9 @@ and is on a path to becoming a deployable product.
 - **Tests:** **NUnit 4** + NUnit3TestAdapter + coverlet (coverage) + `FakeTimeProvider`
   (`Microsoft.Extensions.TimeProvider.Testing`); plus `Microsoft.AspNetCore.Mvc.Testing`
   (`WebApplicationFactory`) for HTTP-endpoint integration tests and **bUnit** for Blazor-UI
-  component tests (in `tests/InsuranceIntegration.Api.IntegrationTests`)
+  component tests (in `tests/dev/InsuranceIntegration.Api.IntegrationTests`). A separate
+  **black-box QA tier** (`tests/qa/`) drives the running app with **Playwright** (TypeScript) -
+  real HTTP + browser (Chromium/Firefox/WebKit) + accessibility; see `docs/guides/TESTING.md` §9.
 - **Frontend:** Blazor (added in the UI phase; same .NET host, no separate JS toolchain)
 
 ## Architecture: layered model separation
@@ -119,7 +121,8 @@ dotnet run --project src/InsuranceIntegration.Api
 | DB context + entities | `src/InsuranceIntegration.Api/Persistence/` |
 | Read models | `src/InsuranceIntegration.Api/Snapshots/`, `Services/Snapshots/` |
 | Blazor Server UI | `src/InsuranceIntegration.Api/Components/`, `wwwroot/`, `Services/Ui/` |
-| Tests | `tests/InsuranceIntegration.Api.Tests/` |
+| Dev-tier tests (white-box, .NET/NUnit) | `tests/dev/InsuranceIntegration.Api.Tests/`, `tests/dev/InsuranceIntegration.Api.IntegrationTests/` |
+| QA-tier tests (black-box, Playwright) | `tests/qa/` |
 | Known bugs (documented, unfixed) | `docs/project/KNOWN_ISSUES.md` |
 | Project progress / continuity | `PROGRESS.md` |
 
