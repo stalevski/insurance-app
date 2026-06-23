@@ -55,8 +55,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Squash-merge minor and patch updates
-        if: steps.meta.outputs.update-type == 'version-update:semver-minor' || steps.meta.outputs.update-type == 'version-update:semver-patch'
+      - name: Squash-merge minor, patch & GitHub Actions updates
+        # GitHub Actions bumps are validated by this same CI run, so they are
+        # safe to auto-merge even on a major; npm/nuget majors stay manual.
+        if: >-
+          steps.meta.outputs.update-type == 'version-update:semver-minor' ||
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.package-ecosystem == 'github_actions'
         run: |
           gh pr merge --squash "$PR_URL" \
             || echo "::notice::Merge deferred; Dependabot will rebase and retry."
