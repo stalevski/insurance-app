@@ -17,6 +17,23 @@ updates:
           - minor
           - patch
 
+  # JavaScript dependencies for the Playwright QA suite (tests/qa)
+  - package-ecosystem: npm
+    directory: "/tests/qa"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
   # GitHub Actions versions used in .github/workflows/
   - package-ecosystem: github-actions
     directory: "/"
