@@ -654,6 +654,7 @@ npm run test:api       # API project only
 npm run test:ui        # UI projects (all three browsers)
 npm run test:a11y      # accessibility project only
 npm run test:smoke     # @smoke-tagged subset
+npm run test:shuffle   # full suite in random order (--shuffle, order-dependence check)
 npm run report         # open the last HTML report
 ```
 
