@@ -225,6 +225,10 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **QA-suite dependency advisory cleared (2026-11-12).** `npm audit fix` in `tests/qa` moved
+  `brace-expansion` 5.0.9 -> 5.0.13, closing the one **high**-severity advisory there (lockfile
+  only). The ten remaining advisories are all the single `minimatch` entry, fixable only by
+  minimatch 11 while eslint 10 / typescript-eslint pin `^10` - left open until they widen.
 - **Return-premium refunds (2026-11-12).** `POST /api/v1/billing/refunds` closes the money loop that
   cancelling or endorsing a policy opens: the policy services already computed the return premium but
   there was nothing that turned it into a payable decision. Settlement rules are ordered so each step
