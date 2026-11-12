@@ -6,6 +6,7 @@ import type { SourceSystemDto } from '@models/api/source-system.dto';
 import type { QuoteSnapshotDto, QuoteSummaryDto } from '@models/api/quote.dto';
 import type { PolicySnapshotDto, PolicySummaryDto } from '@models/api/policy.dto';
 import type { IngestReceiptDto, SourceIngestEnvelopeDto } from '@models/api/ingest.dto';
+import type { RefundRequestDto, RefundResultDto } from '@models/api/billing.dto';
 import { PagedQueryBuilder } from '@builders/requests/paged-query.builder';
 
 /**
@@ -91,5 +92,16 @@ export class InsuranceApiClient extends BaseApiClient {
 
   schemaResponse(schemaPath: string): Promise<APIResponse> {
     return this.request.get(`api/v1/schemas/${schemaPath}`);
+  }
+
+  // ---- Billing -----------------------------------------------------------
+
+  /** Return-premium refund decision (no money moves; the endpoint is a pure calculation). */
+  refund(request: RefundRequestDto): Promise<RefundResultDto> {
+    return this.post<RefundRequestDto, RefundResultDto>('api/v1/billing/refunds', request);
+  }
+
+  refundResponse(request: RefundRequestDto): Promise<APIResponse> {
+    return this.request.post('api/v1/billing/refunds', { data: request });
   }
 }

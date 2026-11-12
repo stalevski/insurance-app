@@ -112,6 +112,7 @@ public static class ServiceRegistration
         services.AddScoped<IComplianceFlowService, ComplianceFlowService>();
         services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
         services.AddScoped<IDelinquencyAssessmentService, DelinquencyAssessmentService>();
+        services.AddScoped<IRefundProcessingService, RefundProcessingService>();
         services.AddScoped<IClaimLifecycleService, ClaimLifecycleService>();
         services.AddScoped<IClaimFinancialService, ClaimFinancialService>();
 

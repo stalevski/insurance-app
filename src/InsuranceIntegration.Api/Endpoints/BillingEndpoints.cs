@@ -32,6 +32,19 @@ public static class BillingEndpoints
             }
         });
 
+        endpoints.MapPost("/api/v1/billing/refunds", (RefundRequest request, IRefundProcessingService refunds) =>
+        {
+            try
+            {
+                var result = refunds.Process(request);
+                return Results.Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid refund request");
+            }
+        });
+
         return endpoints;
     }
 }
