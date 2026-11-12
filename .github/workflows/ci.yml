@@ -12,6 +12,10 @@ jobs:
   build-test:
     name: Build and test
     runs-on: ubuntu-latest
+    # A runner that loses contact would otherwise stay "in progress" for
+    # GitHub's 6-hour default and could not be cancelled (nothing is alive to
+    # acknowledge it). Restore + build + test normally finish in under 2 min.
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -45,6 +49,7 @@ jobs:
     needs: build-test
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
       pull-requests: write

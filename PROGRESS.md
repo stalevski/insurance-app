@@ -216,6 +216,9 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **CI jobs are time-bounded (2026-11-12).** `build-test` (20 min) and `auto-merge` (5 min) set
+  `timeout-minutes`. A runner that loses contact mid-job otherwise keeps the run "in progress" for
+  GitHub's 6-hour default and cannot be cancelled, because nothing is alive to acknowledge it.
 - **Two-tier test split + Playwright QA suite (2026-06-16).** The .NET tests moved to `tests/dev/`
   (white-box: 360 NUnit tests) and a new **black-box QA tier** lives in `tests/qa/` - **Playwright +
   TypeScript** (91 tests: real HTTP API checks, UI flows across Chromium/Firefox/WebKit, and axe
