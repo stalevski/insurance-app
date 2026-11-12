@@ -303,7 +303,41 @@ Endorsements with no `sectionOperations[]` keep the prior behavior (premium math
 
 ---
 
-## 6. `GET /api/v1/products/{productCode}/rating`
+## 6. `POST /api/v1/billing/refunds`
+
+Turns the **return premium** from a cancellation or endorsement into a payable refund decision.
+Pure calculation - no money moves - so it is safe to replay.
+
+**Mandatory body fields**: `policyReference`, `transactionType` (`Cancellation` | `Endorsement`), `transactionReference`, `returnPremium`.
+
+**Optional**: `collectedPremium` (default `0`), `previouslyRefunded` (default `0`), `adminFeeWithheld` (default `0`), `outstandingPremium` (default `0`), `currencyCode` (default `USD`), `payoutMethod` (`BankTransfer` | `Card` | `Credit`, default `BankTransfer`), `effectiveDate` (default today).
+
+**Settlement order** - each step caps the next:
+
+1. **Cap to collected premium**: `refundableBase = min(returnPremium, collectedPremium - previouslyRefunded)`.
+   Anything above that is reported as `uncollectedPortion` with `cappedByCollectedPremium = true`.
+2. **Withhold the admin fee**: `min(adminFeeWithheld, refundableBase)`.
+3. **Recover arrears**: `min(outstandingPremium, after fee)`.
+4. **Pay the rest**, rounded half-away-from-zero to two decimals.
+5. **Payable date** = effective date + channel lead time (bank transfer 5 days, card 3, credit same day).
+
+`outcome` is `Payable` (net > 0), `NoRefund` (nothing owed) or `Exhausted` (all collected premium already refunded).
+
+`refundReference` is deterministic - `RFD-CAN-<transactionReference>` or `RFD-END-<transactionReference>` - so replaying the same adjustment produces the same reference and a downstream ledger can reject the duplicate instead of paying twice.
+
+```powershell
+curl -X POST http://localhost:5000/api/v1/billing/refunds `
+  -H "Content-Type: application/json" `
+  -d '{"policyReference":"POL-REF-001","transactionType":"Cancellation","transactionReference":"CAN-1001",
+       "returnPremium":500,"collectedPremium":500,"adminFeeWithheld":50,"outstandingPremium":100,
+       "payoutMethod":"Card","effectiveDate":"2026-04-01"}'
+```
+
+Yields `netRefundAmount = 350`, `adminFeeWithheld = 50`, `offsetAgainstArrears = 100`, `payoutMethod = "Card"`, `payableDate = "2026-04-04"`, `outcome = "Payable"`.
+
+---
+
+## 7. `GET /api/v1/products/{productCode}/rating`
 
 Pure GET - no JSON body. Mandatory query parameter `annualRevenue`. Optional `currencyCode` (default `USD`).
 
@@ -321,7 +355,7 @@ Catalog values (`COMMERCIAL_PROPERTY`, `LIABILITY`, `CYBER`, `MOTOR`) are docume
 
 ---
 
-## 7. Field-mandatoriness cheat sheet
+## 8. Field-mandatoriness cheat sheet
 
 | Endpoint | Mandatory body fields |
 |---|---|
@@ -335,7 +369,7 @@ Mandatory **`data` / `payload` fields** by `(source, type)` are listed in §1 ab
 
 ---
 
-## 8. End-to-end test plan
+## 9. End-to-end test plan
 
 A repeatable smoke run that exercises every flow extension (assumes the API at `http://localhost:5000`):
 
@@ -371,11 +405,11 @@ Each step's expected outcomes are described in §1-§5 above.
 
 ---
 
-## 9. Testing with Postman
+## 10. Testing with Postman
 
 Three options, in increasing order of setup effort and expressiveness.
 
-### 9.1 Option A - Import the curated collection (recommended)
+### 10.1 Option A - Import the curated collection (recommended)
 
 Two files live under `docs/reference/postman/`:
 
@@ -397,7 +431,7 @@ What the collection does for you automatically (via a collection-level pre-reque
 
 To **deliberately** test idempotency, replace `{{envelopeId}}` in the request body with a fixed string (e.g. `"id": "evt-fixed-1"`) and send the same request twice - the second response will have an identical `result.entityId`.
 
-### 9.2 Option B - Import the live OpenAPI document
+### 10.2 Option B - Import the live OpenAPI document
 
 If you'd rather generate every endpoint from the live API:
 
@@ -407,7 +441,7 @@ If you'd rather generate every endpoint from the live API:
 
 Trade-offs vs option A: always in sync with the latest endpoints, but no scenario-specific bodies, no pre-request scripts, and no business-rule annotations.
 
-### 9.3 Option C - Manual request from `docs/reference/examples/*.json`
+### 10.3 Option C - Manual request from `docs/reference/examples/*.json`
 
 For one-off testing without importing anything:
 
@@ -416,7 +450,7 @@ For one-off testing without importing anything:
 3. **Body** tab → choose **raw** + **JSON**, then paste the contents of any `docs/reference/examples/*.json` file.
 4. **Send**.
 
-### 9.4 Postman tips that matter for this API
+### 10.4 Postman tips that matter for this API
 
 - **Idempotency on ingest**: only the `(source, id)` pair is keyed. If you reuse the same `id` you'll get the cached `IngestReceipt` back without the handler running again. The collection's pre-request script avoids this by default; remove the script (Collection → Pre-request Script tab) if you want idempotency to kick in across runs.
 - **Verify what was stored**: every successful `POST /api/v1/ingest` returns an `IngestReceipt` containing `source`, `envelopeId`, `receivedAtUtc`, and a `self` link. Either `GET` the `self` URL to retrieve the persisted receipt, or query the `IngestEntries` table directly with `WHERE Source='...' AND EnvelopeId='...'`.

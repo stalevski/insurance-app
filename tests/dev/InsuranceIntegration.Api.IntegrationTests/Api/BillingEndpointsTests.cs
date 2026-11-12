@@ -132,4 +132,98 @@ public sealed class BillingEndpointsTests : ApiTestBase
 
         response.ShouldHaveStatus(HttpStatusCode.BadRequest);
     }
+
+    [Test]
+    public async Task ProcessRefund_PaysTheReturnPremium_ForACancellation()
+    {
+        var request = new RefundRequest
+        {
+            PolicyReference = "POL-BILL-007",
+            TransactionType = RefundTransactionType.Cancellation,
+            TransactionReference = "CAN-7001",
+            ReturnPremium = 420.5m,
+            CollectedPremium = 1_200m,
+            EffectiveDate = new DateOnly(2026, 3, 1)
+        };
+
+        using var response = await PostAsync("/api/v1/billing/refunds", request);
+
+        var body = await response.ShouldReturnJsonAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(body.GetProperty("outcome").GetString(), Is.EqualTo(RefundOutcome.Payable));
+            Assert.That(body.GetProperty("netRefundAmount").GetDecimal(), Is.EqualTo(420.5m));
+            Assert.That(body.GetProperty("refundReference").GetString(), Is.EqualTo("RFD-CAN-CAN-7001"));
+            Assert.That(body.GetProperty("payableDate").GetString(), Is.EqualTo("2026-03-06"));
+        });
+    }
+
+    [Test]
+    public async Task ProcessRefund_WithholdsTheAdminFee_AndOffsetsArrears()
+    {
+        var request = new RefundRequest
+        {
+            PolicyReference = "POL-BILL-008",
+            TransactionType = RefundTransactionType.Endorsement,
+            TransactionReference = "END-8001",
+            ReturnPremium = 500m,
+            CollectedPremium = 500m,
+            AdminFeeWithheld = 50m,
+            OutstandingPremium = 100m,
+            PayoutMethod = RefundPayoutMethod.Card,
+            EffectiveDate = new DateOnly(2026, 4, 1)
+        };
+
+        using var response = await PostAsync("/api/v1/billing/refunds", request);
+
+        var body = await response.ShouldReturnJsonAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(body.GetProperty("adminFeeWithheld").GetDecimal(), Is.EqualTo(50m));
+            Assert.That(body.GetProperty("offsetAgainstArrears").GetDecimal(), Is.EqualTo(100m));
+            Assert.That(body.GetProperty("netRefundAmount").GetDecimal(), Is.EqualTo(350m));
+            Assert.That(body.GetProperty("payoutMethod").GetString(), Is.EqualTo(RefundPayoutMethod.Card));
+            Assert.That(body.GetProperty("payableDate").GetString(), Is.EqualTo("2026-04-04"));
+        });
+    }
+
+    [Test]
+    public async Task ProcessRefund_CapsAtPremiumCollected()
+    {
+        var request = new RefundRequest
+        {
+            PolicyReference = "POL-BILL-009",
+            TransactionType = RefundTransactionType.Cancellation,
+            TransactionReference = "CAN-9001",
+            ReturnPremium = 900m,
+            CollectedPremium = 300m
+        };
+
+        using var response = await PostAsync("/api/v1/billing/refunds", request);
+
+        var body = await response.ShouldReturnJsonAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(body.GetProperty("refundableBase").GetDecimal(), Is.EqualTo(300m));
+            Assert.That(body.GetProperty("uncollectedPortion").GetDecimal(), Is.EqualTo(600m));
+            Assert.That(body.GetProperty("cappedByCollectedPremium").GetBoolean(), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ProcessRefund_Returns400_ForAnUnsupportedTransactionType()
+    {
+        var request = new RefundRequest
+        {
+            PolicyReference = "POL-BILL-010",
+            TransactionType = "Refund",
+            TransactionReference = "REF-1",
+            ReturnPremium = 100m,
+            CollectedPremium = 100m
+        };
+
+        using var response = await PostAsync("/api/v1/billing/refunds", request);
+
+        response.ShouldHaveStatus(HttpStatusCode.BadRequest);
+    }
 }

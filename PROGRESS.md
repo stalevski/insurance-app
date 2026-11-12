@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-06-16_
+_Last updated: 2026-11-12_
 
 ## Vision
 
@@ -59,6 +59,15 @@ Docker-capable VPS.
   `ApplyLapse`/`ApplyNonRenewal` (both reject non-in-force policies), the new phases in
   `SnapshotMerge` and the UI lifecycle diagram, and the event-type filter on the Events page.
   10 new tests (2026-06-13).
+- [x] **Return-premium refund processing (2026-11-12).** `POST /api/v1/billing/refunds` turns the
+  return premium from a cancellation or endorsement into a payable refund decision. Settlement order
+  is deliberate and each step caps the next: cap to premium actually collected (you cannot refund
+  what was never received, reported as `uncollectedPortion` + `cappedByCollectedPremium`), withhold
+  the admin fee (never more than the refund), recover arrears, then round half-away-from-zero to two
+  decimals. `outcome` is `Payable` / `NoRefund` / `Exhausted`, and the payable date is the effective
+  date plus the channel's clearing lead time (bank transfer 5 days, card 3, credit same day).
+  `refundReference` is deterministic (`RFD-CAN-…` / `RFD-END-…`), so replaying an adjustment cannot
+  produce a second payable refund. 21 unit tests, 4 HTTP integration tests, 7 black-box QA checks.
 - [x] **Billing payment recording.** `POST /api/v1/billing/payments` applies a received payment to
   an installment schedule: it settles open installments (`Issued`/`Overdue` → `Paid`) in due order
   - optionally starting from a targeted installment number - then recomputes the billing position
@@ -216,6 +225,17 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **Return-premium refunds (2026-11-12).** `POST /api/v1/billing/refunds` closes the money loop that
+  cancelling or endorsing a policy opens: the policy services already computed the return premium but
+  there was nothing that turned it into a payable decision. Settlement rules are ordered so each step
+  caps the next - **cap to premium collected** (refunding uncollected premium is an accounting error
+  nothing downstream can undo; the excess is reported as `uncollectedPortion` with
+  `cappedByCollectedPremium`), **withhold the admin fee** (capped at the refund), **recover arrears**,
+  then round half-away-from-zero. `outcome` is `Payable` / `NoRefund` / `Exhausted`; `payableDate` is
+  the effective date plus the channel lead time (bank 5 days, card 3, credit same day); and
+  `refundReference` is deterministic (`RFD-CAN-…`/`RFD-END-…`) so a replayed adjustment yields the
+  same reference instead of a second payment. Coverage: **21 NUnit + 4 HTTP integration + 7 QA
+  black-box checks** (`.NET` suite 360 -> 385, QA suite 91 -> 98).
 - **CI jobs are time-bounded (2026-11-12).** `build-test` (20 min) and `auto-merge` (5 min) set
   `timeout-minutes`. A runner that loses contact mid-job otherwise keeps the run "in progress" for
   GitHub's 6-hour default and cannot be cancelled, because nothing is alive to acknowledge it.
@@ -306,6 +326,13 @@ Docker-capable VPS.
 
 ## Decisions locked in
 
+- **Refunds are a pure calculation over supplied money, not a ledger (2026-11-12).** The billing
+  endpoints in this repo follow the same shape as payments and delinquency: no persistence, the
+  caller supplies the schedule/amounts and gets a decision back. That keeps the service unit-testable
+  and leaves actual money movement to whatever ledger a real deployment plugs in. Consequences:
+  idempotency is expressed as a **deterministic `refundReference`** (`RFD-CAN-…`/`RFD-END-…`) rather
+  than stored state, and the refund is capped by premium **collected**, because returning uncollected
+  premium is a real accounting error that no down-stream system can undo.
 - **Stay on .NET.** No language migration. UI is **Blazor Server** (single language, single host,
   self-contained) - not React/Vue, to minimise toolchains.
 - **Bugs:** document now (Phase 1), fix in a later separate pass.
@@ -326,23 +353,28 @@ Docker-capable VPS.
 
 ## Next steps
 
-1. Phase 4 image build/run is **verified** (2026-06-14, see Current status). Remaining is
+1. **Refund workflow UI (natural follow-on to the new refund endpoint).** `POST
+   /api/v1/billing/refunds` is API-only. Two candidate next slices: (a) a payout **register** that
+   lists refunds awaiting settlement and lets an operator mark one paid, and (b) surfacing the refund
+   on the policy detail page next to the cancellation/endorsement result (they already compute the
+   return premium the refund consumes).
+2. Phase 4 image build/run is **verified** (2026-06-14, see Current status). Remaining is
    real-world deployment only: provision a Docker-capable Linux VPS, then build + run per
    `docs/guides/DEPLOYMENT.md` behind a TLS reverse proxy (Caddy/Nginx).
-2. ~~Gate the read-only DB browser behind Development or a feature flag before production exposure.~~
+3. ~~Gate the read-only DB browser behind Development or a feature flag before production exposure.~~
    **Done (2026-06-14):** `DatabaseBrowserGate` + `DatabaseBrowserGateMiddleware` disable `/database`
    (404) outside Development unless `DatabaseBrowser__Enabled=true`. For deliberate exposure, still
    add proxy-level basic auth / an IP allowlist on `/database` (see `docs/guides/DEPLOYMENT.md`).
-3. Remaining known issues: all High and Medium items are fixed; only low/debatable ones remain -
+4. Remaining known issues: all High and Medium items are fixed; only low/debatable ones remain -
    L1 (Contoso mapper hard-codes insured/broker data), L2 (`Guid.NewGuid()` entity ids in
    mappers/handlers), D1 (BindPoint installment due dates - confirm the intended convention), and
    D2 (38 pre-existing build warnings). See `docs/project/KNOWN_ISSUES.md`.
-4. UI polish (optional): add submission/quote/policy lifecycle action forms
+5. UI polish (optional): add submission/quote/policy lifecycle action forms
    (cancel/endorse/renew/reinstate) that post to the existing `Endpoints/PolicyEndpoints.cs`
    routes; today those are reachable via Swagger only.
-5. Feature backlog: a full enumeration of candidate functionality (with add/defer/skip verdicts)
+6. Feature backlog: a full enumeration of candidate functionality (with add/defer/skip verdicts)
    lives in `docs/project/FEATURE_PLAN.html` - open it in a browser to pick the next feature.
-6. ~~Test refactoring (tech debt): expected-results builder + review the test classes for code
+7. ~~Test refactoring (tech debt): expected-results builder + review the test classes for code
    duplication.~~ **Done (2026-06-15):** the new `tests/InsuranceIntegration.Api.IntegrationTests`
    project adds `ExpectedRatingResult` (rating-math oracle) and fluent request/envelope builders, and
    the duplication was extracted into a shared `ApiTestBase` (`GetAsync`/`PostAsync`),

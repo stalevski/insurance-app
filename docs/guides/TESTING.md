@@ -32,7 +32,7 @@ The dev tier (`tests/dev/`) has **two test projects**:
 - **Categories**: integration fixtures are tagged with NUnit `[Category]` - `Api`, `Ui`, and `Smoke` - so subsets can be run with `--filter` (see §2). The `Api` category sits on `ApiTestBase` and the `Ui` category on `UiPageTestBase`, each inherited by their derived fixtures.
 - **Time-controlled tests**: `Microsoft.Extensions.TimeProvider.Testing` provides `FakeTimeProvider` for advancing the clock deterministically (used by `BindPreconditionServiceTests` to test quote expiry)
 - **Global usings**: `global using NUnit.Framework;` lives in each project's `GlobalUsings.cs`, so test files do **not** need to add `using NUnit.Framework;`
-- **Total dev-tier tests**: **360** (261 unit/service + 99 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally. (The QA tier adds 91 Playwright tests — see [§9](#9-two-tier-coverage-map--reduction-review).)
+- **Total dev-tier tests**: **385** (282 unit/service + 103 HTTP-endpoint/UI integration). Run `dotnet test` to see the current tally. (The QA tier adds 98 Playwright tests — see [§9](#9-two-tier-coverage-map--reduction-review).)
 
 ## 2. Run the tests
 
@@ -382,6 +382,7 @@ Use this table when debugging a failure or extending a feature:
 | Clearance / fuzzy matching | `tests/dev/InsuranceIntegration.Api.Tests/Clearance/*`, `.../Matching/*` |
 | Outbox background dispatch | `tests/dev/InsuranceIntegration.Api.Tests/Outbox/*` |
 | Cancellation / endorsement math (pure) | `tests/dev/InsuranceIntegration.Api.Tests/Policies/PolicyAdjustmentServiceTests.cs` |
+| Return-premium refund settlement (pure) | `tests/dev/InsuranceIntegration.Api.Tests/Billing/RefundProcessingServiceTests.cs` |
 | Cancellation / endorsement end-to-end (snapshot + DomainEvents) | `tests/dev/InsuranceIntegration.Api.Tests/Policies/PolicyLifecycleServiceTests.cs` |
 | Renewal pricing + lineage | `tests/dev/InsuranceIntegration.Api.Tests/Policies/PolicyRenewalServiceTests.cs` |
 | Rating / catalog math | `tests/dev/InsuranceIntegration.Api.Tests/Pricing/RatingServiceTests.cs` |
@@ -670,6 +671,7 @@ QA-tier conventions: one `BaseApiClient`/`BasePage` per concern; fluent immutabl
 | Product catalog | `ProductCatalogTests` (case-insensitive lookup, null-for-unknown) | `products.api.spec.ts` (catalog list contract) |
 | Quote/policy read | `QuoteReadEndpointsTests`, `PolicyReadEndpointsTests` (in-process JSON shape) | `quotes/policies.api.spec.ts` (live paging, detail snapshot) |
 | Ingest | unit dispatch + `IngestEndpointsTests` (idempotent replay) | `ingest.api.spec.ts` (live envelope → receipt → projection) |
+| Refund settlement | `RefundProcessingServiceTests` (cap → fee → arrears order, outcomes, rounding, replay determinism) + `BillingEndpointsTests` (HTTP contract and 400 paths) | `refunds.api.spec.ts` (settlement rules over the live endpoint) |
 | Pages (render branches) | bUnit `*PageTests` (**empty states, not-found, null props, rejection notes** with controlled data) | `ui/*.spec.ts` (real browser, real data, **3 engines**, navigation) |
 | Accessibility | — | `a11y/surfaces.a11y.spec.ts` (axe WCAG) |
 | Cross-browser | — | Chromium + Firefox + WebKit |
