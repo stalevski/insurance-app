@@ -225,6 +225,25 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **NuGet major bumps triaged (2026-11-18).** The three open Dependabot **major** PRs were checked
+  against what each package actually targets before being trusted on green CI, then merged after the
+  full local gate every time (`dotnet restore`, `dotnet format --verify-no-changes --severity warn`,
+  `dotnet build -c Release`, `dotnet test` - **385 green** on each branch):
+  - **#62 `dotnet-ef` 10.0.15 -> 11.0.0** (CLI tool, `.config/dotnet-tools.json`). The nupkg ships
+    `tools/net10.0/any`, so EF 11 tooling runs on the .NET 10 runtime, and
+    `dotnet ef migrations list --project src/InsuranceIntegration.Api --no-connect` lists all four
+    migrations against the EF Core 10.0.15 design package.
+  - **#63 `Microsoft.Extensions.TimeProvider.Testing` 10.11.0 -> 11.0.0** (test-only library). It
+    multi-targets `net10.0`/`net11.0`; the restore picks `lib/net10.0/...dll`, so no .NET 11 asset is
+    pulled into the test project.
+  - **#64 `Swashbuckle.AspNetCore.SwaggerUI` 10.3.1 -> 11.0.1** (library used by the API). It ships
+    a `net10.0` assembly with a `Microsoft.AspNetCore.App` framework reference; a Development smoke
+    run then returned 200 for `/swagger/index.html`, `/swagger/swagger-ui.css` (embedded assets),
+    `/openapi/v1.json` and `/health`.
+  Nothing was closed - every major targets .NET 10. Lesson recorded for the next sweep: check the
+  nuspec/lib TFM and, for tools, the `tools/<tfm>` folder inside the nupkg, *before* assuming a
+  major needs the next .NET. The accepted `picomatch` advisory (see the QA-suite entry below) is
+  unaffected by these bumps.
 - **QA-suite `minimatch` advisory cleared (2026-11-18).** `eslint` 10.14.0 -> 10.15.0 and
   `typescript-eslint` 8.72.2 -> 8.73.0 in `tests/qa` admit `minimatch ^11` (both previously pinned
   `^10`), which is the only way past the **moderate** `minimatch` advisory
@@ -235,7 +254,10 @@ Docker-capable VPS.
   `typescript-eslint` 8.47.0 **downgrade**. Remaining and accepted: **high** `picomatch`
   (GHSA-fc5q-39xc-vjpf) has no patched release at all (4.0.7 is latest), so the 9 flagged nodes are
   that one advisory fanning out via `tinyglobby` -> `fdir` ->
-  `@typescript-eslint/typescript-estree`; revisit when picomatch ships a fix. Gate for this tier
+  `@typescript-eslint/typescript-estree`; revisit when picomatch ships a fix. On GitHub the
+  `minimatch` alert (#8) is now `fixed` and the `picomatch` alert (#9) was `auto_dismissed`
+  (`first_patched_version: null`), so the repository currently has **zero open Dependabot alerts**.
+  Gate for this tier
   (it has no CI job): `npm run lint` + `npx tsc --noEmit` clean; the Playwright suites were not run
   (they need a live app + browsers).
 - **QA-suite dependency advisory cleared (2026-11-12).** `npm audit fix` in `tests/qa` moved
