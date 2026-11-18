@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-11-12_
+_Last updated: 2026-11-18_
 
 ## Vision
 
@@ -225,6 +225,19 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **QA-suite `minimatch` advisory cleared (2026-11-18).** `eslint` 10.14.0 -> 10.15.0 and
+  `typescript-eslint` 8.72.2 -> 8.73.0 in `tests/qa` admit `minimatch ^11` (both previously pinned
+  `^10`), which is the only way past the **moderate** `minimatch` advisory
+  (GHSA-g3hv-75wg-m249). The tree now dedupes to a single `minimatch` 11.0.9 and `npm audit` drops
+  from 12 flagged nodes / **2 distinct advisories** to 9 nodes / **1 advisory**. Every lockfile
+  change is an upgrade or an addition - nothing was downgraded (checked version-per-package-key);
+  `npm audit fix --force` was deliberately not used because its only resolution is a
+  `typescript-eslint` 8.47.0 **downgrade**. Remaining and accepted: **high** `picomatch`
+  (GHSA-fc5q-39xc-vjpf) has no patched release at all (4.0.7 is latest), so the 9 flagged nodes are
+  that one advisory fanning out via `tinyglobby` -> `fdir` ->
+  `@typescript-eslint/typescript-estree`; revisit when picomatch ships a fix. Gate for this tier
+  (it has no CI job): `npm run lint` + `npx tsc --noEmit` clean; the Playwright suites were not run
+  (they need a live app + browsers).
 - **QA-suite dependency advisory cleared (2026-11-12).** `npm audit fix` in `tests/qa` moved
   `brace-expansion` 5.0.9 -> 5.0.13, closing the one **high**-severity advisory there (lockfile
   only). The ten remaining advisories are all the single `minimatch` entry, fixable only by
