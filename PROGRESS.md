@@ -254,7 +254,10 @@ Docker-capable VPS.
   `typescript-eslint` 8.47.0 **downgrade**. Remaining and accepted: **high** `picomatch`
   (GHSA-fc5q-39xc-vjpf) has no patched release at all (4.0.7 is latest), so the 9 flagged nodes are
   that one advisory fanning out via `tinyglobby` -> `fdir` ->
-  `@typescript-eslint/typescript-estree`; revisit when picomatch ships a fix. Gate for this tier
+  `@typescript-eslint/typescript-estree`; revisit when picomatch ships a fix. On GitHub the
+  `minimatch` alert (#8) is now `fixed` and the `picomatch` alert (#9) was `auto_dismissed`
+  (`first_patched_version: null`), so the repository currently has **zero open Dependabot alerts**.
+  Gate for this tier
   (it has no CI job): `npm run lint` + `npx tsc --noEmit` clean; the Playwright suites were not run
   (they need a live app + browsers).
 - **QA-suite dependency advisory cleared (2026-11-12).** `npm audit fix` in `tests/qa` moved
