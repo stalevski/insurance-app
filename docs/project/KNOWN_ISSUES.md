@@ -54,9 +54,19 @@ _None open. M1-M5 have been fixed - see the Fixed section below._
   (12 installments from a Jan inception fall Jan-Dec). **Confirm the intended convention** before
   changing - it may be correct as-is.
 
-### D2 - Pre-existing build warnings (38)
-- **What:** `dotnet build` produces 38 analyzer/style warnings (nullable assignments, `CA1869`
+### D2 - Pre-existing build warnings (36)
+- **What:** `dotnet build` produces 36 analyzer/style warnings (nullable assignments, `CA1869`
   cached `JsonSerializerOptions`, `CA1707` migration naming, etc.). Build still succeeds.
+- **Progress (2026-11-20):** a first cleanup pass took it **47 -> 36**. **`CA1305`** - every
+  culture-dependent `DateOnly.ToString("yyyy-MM-dd")` / `Convert.ToInt32` call now passes
+  `CultureInfo.InvariantCulture` (a real correctness bug on non-invariant locales: the seeded quote
+  and bind dates could otherwise be written in a local calendar). **`CA1873`** - the three
+  expensive-argument `LogInformation` calls (`LoggingOutboxPublisher`, `OutboxDispatcher`,
+  `DevelopmentDataSeeder`) are now guarded with `IsEnabled(LogLevel.Information)`, message templates
+  unchanged. **`CA1859`** - the two private `RiskFlowService` helpers return `List<EnrichmentItem>`.
+  What remains is deliberately lower-value: test-file style (`CA1861`), `CA1869` per-call
+  `JsonSerializerOptions` in the mappers/ingest handlers, `CA1826`, `CA1805`, `CA1716`/`CA1707`
+  naming, and one `CS8601` in `RiskSubmissionOrchestrator`.
 - **Note:** Not bugs per se, but they erode the "no new warnings" bar. Worth a cleanup pass;
   migration-file warnings can be suppressed for generated code.
 

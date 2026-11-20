@@ -18,13 +18,17 @@ public sealed class LoggingOutboxPublisher : IOutboxPublisher
 
     public Task PublishAsync(OutboxMessageEntity message, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation(
-            "Published outbox event {EventType} for {AggregateType} {AggregateId} (EventId={EventId}, CorrelationId={CorrelationId}).",
-            message.EventType,
-            message.AggregateType,
-            message.AggregateId,
-            message.EventId,
-            message.CorrelationId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Published outbox event {EventType} for {AggregateType} {AggregateId} (EventId={EventId}, CorrelationId={CorrelationId}).",
+                message.EventType,
+                message.AggregateType,
+                message.AggregateId,
+                message.EventId,
+                message.CorrelationId);
+        }
+
         return Task.CompletedTask;
     }
 }

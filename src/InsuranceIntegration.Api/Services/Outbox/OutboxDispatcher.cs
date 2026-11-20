@@ -27,7 +27,10 @@ public sealed class OutboxDispatcher : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("OutboxDispatcher started with poll interval {PollInterval}.", PollInterval);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("OutboxDispatcher started with poll interval {PollInterval}.", PollInterval);
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {

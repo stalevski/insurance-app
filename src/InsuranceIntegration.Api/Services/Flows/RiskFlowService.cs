@@ -146,7 +146,7 @@ public sealed class RiskFlowService : IRiskFlowService
         return (totalSumInsured, totalSectionPremium, balanced);
     }
 
-    private static IReadOnlyCollection<EnrichmentItem> DeriveCoverageEnrichments(CanonicalRiskRequest request, out List<string> warnings)
+    private static List<EnrichmentItem> DeriveCoverageEnrichments(CanonicalRiskRequest request, out List<string> warnings)
     {
         warnings = [];
         var enrichments = new List<EnrichmentItem>();
@@ -284,7 +284,7 @@ public sealed class RiskFlowService : IRiskFlowService
             ?? 0m;
     }
 
-    private IReadOnlyCollection<EnrichmentItem> DeriveEnrichments(CanonicalRiskRequest request)
+    private List<EnrichmentItem> DeriveEnrichments(CanonicalRiskRequest request)
     {
         var enrichments = new List<EnrichmentItem>();
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.SourceContracts.Ingest;
@@ -123,8 +124,8 @@ public sealed class DevelopmentDataSeeder : IDevelopmentDataSeeder
                         technicalPremium,
                         brokerPremium,
                         currencyCode = "USD",
-                        effectiveDate = effective.ToString("yyyy-MM-dd"),
-                        expiryDate = expiry.ToString("yyyy-MM-dd"),
+                        effectiveDate = effective.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        expiryDate = expiry.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                         underwritingYear,
                         insuredRevenue = insured.Revenue,
                         insuredEmployeeCount = insured.EmployeeCount,
@@ -154,9 +155,9 @@ public sealed class DevelopmentDataSeeder : IDevelopmentDataSeeder
                             brokerIsPreferredPartner = true,
                             boundPremium = brokerPremium,
                             currencyCode = "USD",
-                            inceptionDate = effective.ToString("yyyy-MM-dd"),
-                            expiryDate = expiry.ToString("yyyy-MM-dd"),
-                            boundDate = effective.AddDays(-3).ToString("yyyy-MM-dd"),
+                            inceptionDate = effective.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                            expiryDate = expiry.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                            boundDate = effective.AddDays(-3).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                             paymentMethod = "Invoice",
                             installmentCount = 4,
                         },
@@ -166,7 +167,10 @@ public sealed class DevelopmentDataSeeder : IDevelopmentDataSeeder
             }
         }
 
-        _logger.LogInformation("Seeded {QuoteCount} quotes and {PolicyCount} policies across {ProductCount} product families.", quotes, policies, Products.Count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Seeded {QuoteCount} quotes and {PolicyCount} policies across {ProductCount} product families.", quotes, policies, Products.Count);
+        }
     }
 
     private async Task DispatchAsync(string source, string type, string envelopeId, object payload, CancellationToken cancellationToken)
