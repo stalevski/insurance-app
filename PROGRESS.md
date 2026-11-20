@@ -5,7 +5,7 @@
 > "Next steps" sections at the end of each working session so the next device/agent has context.
 > For architecture and conventions, see [`AGENTS.md`](AGENTS.md).
 
-_Last updated: 2026-11-18_
+_Last updated: 2026-11-20_
 
 ## Vision
 
@@ -225,6 +225,20 @@ Docker-capable VPS.
   observation (backlog #8) rather than asserting undefined behavior (2026-06-15).
 ## Current status
 
+- **Analyzer-warning cleanup, first pass (2026-11-20).** Build warnings **47 -> 36** (Release and
+  Debug agree), with the correctness-relevant classes cleared rather than the noisy ones:
+  **`CA1305`** (all six culture-dependent calls - five `DateOnly.ToString("yyyy-MM-dd")` sites in
+  `DevelopmentDataSeeder` for the seeded quote/bind dates and `Convert.ToInt32(result)` in
+  `UiGateway.ScalarCountAsync` - now pass `CultureInfo.InvariantCulture`, so seeded dates and the
+  DB-browser row count no longer depend on the host locale), **`CA1873`** (the three
+  expensive-argument `LogInformation` calls in `LoggingOutboxPublisher`, `OutboxDispatcher` and
+  `DevelopmentDataSeeder` guarded with `IsEnabled(LogLevel.Information)`; templates unchanged), and
+  **`CA1859`** (two private `RiskFlowService` helpers narrowed to `List<EnrichmentItem>`, no
+  call-site churn). Deliberately left alone: `CA1861`/`CA1822` test-file style plus the `CA1869`
+  mapper `JsonSerializerOptions`/`CA1826`/`CA1805`/`CA1716`/`CA1707`/`CS8601` set - see
+  `docs/project/KNOWN_ISSUES.md` D2 for the itemized remainder. Gate: `dotnet build` 36 warnings /
+  0 errors, `dotnet format --verify-no-changes --severity warn` clean, `dotnet test` **385 green**
+  (282 unit + 103 integration).
 - **NuGet major bumps triaged (2026-11-18).** The three open Dependabot **major** PRs were checked
   against what each package actually targets before being trusted on green CI, then merged after the
   full local gate every time (`dotnet restore`, `dotnet format --verify-no-changes --severity warn`,
@@ -407,7 +421,8 @@ Docker-capable VPS.
 4. Remaining known issues: all High and Medium items are fixed; only low/debatable ones remain -
    L1 (Contoso mapper hard-codes insured/broker data), L2 (`Guid.NewGuid()` entity ids in
    mappers/handlers), D1 (BindPoint installment due dates - confirm the intended convention), and
-   D2 (38 pre-existing build warnings). See `docs/project/KNOWN_ISSUES.md`.
+   D2 (36 pre-existing build warnings, down from 47 after the 2026-11-20 `CA1305`/`CA1873`/`CA1859`
+   pass). See `docs/project/KNOWN_ISSUES.md`.
 5. UI polish (optional): add submission/quote/policy lifecycle action forms
    (cancel/endorse/renew/reinstate) that post to the existing `Endpoints/PolicyEndpoints.cs`
    routes; today those are reachable via Swagger only.

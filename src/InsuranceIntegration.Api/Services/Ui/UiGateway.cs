@@ -1,3 +1,4 @@
+using System.Globalization;
 using InsuranceIntegration.Api.Persistence;
 using InsuranceIntegration.Api.Responses.Ingest;
 using InsuranceIntegration.Api.Services.Catalog;
@@ -220,7 +221,7 @@ public sealed class UiGateway : IUiGateway
         await using var command = connection.CreateCommand();
         command.CommandText = $"SELECT COUNT(*) FROM \"{table}\"";
         var result = await command.ExecuteScalarAsync(ct);
-        return Convert.ToInt32(result);
+        return Convert.ToInt32(result, CultureInfo.InvariantCulture);
     }
 
     private static void AddParameter(System.Data.Common.DbCommand command, string name, object value)
