@@ -12,6 +12,10 @@
 > **Built AI-assisted, human-directed.** Planned, generated, reviewed, and tested with
 > AI tooling under my direction - the architecture, code review, and final decisions are mine.
 
+**Stack:** .NET 10 · ASP.NET Core · Blazor · EF Core · NUnit · Playwright
+
+**Verify:** `dotnet build && dotnet test`, then `cd tests/qa && npm run verify`
+
 ## What is this, in plain language?
 
 Insurers, brokers, and MGAs run dozens of systems that all describe the same things - a quote, a
