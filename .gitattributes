@@ -1,2 +1,11 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Check text files out with LF on every platform, Windows included. Prettier
+# treats CRLF as a style error, so a CRLF working tree makes
+# `npm run format:check` in tests/qa flag every file and hides real regressions.
+* text=auto eol=lf
+
+# PowerShell host scripts keep CRLF: Windows PowerShell 5.1 is unreliable with
+# LF-only scripts, and these are only ever run on Windows.
+*.ps1 text eol=crlf

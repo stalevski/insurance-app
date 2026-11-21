@@ -7,9 +7,17 @@ root = true
 ###############################
 [*]
 indent_style = space
+# LF everywhere, on every OS. Paired with `.gitattributes` (`* text=auto eol=lf`)
+# so a Windows checkout and a Linux CI checkout are byte-identical: prettier and
+# `dotnet format --verify-no-changes` both treat the other newline as an error.
+end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+
+# Windows-only host scripts keep CRLF (see .gitattributes).
+[*.ps1]
+end_of_line = crlf
 
 ###############################
 # C# source files
