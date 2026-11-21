@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.base.schema.json",
+  "name": "insurance-app",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:10.0",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "containerEnv": {
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+  },
+  "postCreateCommand": "dotnet restore && dotnet build --no-restore",
+  "forwardPorts": [5000],
+  "remoteEnv": {
+    "ASPNETCORE_ENVIRONMENT": "Development"
+  }
+}
