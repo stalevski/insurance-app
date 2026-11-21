@@ -44,6 +44,75 @@ jobs:
           name: test-results
           path: '**/test-results.trx'
 
+  qa:
+    name: QA tier (Playwright)
+    runs-on: ubuntu-latest
+    # The black-box suite is sequential (workers: 1) against one SQLite file and
+    # builds + boots the API itself through Playwright's `webServer` entry. A
+    # normal run is ~3-5 min; the ceiling covers a slow cold `dotnet run` plus
+    # two retries on a flaky browser test.
+    timeout-minutes: 25
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: tests/qa/.nvmrc
+          cache: npm
+          cache-dependency-path: tests/qa/package-lock.json
+
+      - name: Install QA dependencies
+        working-directory: tests/qa
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        working-directory: tests/qa
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify QA tier (typecheck, lint, format check)
+        working-directory: tests/qa
+        run: npm run verify
+
+      - name: QA API specs (gating)
+        # No manual app startup: the suite's `webServer` block runs
+        # `dotnet run --project src/InsuranceIntegration.Api` on
+        # http://localhost:5000 against a disposable DB in tests/qa/.tmp.
+        working-directory: tests/qa
+        run: npm run test:api
+
+      - name: QA UI specs, Chromium (reported, non-blocking)
+        # Browser-driven specs are visible but must not block a merge: the suite
+        # has no @external tag, and only the deterministic API specs above are
+        # the gate. Failure here still shows up as a red step in the run summary.
+        continue-on-error: true
+        working-directory: tests/qa
+        run: npx playwright test --project=insurance-app-ui-chromium
+
+      - name: QA accessibility spec (reported, non-blocking)
+        continue-on-error: true
+        working-directory: tests/qa
+        run: npm run test:a11y
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qa-results
+          path: |
+            tests/qa/playwright-report/
+            tests/qa/test-results/
+          retention-days: 7
+
   auto-merge:
     name: Auto-merge Dependabot minor & patch
     needs: build-test

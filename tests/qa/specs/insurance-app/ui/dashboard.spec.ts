@@ -8,14 +8,7 @@ test.describe('Dashboard @smoke', () => {
   test('shows the six platform metric cards', async ({ homePage }) => {
     await expect(homePage.cards).toHaveCount(6);
 
-    for (const label of [
-      'Quotes',
-      'Bound quotes',
-      'Policies',
-      'Domain events',
-      'Ingest entries',
-      'Pending outbox',
-    ]) {
+    for (const label of ['Quotes', 'Bound quotes', 'Policies', 'Domain events', 'Ingest entries', 'Pending outbox']) {
       await expect(homePage.metricFor(label)).toBeVisible();
     }
   });

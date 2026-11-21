@@ -77,15 +77,11 @@ export class InsuranceApiClient extends BaseApiClient {
   }
 
   ingestReceipt(source: string, envelopeId: string): Promise<IngestReceiptDto> {
-    return this.get<IngestReceiptDto>(
-      `api/v1/ingest/${encodeURIComponent(source)}/${encodeURIComponent(envelopeId)}`,
-    );
+    return this.get<IngestReceiptDto>(`api/v1/ingest/${encodeURIComponent(source)}/${encodeURIComponent(envelopeId)}`);
   }
 
   ingestReceiptResponse(source: string, envelopeId: string): Promise<APIResponse> {
-    return this.request.get(
-      `api/v1/ingest/${encodeURIComponent(source)}/${encodeURIComponent(envelopeId)}`,
-    );
+    return this.request.get(`api/v1/ingest/${encodeURIComponent(source)}/${encodeURIComponent(envelopeId)}`);
   }
 
   // ---- Schemas -----------------------------------------------------------

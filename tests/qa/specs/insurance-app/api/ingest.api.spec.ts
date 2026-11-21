@@ -22,9 +22,7 @@ test.describe('Ingest gateway @smoke', () => {
 
     // Projection is applied inline during dispatch; poll briefly to stay robust
     // against any future move to asynchronous projection.
-    await expect
-      .poll(async () => (await api.quoteResponse(reference)).status(), { timeout: 10_000 })
-      .toBe(200);
+    await expect.poll(async () => (await api.quoteResponse(reference)).status(), { timeout: 10_000 }).toBe(200);
 
     const quote = await api.quote(reference);
     expect(quote.quoteReference).toBe(reference);

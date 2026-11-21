@@ -1,11 +1,6 @@
 import { test, expect } from '@insurance-app-fixtures';
 
-const SCHEMA_PATHS = [
-  'ingest/envelope',
-  'ingest/risk-request',
-  'canonical/risk-request',
-  'final/risk-response',
-];
+const SCHEMA_PATHS = ['ingest/envelope', 'ingest/risk-request', 'canonical/risk-request', 'final/risk-response'];
 
 test.describe('JSON schema endpoints', () => {
   for (const schemaPath of SCHEMA_PATHS) {
