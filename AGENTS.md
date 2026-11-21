@@ -131,3 +131,20 @@ dotnet run --project src/InsuranceIntegration.Api
 This project may be worked on from different machines (not simultaneously). **Read `PROGRESS.md`
 first** to see current state and the next step, and **update it at the end of a working session**
 so the next device/agent has context.
+
+## Verify (required before claiming done)
+
+Run these in order; all four must exit 0:
+
+1. `dotnet format --verify-no-changes --severity warn` — exits **2** on drift, not 1
+2. `dotnet build -c Release`
+3. `dotnet test` — the full .NET suite
+4. `cd tests/qa && npm ci && npm run verify && npm run test:api`
+
+The QA tier is a **second npm project** (`tests/qa`), not part of the .NET
+solution. `npm run test:api` starts the API itself through Playwright's
+`webServer`; browser suites (`test:ui`, `test:a11y`) need the app already
+running on `localhost:5000`.
+
+CI gates the .NET chain plus `tests/qa` `verify` and `test:api`; UI and a11y run
+non-blocking, so a red UI/a11y job is not by itself a failed change.
