@@ -109,4 +109,3 @@ Point the suite at an already-running instance with `INSURANCE_APP_BASE_URL`
   expected-result oracles (`expectedRating`, a faithful port of the server's `RatingService`),
   and API-call builders (`PagedQueryBuilder`).
 - **Tags**: `@smoke`, `@critical`, `@a11y`.
-```

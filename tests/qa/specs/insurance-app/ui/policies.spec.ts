@@ -13,11 +13,7 @@ test.describe('Policies list @smoke', () => {
     await policiesPage.open();
 
     // Seeded policies are all bound from a quote, so the first row exposes a quote link.
-    const quoteLinkInFirstRow = policiesPage.rows
-      .first()
-      .getByRole('link')
-      .filter({ hasText: /^Q/ })
-      .first();
+    const quoteLinkInFirstRow = policiesPage.rows.first().getByRole('link').filter({ hasText: /^Q/ }).first();
 
     await expect(quoteLinkInFirstRow).toBeVisible();
     await quoteLinkInFirstRow.click();

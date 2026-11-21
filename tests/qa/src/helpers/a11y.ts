@@ -38,9 +38,7 @@ const summarize = (violations: AxeViolation[]): string =>
 
 export const assertNoSeriousA11yViolations = async (page: Page): Promise<void> => {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-  const blocking = results.violations.filter((violation) =>
-    BLOCKING_IMPACTS.has(violation.impact ?? ''),
-  );
+  const blocking = results.violations.filter((violation) => BLOCKING_IMPACTS.has(violation.impact ?? ''));
 
   // Attach the full Axe report to the Playwright report so every scan - passing or
   // failing - is auditable from the HTML report without dumping raw JSON into the

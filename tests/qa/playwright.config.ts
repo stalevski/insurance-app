@@ -44,12 +44,7 @@ export default defineConfig({
     timeout: 10_000,
   },
   reporter: process.env.CI
-    ? [
-        ['github'],
-        ['list'],
-        ['html', { open: 'never' }],
-        ['junit', { outputFile: 'test-results/junit.xml' }],
-      ]
+    ? [['github'], ['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }]]
     : [['list'], ['html', { open: 'never' }]],
   use: {
     // Aria snapshots ride along with the trace (Playwright 1.63+), so a failed
@@ -68,8 +63,7 @@ export default defineConfig({
     },
   },
   webServer: {
-    command:
-      'dotnet run --project ../../src/InsuranceIntegration.Api --no-launch-profile --urls http://localhost:5000',
+    command: 'dotnet run --project ../../src/InsuranceIntegration.Api --no-launch-profile --urls http://localhost:5000',
     url: `${uiBaseUrl}/health`,
     cwd: here,
     timeout: 180_000,
